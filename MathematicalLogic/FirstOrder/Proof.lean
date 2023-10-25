@@ -84,11 +84,11 @@ theorem truth : Γ ⊢ ⊤ := identity
 
 theorem explode : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) truth)
 
-theorem double_neg1 : Γ ⊢ p ⟶ ~~p := by
+theorem double_neg1 : Γ ⊢ p ⟶ ~ ~ p := by
   pintros
   apply mp <;> passumption
 
-theorem double_neg2 : Γ ⊢ ~~p ⟶ p := by
+theorem double_neg2 : Γ ⊢ ~ ~ p ⟶ p := by
   pintro
   apply mp2 (axioms Axioms.a3)
   · pintros
