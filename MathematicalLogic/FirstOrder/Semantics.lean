@@ -28,9 +28,6 @@ end
 termination_by
   Term.interp t _ _ => t.size
   Terms.interp ts _ _ => ts.size
-decreasing_by
-  all_goals (simp_wf; simp [Term.size, Terms.size])
-  all_goals linarith
 
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => Term.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => Terms.interp ts 𝓜 ρ
@@ -61,9 +58,6 @@ end
 termination_by
   Term.interp_subst _ t _ _ _ => t.size
   Terms.interp_subst _ _ ts _ _ _ => ts.size
-decreasing_by
-  all_goals (simp_wf; simp [Term.size, Terms.size])
-  all_goals linarith
 
 
 

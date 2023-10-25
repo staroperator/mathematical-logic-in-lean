@@ -31,10 +31,10 @@ macro_rules
     expandListLit elems.elemsAndSeps.size false (← ``(Terms.nil))
 
 mutual
-def Term.size : Term 𝓢 → ℕ
+@[simp] def Term.size : Term 𝓢 → ℕ
 | #_ => 0
 | _ ⬝ₜ ts => ts.size + 1
-def Terms.size : Terms 𝓢 n → ℕ
+@[simp] def Terms.size : Terms 𝓢 n → ℕ
 | []ₜ => 0
 | t ∷ₜ ts => t.size + ts.size + 1
 end
@@ -58,6 +58,7 @@ def Terms.subst : Terms 𝓢 n → Subst 𝓢 → Terms 𝓢 n
 | []ₜ, _ => []ₜ
 | t ∷ₜ ts, σ => t.subst σ ∷ₜ ts.subst σ
 end
+
 notation:max t "[" σ "]ₜ" => Term.subst t σ
 notation:max ts "[" σ "]ₜₛ" => Terms.subst ts σ
 
