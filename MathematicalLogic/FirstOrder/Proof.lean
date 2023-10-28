@@ -1,26 +1,26 @@
 import Mathlib.Data.Set.Finite
 import MathematicalLogic.FirstOrder.Syntax
 
-@[reducible] def Formulas (𝓢) := Set (Formula 𝓢)
+@[reducible] def Formulas (𝓛) := Set (Formula 𝓛)
 
-def Formulas.add (Γ : Formulas 𝓢) (p) := insert p Γ
+def Formulas.add (Γ : Formulas 𝓛) (p) := insert p Γ
 infixl:51 ",' " => Formulas.add
 
-def Formulas.lift : Formulas 𝓢 → Formulas 𝓢 := λ Γ => {↑ₚp | p ∈ Γ}
+def Formulas.lift : Formulas 𝓛 → Formulas 𝓛 := λ Γ => {↑ₚp | p ∈ Γ}
 prefix:max "↑ₚₛ" => Formulas.lift
 
-inductive Axioms (𝓢) : Formulas 𝓢 where
-| a1 : Axioms 𝓢 (p ⟶ (q ⟶ p))
-| a2 : Axioms 𝓢 ((p ⟶ q ⟶ r) ⟶ (p ⟶ q) ⟶ p ⟶ r)
-| a3 : Axioms 𝓢 ((~ p ⟶ ~ q) ⟶ q ⟶ p)
-| a4 : Axioms 𝓢 (∀' p ⟶ p[↦ₛ t]ₚ)
-| a5 : Axioms 𝓢 (p ⟶ ∀' ↑ₚp)
-| a6 : Axioms 𝓢 (∀' (p ⟶ q) ⟶ ∀' p ⟶ ∀' q)
-| a7 : Axioms 𝓢 p → Axioms 𝓢 (∀' p)
+inductive Axioms (𝓛) : Formulas 𝓛 where
+| a1 : Axioms 𝓛 (p ⟶ (q ⟶ p))
+| a2 : Axioms 𝓛 ((p ⟶ q ⟶ r) ⟶ (p ⟶ q) ⟶ p ⟶ r)
+| a3 : Axioms 𝓛 ((~ p ⟶ ~ q) ⟶ q ⟶ p)
+| a4 : Axioms 𝓛 (∀' p ⟶ p[↦ₛ t]ₚ)
+| a5 : Axioms 𝓛 (p ⟶ ∀' ↑ₚp)
+| a6 : Axioms 𝓛 (∀' (p ⟶ q) ⟶ ∀' p ⟶ ∀' q)
+| a7 : Axioms 𝓛 p → Axioms 𝓛 (∀' p)
 
-inductive Proof (Γ : Formulas 𝓢) : Formula 𝓢 → Prop where
+inductive Proof (Γ : Formulas 𝓛) : Formula 𝓛 → Prop where
 | assumption : p ∈ Γ → Proof Γ p
-| axioms : p ∈ Axioms 𝓢 → Proof Γ p
+| axioms : p ∈ Axioms 𝓛 → Proof Γ p
 | mp : Proof Γ (p ⟶ q) → Proof Γ p → Proof Γ q
 
 infix:50 " ⊢ " => Proof
@@ -49,7 +49,7 @@ theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   | mp _ _ ih₁ ih₂ => exact mp ih₁ ih₂
 
 theorem identity : Γ ⊢ p ⟶ p
-  := mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (@Axioms.a1 _ p p))
+  := mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
 
 theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
   constructor
@@ -223,3 +223,27 @@ theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Set.Finite Δ ∧ Δ �
           · exact h₆
 
 end Proof
+
+
+
+infix:50 " ⊬ " => λ Γ p => ¬ Γ ⊢ p
+
+def Consistent (Γ : Formulas 𝓛) := Γ ⊬ ⊥
+
+theorem Consistent.weaken : Γ ⊆ Δ → Consistent Δ → Consistent Γ := by
+  intros h₁ h₂ h
+  apply h₂
+  apply Proof.weaken
+  · exact h₁
+  · exact h
+
+theorem Consistent.add : Consistent (Γ,' p) ↔ Γ ⊬ ~ p := by
+  constructor
+  · intro h₁ h₂
+    apply h₁
+    rw [←Proof.deduction]
+    exact h₂
+  · intro h₁ h₂
+    apply h₁
+    pintro
+    exact h₂

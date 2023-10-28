@@ -1,15 +1,14 @@
 import Mathlib.Data.Vector
-import Mathlib.Tactic.Linarith
 import MathematicalLogic.FirstOrder.Proof
 
 universe u
 
-structure Model (𝓢 : Symbol) where
+structure Model (𝓛 : Language) where
   𝓤 : Type u
-  𝓕 : 𝓢.𝓕 n → Vector 𝓤 n → 𝓤
-  𝓟 : 𝓢.𝓟 n → Vector 𝓤 n → Prop
+  𝓕 : 𝓛.𝓕 n → Vector 𝓤 n → 𝓤
+  𝓟 : 𝓛.𝓟 n → Vector 𝓤 n → Prop
 
-def Assignment (𝓜: Model 𝓢) := ℕ → 𝓜.𝓤
+def Assignment (𝓜: Model 𝓛) := ℕ → 𝓜.𝓤
 
 def Assignment.cons (u : 𝓜.𝓤) (ρ : Assignment 𝓜) : Assignment 𝓜
 | 0 => u
@@ -18,10 +17,10 @@ def Assignment.cons (u : 𝓜.𝓤) (ρ : Assignment 𝓜) : Assignment 𝓜
 infixr:80 " ∷ₐ " => Assignment.cons
 
 mutual
-def Term.interp : Term 𝓢 → (𝓜 : Model 𝓢) → Assignment 𝓜 → 𝓜.𝓤
+def Term.interp : Term 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → 𝓜.𝓤
 | #x, _, ρ => ρ x
 | f ⬝ₜ ts, 𝓜, ρ => 𝓜.𝓕 f (ts.interp 𝓜 ρ)
-def Terms.interp : Terms 𝓢 n → (𝓜 : Model 𝓢) → Assignment 𝓜 → Vector 𝓜.𝓤 n
+def Terms.interp : Terms 𝓛 n → (𝓜 : Model 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
 | []ₜ, _, _ => Vector.nil
 | t ∷ₜ ts, 𝓜, ρ => Vector.cons (t.interp 𝓜 ρ) (ts.interp 𝓜 ρ)
 end
@@ -32,7 +31,7 @@ termination_by
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => Term.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => Terms.interp ts 𝓜 ρ
 
-def Assignment.subst {𝓜 : Model 𝓢} (ρ : Assignment 𝓜) (σ : Subst 𝓢) : Assignment 𝓜
+def Assignment.subst {𝓜 : Model 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜
   := λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
 
 notation:80 ρ "[" σ "]ₐ" => Assignment.subst ρ σ
@@ -61,7 +60,7 @@ termination_by
 
 
 
-def Formula.interp : Formula 𝓢 → (𝓜 : Model 𝓢) → Assignment 𝓜 → Prop
+def Formula.interp : Formula 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → Prop
 | p ⬝ₚ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛ 𝓜, ρ)
 | ⊥, _, _ => False
 | p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
@@ -103,15 +102,15 @@ theorem Formula.interp_exists : ⟦ ∃' p ⟧ₚ 𝓜, ρ = ∃ u, ⟦ p ⟧ₚ
 
 
 
-def Entails (Γ : Formulas 𝓢) (p)
-  := ∀ (𝓜 : Model.{u} 𝓢) (ρ : Assignment 𝓜), (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
+def Entails (Γ : Formulas 𝓛) (p)
+  := ∀ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
 
 infix:50 " ⊨ " => Entails
 syntax:50 term " ⊨.{" level "} " term:50 : term
 macro_rules
 | `($Γ ⊨.{$u} $p) => `(Entails.{$u} $Γ $p)
 
-theorem Entails.axioms {p : Formula 𝓢} : p ∈ Axioms 𝓢 → Γ ⊨ p := by
+theorem Entails.axioms {p : Formula 𝓛} : p ∈ Axioms 𝓛 → Γ ⊨ p := by
   intros h 𝓜 ρ h₁
   clear h₁
   induction h generalizing ρ <;> simp [Formula.interp] <;> tauto
@@ -139,3 +138,15 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
   | axioms h => exact Entails.axioms h
   | mp _ _ ih₁ ih₂ => exact Entails.mp ih₁ ih₂
 
+
+
+def Satisfiable (Γ : Formulas 𝓛)
+  := ∃ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
+
+theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
+  rintro h₁ ⟨𝓜, ⟨ρ, h₂⟩⟩
+  exists 𝓜, ρ
+  intros p h₃
+  apply h₂
+  apply h₁
+  exact h₃
