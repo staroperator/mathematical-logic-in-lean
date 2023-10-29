@@ -1,5 +1,5 @@
 import Mathlib.Data.Nat.Basic
-import Mathlib.Data.Set.Basic
+import Mathlib.Data.Set.Lattice
 import Mathlib.Order.BoundedOrder
 
 structure Language where
@@ -40,10 +40,10 @@ mutual
 end
 
 mutual
-def Term.vars : Term 𝓛 → Set ℕ
+@[simp] def Term.vars : Term 𝓛 → Set ℕ
 | #x => {x}
 | _ ⬝ₜ ts => ts.vars
-def Terms.vars : Terms 𝓛 n → Set ℕ
+@[simp] def Terms.vars : Terms 𝓛 n → Set ℕ
 | []ₜ => {}
 | t ∷ₜ ts => t.vars ∪ ts.vars
 end
@@ -53,10 +53,10 @@ end
 def Subst (𝓛) := ℕ → Term 𝓛
 
 mutual
-def Term.subst : Term 𝓛 → Subst 𝓛 → Term 𝓛
+@[simp] def Term.subst : Term 𝓛 → Subst 𝓛 → Term 𝓛
 | #x, σ => σ x
 | f ⬝ₜ ts, σ => f ⬝ₜ (ts.subst σ)
-def Terms.subst : Terms 𝓛 n → Subst 𝓛 → Terms 𝓛 n
+@[simp] def Terms.subst : Terms 𝓛 n → Subst 𝓛 → Terms 𝓛 n
 | []ₜ, _ => []ₜ
 | t ∷ₜ ts, σ => t.subst σ ∷ₜ ts.subst σ
 end
@@ -67,24 +67,30 @@ notation:max ts "[" σ "]ₜₛ" => Terms.subst ts σ
 theorem Term.subst_ext : σ₁ = σ₂ → t[σ₁]ₜ = t[σ₂]ₜ := by intro h; rw [h]
 
 def Subst.id : Subst 𝓛 := λ x => #x
+
 mutual
-theorem Term.subst_id : t[Subst.id]ₜ = t := match t with
-| #x => by rw [Term.subst]; rfl
-| f ⬝ₜ ts => by rw [Term.subst, Terms.subst_id]
-theorem Terms.subst_id : ts[Subst.id]ₜₛ = ts := match ts with
-| []ₜ => by rfl
-| t ∷ₜ ts => by rw [Terms.subst, Term.subst_id, Terms.subst_id]
+theorem Term.subst_id : t[Subst.id]ₜ = t :=
+  match t with
+  | #x => by rw [Term.subst]; rfl
+  | f ⬝ₜ ts => by rw [Term.subst, Terms.subst_id]
+theorem Terms.subst_id : ts[Subst.id]ₜₛ = ts :=
+  match ts with
+  | []ₜ => by rfl
+  | t ∷ₜ ts => by rw [Terms.subst, Term.subst_id, Terms.subst_id]
 end
 
 def Subst.comp (σ₁ σ₂ : Subst 𝓛) : Subst 𝓛 := λ x => (σ₁ x)[σ₂]ₜ
 infixl:90 " ∘ₛ " => Subst.comp
+
 mutual
-theorem Term.subst_comp : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ := match t with
-| #x => by simp [Term.subst]; rfl
-| f ⬝ₜ ts => by simp [Term.subst]; rw [Terms.subst_comp]
-theorem Terms.subst_comp : ts[σ₁]ₜₛ[σ₂]ₜₛ = ts[σ₁ ∘ₛ σ₂]ₜₛ := match ts with
-| []ₜ => by rfl
-| t ∷ₜ ts => by simp only [Terms.subst]; rw [Term.subst_comp, Terms.subst_comp]
+theorem Term.subst_comp : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ :=
+  match t with
+  | #x => by simp [Term.subst]; rfl
+  | f ⬝ₜ ts => by simp [Term.subst]; rw [Terms.subst_comp]
+theorem Terms.subst_comp : ts[σ₁]ₜₛ[σ₂]ₜₛ = ts[σ₁ ∘ₛ σ₂]ₜₛ :=
+  match ts with
+  | []ₜ => by rfl
+  | t ∷ₜ ts => by simp only [Terms.subst]; rw [Term.subst_comp, Terms.subst_comp]
 end
 
 def Subst.single : Term 𝓛 → Subst 𝓛
@@ -96,64 +102,9 @@ def Subst.shift : Subst 𝓛 := λ x => #(x + 1)
 def Term.shift (t : Term 𝓛) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
 
-@[simp] theorem shift_of_var : ↑ₜ(#x : Term 𝓛) = #(x+1)
-  := by simp [Term.shift, Term.subst, Subst.shift]
-
 theorem Term.shift_subst_single : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by
   rw [Term.shift, Term.subst_comp]
-  conv => rhs; rw [←@Term.subst_id _ t₁]
-
-mutual
-theorem Term.is_shift_iff : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := match t with
-| #x => by
-  constructor
-  · rintro ⟨t', h⟩ h'
-    cases t' with
-    | var y =>
-      rw [Term.shift, Term.subst, Subst.shift] at h
-      injection h with h
-      subst h
-      contradiction
-    | func => rw [Term.shift, Term.subst] at h; injection h
-  · intro h
-    cases x with
-    | zero => contradiction
-    | succ x => exists #x; rw [Term.shift, Term.subst, Subst.shift]
-| f ⬝ₜ ts => by
-  rw [Term.vars, ←Terms.is_shift_iff]
-  constructor
-  · rintro ⟨t', h⟩
-    cases t' with
-    | var => rw [Term.shift, Term.subst] at h; injection h
-    | func =>
-      rw [Term.shift, Term.subst] at h
-      injection h with h₁ h₂ h
-      subst h₁; simp at h₂; subst h₂; simp at h; subst h
-      refine ⟨_, rfl⟩
-  · rintro ⟨ts', h⟩
-    cases ts' with
-    | nil => rw [Terms.subst] at h; rw [h]; exists f ⬝ₜ []ₜ
-    | cons t' ts' => rw [Terms.subst] at h; rw [h]; exists f ⬝ₜ (t' ∷ₜ ts'); rw [Term.shift, Term.subst, Terms.subst]
-theorem Terms.is_shift_iff : (∃ ts', ts = ts'[Subst.shift]ₜₛ) ↔ 0 ∉ ts.vars := match ts with
-| []ₜ => by simp [Terms.vars]; exists []ₜ
-| t ∷ₜ ts => by
-  simp [Terms.vars, not_or]
-  rw [←Term.is_shift_iff, ←Terms.is_shift_iff]
-  constructor
-  · rintro ⟨ts', h⟩
-    cases ts' with
-    | cons t' ts' =>
-      rw [Terms.subst] at h
-      injection h with _ h₁ h₂
-      subst h₁; subst h₂
-      constructor
-      · exists t'
-      · exists ts'
-  · rintro ⟨⟨t', h⟩, ⟨ts', h'⟩⟩
-    subst h; subst h'
-    exists t' ∷ₜ ts'
-    rw [Terms.subst, Term.shift] 
-end
+  conv => rhs; rw [←Term.subst_id (t := t₁)]
 
 def Subst.lift : Subst 𝓛 → Subst 𝓛
 | _, 0 => #0
@@ -179,6 +130,65 @@ theorem Subst.lift_comp : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛ
     rw [Subst.lift]; simp
     rw [Subst.lift]; simp
     rw [Term.shift_subst_lift]
+
+mutual
+theorem Term.subst_ext_vars {t : Term 𝓛}
+  : (∀ x ∈ t.vars, σ₁ x = σ₂ x) → t[σ₁]ₜ = t[σ₂]ₜ :=
+  match t with
+  | #x => by intro h; simp [h]
+  | f ⬝ₜ ts => by
+    intro h
+    simp at h
+    simp
+    apply Terms.subst_ext_vars
+    exact h
+theorem Terms.subst_ext_vars {ts : Terms 𝓛 n}
+  : (∀ x ∈ ts.vars, σ₁ x = σ₂ x) → ts[σ₁]ₜₛ = ts[σ₂]ₜₛ :=
+  match ts with
+  | []ₜ => by intro; rfl
+  | t ∷ₜ ts => by
+    intro h
+    simp at h
+    simp
+    constructor
+    · apply Term.subst_ext_vars; intros; apply h; left; assumption
+    · apply Terms.subst_ext_vars; intros; apply h; right; assumption
+end
+
+mutual
+theorem Term.vars_of_subst
+  : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars :=
+  match t with
+  | #x => by simp
+  | f ⬝ₜ ts => by simp; rw [Terms.vars_of_subst]
+theorem Terms.vars_of_subst
+  : ts[σ]ₜₛ.vars = ⋃ x ∈ ts.vars, (σ x).vars :=
+  match ts with
+  | []ₜ => by simp
+  | t ∷ₜ ts => by
+    conv => lhs; simp
+    conv => rhs; rw [Terms.vars]
+    rw [Term.vars_of_subst, Terms.vars_of_subst, Set.biUnion_union]
+end
+
+theorem Term.is_shift_iff
+  : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
+  constructor
+  · rintro ⟨t, h⟩
+    subst h
+    intro h
+    simp [Term.shift, Term.vars_of_subst] at h
+    rcases h with ⟨x, ⟨_, h⟩⟩
+    contradiction
+  · intro h
+    exists t[↦ₛ #0]ₜ
+    rw [Term.shift, Term.subst_comp]
+    conv => lhs; rw [←Term.subst_id (t := t)]
+    apply Term.subst_ext_vars
+    intros x h₁
+    cases x
+    · contradiction
+    · simp [Subst.id, Subst.comp, Subst.shift, Subst.single]
 
 
 
@@ -213,13 +223,13 @@ namespace Formula
   prefix:59 "∃' " => exist
 end Formula
 
-def Formula.free : Formula 𝓛 → Set ℕ
+@[simp] def Formula.free : Formula 𝓛 → Set ℕ
 | _ ⬝ₚ ts => ts.vars
 | ⊥ => {}
 | p ⟶ q => p.free ∪ q.free
-| ∀' p => {x | x + 1 ∈ p.free}
+| ∀' p => { x | x + 1 ∈ p.free }
 
-def Formula.subst : Formula 𝓛 → Subst 𝓛 → Formula 𝓛
+@[simp] def Formula.subst : Formula 𝓛 → Subst 𝓛 → Formula 𝓛
 | p ⬝ₚ ts, σ => p ⬝ₚ ts[σ]ₜₛ
 | ⊥, _ => ⊥
 | p ⟶ q, σ => p.subst σ ⟶ q.subst σ
@@ -246,3 +256,73 @@ theorem Formula.subst_comp : p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ :=
   | implies _ _ ih₁ ih₂ => simp [Formula.subst, ih₁, ih₂]
   | all _ ih => simp [Formula.subst, Terms.subst, Subst.lift_comp, ih]
 
+
+
+theorem Formula.subst_ext_free {p : Formula 𝓛}
+  : (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
+  intro h
+  induction p generalizing σ₁ σ₂ with
+  | atom => simp at h; simp [Terms.subst_ext_vars h]
+  | false => rfl
+  | implies _ _ ih₁ ih₂ =>
+    simp at h
+    simp; rw [ih₁, ih₂]
+    · trivial
+    · intros; apply h; right; assumption
+    · intros; apply h; left; assumption
+  | all _ ih =>
+    simp at h
+    simp; rw [ih]
+    intros x h₁
+    cases x
+    · rfl
+    · simp [Subst.lift]; congr; apply h; exact h₁
+
+theorem Formula.free_of_subst
+  : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
+  induction p generalizing σ with
+  | atom => simp [Terms.vars_of_subst]
+  | false => simp
+  | implies p q ih₁ ih₂ =>
+    conv => lhs; simp
+    conv => rhs; rw [Formula.free]
+    rw [ih₁, ih₂, Set.biUnion_union]
+  | all p ih =>
+    conv => lhs; simp [ih]
+    conv => rhs; rw [Formula.free]
+    apply Set.ext
+    intro x; simp
+    constructor
+    · rintro ⟨y, ⟨h₁, h₂⟩⟩
+      cases y with
+      | zero => contradiction
+      | succ y =>
+        simp [Subst.lift, Term.shift, Term.vars_of_subst] at h₂
+        rcases h₂ with ⟨z, ⟨h₂, h₃⟩⟩
+        simp [Subst.shift] at h₃
+        subst h₃
+        exists y
+    · rintro ⟨y, ⟨h₁, h₂⟩⟩
+      exists y + 1
+      constructor
+      · exact h₁
+      · simp [Subst.lift, Term.shift, Term.vars_of_subst]
+        exists x
+
+theorem Formula.is_shift_iff : (∃ p', p = ↑ₚp') ↔ 0 ∉ p.free := by
+  constructor
+  · rintro ⟨p', h⟩
+    subst h
+    intro h
+    simp [Formula.shift, Formula.free_of_subst] at h
+    rcases h with ⟨x, ⟨_, h⟩⟩
+    contradiction
+  · intro h
+    exists p[↦ₛ #0]ₚ
+    rw [Formula.shift, Formula.subst_comp]
+    conv => lhs; rw [←Formula.subst_id (p := p)]
+    apply Formula.subst_ext_free
+    intros x h₁
+    cases x
+    · contradiction
+    · simp [Subst.id, Subst.comp, Subst.shift, Subst.single]

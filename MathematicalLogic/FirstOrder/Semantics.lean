@@ -48,11 +48,11 @@ lemma Assignment.subst_single {ρ : Assignment 𝓜} : ρ[↦ₛ t]ₐ = (⟦ t 
 
 mutual
 theorem Term.interp_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ[σ]ₐ := match t with
-| #x => by simp [Term.subst, Term.interp, Assignment.subst]
-| f ⬝ₜ ts => by simp [Term.subst, Term.interp]; rw [Terms.interp_subst]
+| #x => by simp [Term.interp, Assignment.subst]
+| f ⬝ₜ ts => by simp [Term.interp]; rw [Terms.interp_subst]
 theorem Terms.interp_subst : ⟦ ts[σ]ₜₛ ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ[σ]ₐ := match ts with
 | []ₜ => by rfl
-| t ∷ₜ ts => by simp [Terms.subst, Terms.interp]; rw [Term.interp_subst, Terms.interp_subst]
+| t ∷ₜ ts => by simp [Terms.interp]; rw [Term.interp_subst, Terms.interp_subst]
 end
 termination_by
   Term.interp_subst _ t _ _ _ => t.size
