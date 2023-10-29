@@ -132,8 +132,8 @@ theorem Subst.lift_comp : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛ
     rw [Term.shift_subst_lift]
 
 mutual
-theorem Term.subst_ext_vars {t : Term 𝓛}
-  : (∀ x ∈ t.vars, σ₁ x = σ₂ x) → t[σ₁]ₜ = t[σ₂]ₜ :=
+theorem Term.subst_ext_vars {t : Term 𝓛} :
+  (∀ x ∈ t.vars, σ₁ x = σ₂ x) → t[σ₁]ₜ = t[σ₂]ₜ :=
   match t with
   | #x => by intro h; simp [h]
   | f ⬝ₜ ts => by
@@ -142,8 +142,8 @@ theorem Term.subst_ext_vars {t : Term 𝓛}
     simp
     apply Terms.subst_ext_vars
     exact h
-theorem Terms.subst_ext_vars {ts : Terms 𝓛 n}
-  : (∀ x ∈ ts.vars, σ₁ x = σ₂ x) → ts[σ₁]ₜₛ = ts[σ₂]ₜₛ :=
+theorem Terms.subst_ext_vars {ts : Terms 𝓛 n} :
+  (∀ x ∈ ts.vars, σ₁ x = σ₂ x) → ts[σ₁]ₜₛ = ts[σ₂]ₜₛ :=
   match ts with
   | []ₜ => by intro; rfl
   | t ∷ₜ ts => by
@@ -156,13 +156,11 @@ theorem Terms.subst_ext_vars {ts : Terms 𝓛 n}
 end
 
 mutual
-theorem Term.vars_of_subst
-  : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars :=
+theorem Term.vars_of_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars :=
   match t with
   | #x => by simp
   | f ⬝ₜ ts => by simp; rw [Terms.vars_of_subst]
-theorem Terms.vars_of_subst
-  : ts[σ]ₜₛ.vars = ⋃ x ∈ ts.vars, (σ x).vars :=
+theorem Terms.vars_of_subst : ts[σ]ₜₛ.vars = ⋃ x ∈ ts.vars, (σ x).vars :=
   match ts with
   | []ₜ => by simp
   | t ∷ₜ ts => by
@@ -171,8 +169,7 @@ theorem Terms.vars_of_subst
     rw [Term.vars_of_subst, Terms.vars_of_subst, Set.biUnion_union]
 end
 
-theorem Term.is_shift_iff
-  : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
+theorem Term.is_shift_iff : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
   constructor
   · rintro ⟨t, h⟩
     subst h
@@ -258,8 +255,8 @@ theorem Formula.subst_comp : p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ :=
 
 
 
-theorem Formula.subst_ext_free {p : Formula 𝓛}
-  : (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
+theorem Formula.subst_ext_free {p : Formula 𝓛} :
+  (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
   intro h
   induction p generalizing σ₁ σ₂ with
   | atom => simp at h; simp [Terms.subst_ext_vars h]
@@ -278,8 +275,7 @@ theorem Formula.subst_ext_free {p : Formula 𝓛}
     · rfl
     · simp [Subst.lift]; congr; apply h; exact h₁
 
-theorem Formula.free_of_subst
-  : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
+theorem Formula.free_of_subst : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
   induction p generalizing σ with
   | atom => simp [Terms.vars_of_subst]
   | false => simp

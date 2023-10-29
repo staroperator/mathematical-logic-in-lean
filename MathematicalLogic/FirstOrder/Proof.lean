@@ -38,8 +38,8 @@ macro_rules
 | `(tactic| passumption) => `(tactic| apply Proof.assumption; repeat (first | exact Or.inl rfl | apply Or.inr))
 | `(tactic| passumption at $n) => `(tactic| passumption_at $n)
 
-theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r
-  := λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
+theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
+  λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
 
 theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   intros h₁ h₂
@@ -48,8 +48,8 @@ theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   | axioms h => exact axioms h
   | mp _ _ ih₁ ih₂ => exact mp ih₁ ih₂
 
-theorem identity : Γ ⊢ p ⟶ p
-  := mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
+theorem identity : Γ ⊢ p ⟶ p :=
+  mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
 
 theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
   constructor

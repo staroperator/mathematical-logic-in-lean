@@ -31,8 +31,8 @@ termination_by
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => Term.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => Terms.interp ts 𝓜 ρ
 
-def Assignment.subst {𝓜 : Model 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜
-  := λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
+def Assignment.subst {𝓜 : Model 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜 :=
+  λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
 
 notation:80 ρ "[" σ "]ₐ" => Assignment.subst ρ σ
 
@@ -85,25 +85,31 @@ theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜,
       · simp [Assignment.subst, Subst.lift, Term.shift]
         conv => lhs; simp [Term.interp_subst, Assignment.subst_shift]
 
-theorem Formula.interp_neg : ⟦ ~ p ⟧ₚ 𝓜, ρ = ¬ ⟦ p ⟧ₚ 𝓜, ρ
-  := by simp [Formula.interp]
+theorem Formula.interp_neg :
+  ⟦ ~ p ⟧ₚ 𝓜, ρ = ¬ ⟦ p ⟧ₚ 𝓜, ρ := by
+  simp [Formula.interp]
 
-theorem Formula.interp_and : ⟦ p ⋀ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ)
-  := by simp [Formula.interp, imp_false]
+theorem Formula.interp_and :
+  ⟦ p ⋀ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by
+  simp [Formula.interp, imp_false]
 
-theorem Formula.interp_or : ⟦ p ⋁ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ)
-  := by simp [Formula.interp, imp_iff_not_or]
+theorem Formula.interp_or :
+  ⟦ p ⋁ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by
+  simp [Formula.interp, imp_iff_not_or]
 
-theorem Formula.interp_iff : ⟦ p ⟷ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ)
-  := by simp [Formula.interp, imp_false, iff_iff_implies_and_implies]
+theorem Formula.interp_iff :
+  ⟦ p ⟷ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by
+  simp [Formula.interp, imp_false, iff_iff_implies_and_implies]
 
-theorem Formula.interp_exists : ⟦ ∃' p ⟧ₚ 𝓜, ρ = ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ
-  := by simp [Formula.interp, imp_false]
+theorem Formula.interp_exists :
+  ⟦ ∃' p ⟧ₚ 𝓜, ρ = ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ := by
+  simp [Formula.interp, imp_false]
 
 
 
-def Entails (Γ : Formulas 𝓛) (p)
-  := ∀ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
+def Entails (Γ : Formulas 𝓛) (p) :=
+  ∀ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜),
+    (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
 
 infix:50 " ⊨ " => Entails
 syntax:50 term " ⊨.{" level "} " term:50 : term
@@ -140,8 +146,8 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
 
 
 
-def Satisfiable (Γ : Formulas 𝓛)
-  := ∃ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
+def Satisfiable (Γ : Formulas 𝓛) :=
+  ∃ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
 
 theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
   rintro h₁ ⟨𝓜, ⟨ρ, h₂⟩⟩
