@@ -84,6 +84,11 @@ theorem truth : Γ ⊢ ⊤ := identity
 
 theorem explode : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) truth)
 
+theorem contradiction : Γ ⊢ ~ p ⟶ p ⟶ q := by
+  pintros
+  apply mp explode
+  apply mp <;> passumption
+
 theorem double_neg1 : Γ ⊢ p ⟶ ~ ~ p := by
   pintros
   apply mp <;> passumption
@@ -94,6 +99,17 @@ theorem double_neg2 : Γ ⊢ ~ ~ p ⟶ p := by
   · pintros
     apply mp <;> passumption
   · passumption
+
+theorem not_imp_left : Γ ⊢ ~ (p ⟶ q) ⟶ p := by
+  pintro
+  apply mp double_neg2
+  apply mp2 contraposition
+  · exact contradiction (q := q)
+  · passumption
+
+theorem not_imp_right : Γ ⊢ ~ (p ⟶ q) ⟶ ~ q := by
+  apply mp contraposition
+  exact Proof.axioms Axioms.a1
 
 theorem and_intro : Γ ⊢ p ⟶ q ⟶ p ⋀ q := by
   pintros
@@ -189,7 +205,7 @@ theorem exists_elim : Γ ⊢ ∃' p ⟶ (∀' (p ⟶ ↑ₚq)) ⟶ q := by
     apply contraposition
   · passumption
 
-theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Set.Finite Δ ∧ Δ ⊢ p := by
+theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
   intro h
   induction h with
   | @assumption p h =>

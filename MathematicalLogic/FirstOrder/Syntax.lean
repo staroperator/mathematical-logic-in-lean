@@ -6,7 +6,7 @@ structure Language where
   𝓕 : ℕ → Type
   𝓟 : ℕ → Type
 
-def Const (𝓛 : Language) := 𝓛.𝓕 0
+@[reducible] def Const (𝓛 : Language) := 𝓛.𝓕 0
 
 mutual
 inductive Term : Language → Type where
@@ -64,8 +64,6 @@ end
 notation:max t "[" σ "]ₜ" => Term.subst t σ
 notation:max ts "[" σ "]ₜₛ" => Terms.subst ts σ
 
-theorem Term.subst_ext : σ₁ = σ₂ → t[σ₁]ₜ = t[σ₂]ₜ := by intro h; rw [h]
-
 def Subst.id : Subst 𝓛 := λ x => #x
 
 mutual
@@ -113,9 +111,7 @@ prefix:max "⇑ₛ" => Subst.lift
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   rw [Term.shift, Term.shift, Term.subst_comp, Term.subst_comp]
-  apply Term.subst_ext
-  funext x
-  rfl
+  congr
 
 theorem Subst.lift_id : ⇑ₛ(Subst.id : Subst 𝓛) = Subst.id := by
   funext x
@@ -253,7 +249,9 @@ theorem Formula.subst_comp : p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ :=
   | implies _ _ ih₁ ih₂ => simp [Formula.subst, ih₁, ih₂]
   | all _ ih => simp [Formula.subst, Terms.subst, Subst.lift_comp, ih]
 
-
+theorem Formula.shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
+  rw [Formula.shift, Formula.subst_comp]
+  conv => rhs; rw [←Formula.subst_id (p := p)]
 
 theorem Formula.subst_ext_free {p : Formula 𝓛} :
   (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
