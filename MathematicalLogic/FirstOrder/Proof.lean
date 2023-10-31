@@ -79,6 +79,9 @@ theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by
   · apply mp <;> passumption
 
 theorem contraposition : Γ ⊢ (p ⟶ q) ⟶ ~ q ⟶ ~ p := composition
+theorem contraposition2 : Γ ⊢ (p ⟶ ~ q) ⟶ q ⟶ ~ p := by
+  pintros
+  apply mp2 <;> passumption
 
 theorem truth : Γ ⊢ ⊤ := identity
 
@@ -99,6 +102,13 @@ theorem double_neg2 : Γ ⊢ ~ ~ p ⟶ p := by
   · pintros
     apply mp <;> passumption
   · passumption
+
+theorem contraposition3 : Γ ⊢ (~ p ⟶ q) ⟶ ~ q ⟶ p := by
+  apply mp2 composition
+  · exact contraposition
+  · apply mp (axioms Axioms.a2)
+    pintro
+    apply double_neg2
 
 theorem not_imp_left : Γ ⊢ ~ (p ⟶ q) ⟶ p := by
   pintro
@@ -204,6 +214,10 @@ theorem exists_elim : Γ ⊢ ∃' p ⟶ (∀' (p ⟶ ↑ₚq)) ⟶ q := by
   · apply generalization
     apply contraposition
   · passumption
+
+theorem exists_self : Γ ⊢ ∃' ↑ₚp ⟶ p := by
+  apply mp contraposition3
+  apply axioms Axioms.a5
 
 theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
   intro h
