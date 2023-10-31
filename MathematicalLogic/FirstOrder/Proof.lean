@@ -1,15 +1,15 @@
 import Mathlib.Data.Set.Finite
 import MathematicalLogic.FirstOrder.Syntax
 
-@[reducible] def Formulas (𝓛) := Set (Formula 𝓛)
+@[reducible] def Context (𝓛) := Set (Formula 𝓛)
 
-def Formulas.add (Γ : Formulas 𝓛) (p) := insert p Γ
-infixl:51 ",' " => Formulas.add
+def Context.add (Γ : Context 𝓛) (p) := insert p Γ
+infixl:51 ",' " => Context.add
 
-def Formulas.lift : Formulas 𝓛 → Formulas 𝓛 := λ Γ => {↑ₚp | p ∈ Γ}
-prefix:max "↑ₚₛ" => Formulas.lift
+def Context.lift : Context 𝓛 → Context 𝓛 := λ Γ => {↑ₚp | p ∈ Γ}
+prefix:max "↑ₚₛ" => Context.lift
 
-inductive Axioms (𝓛) : Formulas 𝓛 where
+inductive Axioms (𝓛) : Context 𝓛 where
 | a1 : Axioms 𝓛 (p ⟶ (q ⟶ p))
 | a2 : Axioms 𝓛 ((p ⟶ q ⟶ r) ⟶ (p ⟶ q) ⟶ p ⟶ r)
 | a3 : Axioms 𝓛 ((~ p ⟶ ~ q) ⟶ q ⟶ p)
@@ -18,7 +18,7 @@ inductive Axioms (𝓛) : Formulas 𝓛 where
 | a6 : Axioms 𝓛 (∀' (p ⟶ q) ⟶ ∀' p ⟶ ∀' q)
 | a7 : Axioms 𝓛 p → Axioms 𝓛 (∀' p)
 
-inductive Proof (Γ : Formulas 𝓛) : Formula 𝓛 → Prop where
+inductive Proof (Γ : Context 𝓛) : Formula 𝓛 → Prop where
 | assumption : p ∈ Γ → Proof Γ p
 | axioms : p ∈ Axioms 𝓛 → Proof Γ p
 | mp : Proof Γ (p ⟶ q) → Proof Γ p → Proof Γ q
@@ -258,7 +258,7 @@ end Proof
 
 infix:50 " ⊬ " => λ Γ p => ¬ Γ ⊢ p
 
-def Consistent (Γ : Formulas 𝓛) := Γ ⊬ ⊥
+def Consistent (Γ : Context 𝓛) := Γ ⊬ ⊥
 
 theorem Consistent.weaken : Γ ⊆ Δ → Consistent Δ → Consistent Γ := by
   intros h₁ h₂ h

@@ -38,10 +38,10 @@ def Formula.injConsts : Formula 𝓛 → Formula (𝓛 ⊎ 𝓒)
 
 notation "⌈" p "⌉ₚ" => Formula.injConsts p
 
-def Formulas.injConsts (Γ : Formulas 𝓛) : Formulas (𝓛 ⊎ 𝓒) :=
+def Context.injConsts (Γ : Context 𝓛) : Context (𝓛 ⊎ 𝓒) :=
   { ⌈p⌉ₚ | p ∈ Γ }
 
-notation "⌈" Γ "⌉ₚₛ" => Formulas.injConsts Γ
+notation "⌈" Γ "⌉ₚₛ" => Context.injConsts Γ
 
 mutual
 def Term.eraseConsts : Term (𝓛 ⊎ 𝓒) → ℕ → Term 𝓛
@@ -883,7 +883,7 @@ lemma Formula.exists_inj_omega :
 
 
 
-def WitnessFormulas : Formulas 𝓛*
+def WitnessFormulas : Context 𝓛*
   := { p | ∃ (p' : Formula 𝓛*) (c : Const 𝓛*)
              (n : ℕ) (p'' : Formula (𝓛^n)),
              p = ∃' p' ⟶ p' [↦ₛ c]ₚ
@@ -893,7 +893,7 @@ def WitnessFormulas : Formulas 𝓛*
 
 notation "𝓦" => WitnessFormulas
 
-lemma level_of_witness_formulas
+lemma level_of_W_formula
   {p p' : Formula 𝓛*} {c : Const 𝓛*} {p'' : Formula (𝓛^n)} :
   p = ∃' p' ⟶ p' [↦ₛ c]ₚ →
   p' = p''.injOmega →
@@ -928,7 +928,7 @@ lemma level_of_witness_formulas
     replace h := h _ h₄
     simp [Subst.single, h₃, Term.level] at h
 
-lemma level_less_than_witness_formulas
+lemma level_less_than_W_formula
   {p p' q : Formula 𝓛*} {c : Const 𝓛*} {p'' : Formula (𝓛^n)} :
   p = ∃' p' ⟶ p' [↦ₛ c]ₚ →
   p' = p''.injOmega →
@@ -946,9 +946,9 @@ lemma level_less_than_witness_formulas
     have h₅ : q'.level ≤ m
     · subst h₂''; apply Formula.level_of_inj_omega
     have h₆ : q.level = m + 1 := 
-      level_of_witness_formulas h₁'' h₂'' h₃'' h₄''
+      level_of_W_formula h₁'' h₂'' h₃'' h₄''
     have h₇ : p.level = n + 1 :=
-      level_of_witness_formulas h₁' h₂' h₃' h₄'
+      level_of_W_formula h₁' h₂' h₃' h₄'
     have h := trans h₄ h₅
     rw [h₆, h₇] at h₂
     apply Nat.le_of_succ_le_succ at h₂
@@ -1003,7 +1003,7 @@ lemma Set.Finite.induction_on_sorted
         exact h₁
       · intros x h; apply h₃; right; exact h
 
-lemma consistency_of_witness_formulas_aux {Γ : Formulas 𝓛} :
+lemma consistency_of_W_aux {Γ : Context 𝓛} :
   Consistent Γ → W ⊆ 𝓦 → Set.Finite W → Consistent (⌈Γ⌉ₚₛ ∪ W) := by
   intros h₁ h₂ h₃
   let r : Formula 𝓛* → Formula 𝓛* → Prop := λ p q => p.level ≥ q.level
@@ -1028,7 +1028,7 @@ lemma consistency_of_witness_formulas_aux {Γ : Formulas 𝓛} :
           rw [Formula.level_of_inj_consts] at h'
           contradiction
         · revert h'
-          apply level_less_than_witness_formulas h₁' h₂' h₃' h₄'
+          apply level_less_than_W_formula h₁' h₂' h₃' h₄'
           · exact h₂ (h₅ h)
           · exact h₇ _ h
           · intro h'; rw [h'] at h; contradiction
@@ -1050,7 +1050,7 @@ lemma Set.decompose_subset_union {s₁ s₂ s₃ : Set α} :
   · simp [←Set.inter_distrib_left, Set.inter_eq_self_of_subset_left h]
   constructor <;> simp [h]
 
-theorem consistency_of_witness_formulas :
+theorem consistency_of_W :
   Consistent Γ → Consistent (⌈Γ⌉ₚₛ ∪ 𝓦) := by
   intros h₁ h₂
   rcases Proof.compactness h₂ with ⟨Δ, ⟨h₂, ⟨h₃, h₄⟩⟩⟩
@@ -1059,17 +1059,17 @@ theorem consistency_of_witness_formulas :
   revert h₄
   apply Consistent.weaken
   · apply Set.union_subset_union_left _ h₆
-  apply consistency_of_witness_formulas_aux
+  apply consistency_of_W_aux
   · exact h₁
   · exact h₇
   · apply Set.Finite.subset
     · exact h₃
     · simp
 
-def WitnessProperty (Γ : Formulas 𝓛) :=
+def WitnessProperty (Γ : Context 𝓛) :=
   ∀ p, Γ ⊢ ∃' p → ∃ t, Γ ⊢ p[↦ₛ t]ₚ
 
-theorem witness_property_of_witness_formulas {Γ : Formulas 𝓛*} :
+theorem witness_property_of_W {Γ : Context 𝓛*} :
   𝓦 ⊆ Γ → WitnessProperty Γ := by
   intros h₁ p h₂
   by_cases h₃ : 0 ∈ p.free

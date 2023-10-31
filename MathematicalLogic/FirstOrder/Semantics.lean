@@ -107,7 +107,7 @@ theorem Formula.interp_exists :
 
 
 
-def Entails (Γ : Formulas 𝓛) (p) :=
+def Entails (Γ : Context 𝓛) (p) :=
   ∀ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜),
     (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
 
@@ -146,7 +146,7 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
 
 
 
-def Satisfiable (Γ : Formulas 𝓛) :=
+def Satisfiable (Γ : Context 𝓛) :=
   ∃ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
 
 theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
