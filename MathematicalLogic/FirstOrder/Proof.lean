@@ -256,7 +256,7 @@ end Proof
 
 
 
-infix:50 " ⊬ " => λ Γ p => ¬ Γ ⊢ p
+notation Γ:50 "⊬" p:50 => ¬ Γ ⊢ p
 
 def Consistent (Γ : Context 𝓛) := Γ ⊬ ⊥
 
