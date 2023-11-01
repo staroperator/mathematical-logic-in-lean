@@ -307,9 +307,6 @@ lemma Formula.consts_of_subst :
         left
         exact h₂
 
-local instance : Coe (Const 𝓛) (Term 𝓛) where
-  coe := λ c => c ⬝ₜ []ₜ
-
 mutual
 def Term.substConst [DecidableEq (Const 𝓛)] : Term 𝓛 → Const 𝓛 → ℕ → Term 𝓛
 | #x, _, y =>
@@ -530,7 +527,7 @@ def Language.witnessOmega (𝓛 : Language) : Type
   := Σ n, 𝓛.witnessNth n
 @[reducible] def Language.addWitness (𝓛 : Language)
   := 𝓛 ⊎ 𝓛.witnessOmega
-postfix:max "*" => Language.addWitness
+local postfix:max "*" => Language.addWitness
 
 def injOmegaWitness {𝓛 : Language} : {n : ℕ} → 𝓛.witnessAcc n → 𝓛.witnessOmega
 | _ + 1, Sum.inl c => injOmegaWitness c
@@ -1077,7 +1074,7 @@ theorem witness_property_of_W {Γ : Context 𝓛*} :
       apply h₁
       exists p, c, p.level, p'
     · exact h₂
-  · exists #0
+  · exists Sum.inr ⟨0, (⊥ : Formula _)⟩
     rw [←Formula.is_shift_iff] at h₃
     rcases h₃ with ⟨p', h₃⟩
     rw [h₃, Formula.shift_subst_single]

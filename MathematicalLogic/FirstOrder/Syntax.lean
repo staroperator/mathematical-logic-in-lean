@@ -30,6 +30,9 @@ macro_rules
       | i+1, false => expandListLit i true  (← ``(Terms.cons $(⟨elems.elemsAndSeps.get! i⟩) $result))
     expandListLit elems.elemsAndSeps.size false (← ``(Terms.nil))
 
+instance : Coe (Const 𝓛) (Term 𝓛) where
+  coe := λ c => c ⬝ₜ []ₜ
+
 mutual
 @[simp] def Term.size : Term 𝓛 → ℕ
 | #_ => 0
