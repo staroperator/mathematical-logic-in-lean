@@ -1,7 +1,7 @@
 import Mathlib.Data.Vector
 import MathematicalLogic.FirstOrder.Proof
 
-universe u
+universe u v
 
 structure Model (𝓛 : Language) where
   𝓤 : Type u
@@ -156,3 +156,77 @@ theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u
   apply h₂
   apply h₁
   exact h₃
+
+
+
+def Model.ulift (𝓜 : Model.{u} 𝓛) : Model.{max u v} 𝓛 where
+  𝓤 := ULift.{v} 𝓜.𝓤
+  𝓕 := λ f v => ULift.up (𝓜.𝓕 f (v.map ULift.down))
+  𝓟 := λ p v => 𝓜.𝓟 p (v.map ULift.down)
+
+def Assignment.ulift (ρ : Assignment 𝓜) : Assignment (𝓜.ulift) :=
+  λ x => ULift.up (ρ x)
+
+lemma Assignment.ulift_cons {𝓜 : Model.{u} 𝓛} {ρ : Assignment.{u} 𝓜} {u : 𝓜.𝓤} : (u ∷ₐ ρ).ulift = Assignment.cons (𝓜 := 𝓜.ulift) (ULift.up u) ρ.ulift := by
+  funext x; cases x <;> rfl
+
+lemma Vector.map_comp {v : Vector α n} : (v.map f).map g = v.map (g ∘ f) := by
+  induction n with
+  | zero => simp
+  | succ n ih => rw [←Vector.cons_head_tail (v := v)]; simp only [Vector.map_cons, Function.comp, ih]
+
+lemma ULift.down_comp_up : ULift.down ∘ ULift.up = id (α := α) := by
+  funext x; simp
+
+mutual
+lemma Term.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+  ⟦ t ⟧ₜ 𝓜.ulift, ρ.ulift = ULift.up (⟦ t ⟧ₜ 𝓜, ρ) :=
+  match t with
+  | #x => by simp [Term.interp, Assignment.ulift]
+  | f ⬝ₜ ts => by
+    simp [Term.interp]
+    rw [Terms.interp_ulift]
+    unfold Model.ulift
+    simp [Vector.map_comp, ULift.down_comp_up]
+lemma Terms.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+  ⟦ ts ⟧ₜₛ 𝓜.ulift, ρ.ulift = (⟦ ts ⟧ₜₛ 𝓜, ρ).map ULift.up :=
+  match ts with
+  | []ₜ => rfl
+  | t ∷ₜ ts => by
+    simp [Terms.interp]
+    rw [Term.interp_ulift, Terms.interp_ulift]
+end
+termination_by
+  Term.interp_ulift => t.size
+  Terms.interp_ulift => ts.size
+
+lemma Formula.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+  ⟦ p ⟧ₚ 𝓜.ulift, ρ.ulift ↔ ⟦ p ⟧ₚ 𝓜, ρ := by
+  induction p generalizing ρ <;> simp [Formula.interp]
+  case atom p ts =>
+    simp [Terms.interp_ulift]
+    unfold Model.ulift
+    simp [Vector.map_comp, ULift.down_comp_up]
+  case implies p q ih₁ ih₂ =>
+    simp [ih₁, ih₂]
+  case all p ih =>
+    constructor
+    · intros h u
+      rw [←ih, Assignment.ulift_cons]
+      apply h
+    · intros h u
+      rw [←ULift.up_down u, ←Assignment.ulift_cons, ih]
+      apply h
+
+theorem Entails.down : Γ ⊨.{max u v} p → Γ ⊨.{u} p := by
+  intros h 𝓜 ρ h₁
+  have h₂ := h (Model.ulift.{u, v} 𝓜) ρ.ulift
+  simp [Formula.interp_ulift] at h₂
+  exact h₂ h₁
+
+theorem Satisfiable.up : Satisfiable.{u} Γ → Satisfiable.{max u v} Γ := by
+  intro h
+  rcases h with ⟨𝓜, ρ, h⟩
+  exists (Model.ulift.{u, v} 𝓜), ρ.ulift
+  simp [Formula.interp_ulift]
+  exact h
