@@ -1,9 +1,7 @@
 import Mathlib.Data.Set.Basic
 import Mathlib.Order.Zorn
 import MathematicalLogic.FirstOrder.Proof
-
-def MaximalConsistent (Γ : Context 𝓛) :=
-  Consistent Γ ∧ ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
+import MathematicalLogic.FirstOrder.Completeness.Basic
 
 lemma consistent_chain_upper_bound
   (S : Set (Set (Formula 𝓛))) :

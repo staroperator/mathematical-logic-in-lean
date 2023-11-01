@@ -2,8 +2,7 @@ import Mathlib.Data.List.Perm
 import Mathlib.Data.List.Sort
 import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Semantics
-
-
+import MathematicalLogic.FirstOrder.Completeness.Basic
 
 @[reducible]
 def Language.addConsts (𝓛 : Language) (𝓒 : Type) : Language where
@@ -1065,9 +1064,6 @@ theorem consistency_of_W :
   · apply Set.Finite.subset
     · exact h₃
     · simp
-
-def WitnessProperty (Γ : Context 𝓛) :=
-  ∀ p, Γ ⊢ ∃' p → ∃ t, Γ ⊢ p[↦ₛ t]ₚ
 
 theorem witness_property_of_W {Γ : Context 𝓛*} :
   𝓦 ⊆ Γ → WitnessProperty Γ := by
