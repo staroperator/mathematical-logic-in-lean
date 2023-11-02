@@ -22,9 +22,6 @@ def Terms.injConsts : Terms 𝓛 n → Terms (𝓛 ⊎ 𝓒) n
 | []ₜ => []ₜ
 | t ∷ₜ ts => t.injConsts ∷ₜ ts.injConsts
 end
-termination_by
-  Term.injConsts t => t.size
-  Terms.injConsts ts => ts.size
 
 notation "⌈" t "⌉ₜ" => Term.injConsts t
 notation "⌈" ts "⌉ₜₛ" => Terms.injConsts ts
@@ -52,9 +49,6 @@ def Terms.eraseConsts : Terms (𝓛 ⊎ 𝓒) n → ℕ → Terms 𝓛 n
 | []ₜ, _ => []ₜ
 | t ∷ₜ ts, x => t.eraseConsts x ∷ₜ ts.eraseConsts x
 end
-termination_by
-  Term.eraseConsts t _ => t.size
-  Terms.eraseConsts ts _ => ts.size
 
 local notation "⌊" t "⌋ₜ" => Term.eraseConsts t
 local notation "⌊" ts "⌋ₜₛ" => Terms.eraseConsts ts
@@ -83,15 +77,12 @@ lemma Terms.erase_inj : ⌊(⌈ts⌉ₜₛ : Terms (𝓛 ⊎ 𝓒) n)⌋ₜₛ x
     rw [Term.erase_inj, Terms.erase_inj]
     trivial
 end
-termination_by
-  Term.erase_inj => t.size
-  Terms.erase_inj => ts.size
 
 lemma Formula.erase_inj : ⌊(⌈p⌉ₚ : Formula (𝓛 ⊎ 𝓒))⌋ₚ x = p := by
   induction p generalizing x with
   | atom => simp [Formula.injConsts, Formula.eraseConsts, Terms.erase_inj]
   | false => rfl
-  | implies _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.eraseConsts, ih₁, ih₂]
+  | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.eraseConsts, ih₁, ih₂]
   | all _ ih => simp [Formula.injConsts, Formula.eraseConsts, ih]
 
 mutual
@@ -116,16 +107,13 @@ lemma Terms.erase_swap_subst :
     rw [Term.erase_swap_subst h₁ h₂, Terms.erase_swap_subst h₁ h₂]
     trivial
 end
-termination_by
-  Term.erase_swap_subst => t.size
-  Terms.erase_swap_subst => ts.size
 
 lemma Formula.erase_swap_subst :
   (∀ z, σ₂ z = ⌊σ₁ z⌋ₜ x) → σ₂ y = #x → ⌊p[σ₁]ₚ⌋ₚ x = (⌊p⌋ₚ y)[σ₂]ₚ := by
   intros h₁ h₂
   induction p generalizing σ₁ σ₂ x y <;> simp [Formula.eraseConsts]
   case atom => simp [Terms.erase_swap_subst h₁ h₂]
-  case implies _ _ ih₁ ih₂ => simp [ih₁ h₁ h₂, ih₂ h₁ h₂]
+  case imp _ _ ih₁ ih₂ => simp [ih₁ h₁ h₂, ih₂ h₁ h₂]
   case all _ ih =>
     rw [ih]
     · intro z; cases z
@@ -207,16 +195,13 @@ lemma Terms.interp_erase : ⟦ ts ⟧ₜₛ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈ts⌉ₜ�
     simp [Terms.injConsts, Terms.interp]
     rw [Term.interp_erase, Terms.interp_erase]
 end
-termination_by
-  Term.interp_erase => t.size
-  Terms.interp_erase => ts.size
 
 lemma Formula.interp_erase :
   ⟦ p ⟧ₚ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈p⌉ₚ ⟧ₚ 𝓜, ρ := by
   induction p generalizing ρ with
   | atom => simp [Formula.injConsts, Formula.interp, Terms.interp_erase]; rfl
   | false => rfl
-  | implies _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.interp, ih₁, ih₂]
+  | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.interp, ih₁, ih₂]
   | all _ ih =>
     rw [Formula.injConsts, Formula.interp]
     apply forall_congr
@@ -245,9 +230,6 @@ def Terms.consts : Terms 𝓛 n → Set (Const 𝓛)
 | []ₜ => {}
 | t ∷ₜ ts => t.consts ∪ ts.consts
 end
-termination_by
-  Term.consts t => t.size
-  Terms.consts ts => ts.size
 
 def Formula.consts : Formula 𝓛 → Set (Const 𝓛)
 | _ ⬝ₚ ts => ts.consts
@@ -274,9 +256,6 @@ lemma Terms.consts_of_subst :
     rw [Term.consts_of_subst, Terms.consts_of_subst]
     simp [Set.union_assoc, Set.union_left_comm]
 end
-termination_by
-  Term.consts_of_subst => t.size
-  Terms.consts_of_subst => ts.size
 
 lemma Formula.consts_of_subst :
   p[σ]ₚ.consts = p.consts ∪ ⋃ x ∈ p.free, (σ x).consts := by
@@ -285,7 +264,7 @@ lemma Formula.consts_of_subst :
     <;> (conv => rhs; rw [Formula.consts, Formula.free]; try rw [Set.biUnion_union])
   case atom => simp [Terms.consts_of_subst]
   case false => simp
-  case implies _ _ ih₁ ih₂ => simp [ih₁, ih₂, Set.union_assoc, Set.union_left_comm]
+  case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂, Set.union_assoc, Set.union_left_comm]
   case all _ ih =>
     simp [ih]
     congr
@@ -318,9 +297,6 @@ def Terms.substConst [DecidableEq (Const 𝓛)] : Terms 𝓛 n → Const 𝓛 �
 | []ₜ, _, _ => []ₜ
 | t ∷ₜ ts, c, x => t.substConst c x ∷ₜ ts.substConst c x
 end
-termination_by
-  Term.substConst t _ _ => t.size
-  Terms.substConst ts _ _ => ts.size
 
 local notation t "[" c " ↦ᶜ " x "]ₜ" => Term.substConst t c x
 local notation ts "[" c " ↦ᶜ " x "]ₜₛ" => Terms.substConst ts c x
@@ -361,20 +337,16 @@ lemma Terms.subst_const_of_non_const_aux [DecidableEq (Const 𝓛)] {ts : Terms 
     rw [Term.subst_const_of_non_const_aux h₁, Terms.subst_const_of_non_const_aux h₂]
     trivial
 end
-termination_by
-  Term.subst_const_of_non_const_aux => t.size
-  Terms.subst_const_of_non_const_aux => ts.size
 
 lemma Formula.subst_const_of_non_const_aux [DecidableEq (Const 𝓛)] {p : Formula 𝓛} :
   c ∉ p.consts → p[c ↦ᶜ x]ₚ = p[Subst.shift_since x]ₚ := by
   intro h
   induction p generalizing x <;> simp [Formula.substConst]
   case atom => simp [Terms.subst_const_of_non_const_aux h]
-  case implies _ _ ih₁ ih₂ =>
+  case imp _ _ ih₁ ih₂ =>
     simp [Formula.consts, not_or] at h
     rcases h with ⟨h₁, h₂⟩
     rw [ih₁ h₁, ih₂ h₂]
-    trivial
   case all _ ih =>
     rw [ih h]
     congr
@@ -419,9 +391,6 @@ lemma Terms.subst_const_swap_subst [DecidableEq (Const 𝓛)] {ts : Terms 𝓛 n
     rw [Term.subst_const_swap_subst h₁ h₂, Terms.subst_const_swap_subst h₁ h₂]
     trivial
 end
-termination_by
-  Term.subst_const_swap_subst => t.size
-  Terms.subst_const_swap_subst => ts.size
 
 lemma Formula.subst_const_swap_subst [DecidableEq (Const 𝓛)] {p : Formula 𝓛} :
   (∀ z, σ₂ (if z < y then z else z + 1) = (σ₁ z)[c ↦ᶜ x]ₜ) →
@@ -429,7 +398,7 @@ lemma Formula.subst_const_swap_subst [DecidableEq (Const 𝓛)] {p : Formula �
   intros h₁ h₂
   induction p generalizing σ₁ σ₂ x y <;> simp [Formula.substConst]
   case atom => simp [Terms.subst_const_swap_subst h₁ h₂]
-  case implies _ _ ih₁ ih₂ => simp [ih₁ h₁ h₂, ih₂ h₁ h₂]
+  case imp _ _ ih₁ ih₂ => simp [ih₁ h₁ h₂, ih₂ h₁ h₂]
   case all _ ih =>
     rw [ih]
     · intro z
@@ -543,9 +512,6 @@ def Terms.injOmega {n : ℕ} : Terms (𝓛^n) m → Terms 𝓛* m
 | []ₜ => []ₜ
 | t ∷ₜ ts => t.injOmega ∷ₜ ts.injOmega
 end
-termination_by
-  Term.injOmega t => t.size
-  Terms.injOmega ts => ts.size
 
 def Formula.injOmega {n : ℕ} : Formula (𝓛^n) → Formula 𝓛*
 | p ⬝ₚ ts => p ⬝ₚ ts.injOmega
@@ -563,9 +529,6 @@ def Terms.level : Terms 𝓛* n → ℕ
 | []ₜ => 0
 | t ∷ₜ ts => max t.level ts.level
 end
-termination_by
-  Term.level t => t.size
-  Terms.level ts => ts.size
 
 def Formula.level : Formula 𝓛* → ℕ
 | _ ⬝ₚ ts => ts.level
@@ -603,9 +566,6 @@ lemma Terms.const_less_than_level {ts : Terms 𝓛* n} :
     | inl h => left; apply Term.const_less_than_level; exact h
     | inr h => right; apply Terms.const_less_than_level; exact h
 end
-termination_by
-  Term.const_less_than_level => t.size
-  Terms.const_less_than_level => ts.size
 
 lemma Formula.const_less_than_level {p : Formula 𝓛*} :
   Sum.inr ⟨k, q⟩ ∈ p.consts → k < p.level := by
@@ -617,7 +577,7 @@ lemma Formula.const_less_than_level {p : Formula 𝓛*} :
     apply Terms.const_less_than_level
     exact h
   | false => simp [Formula.consts] at h
-  | implies _ _ ih₁ ih₂ =>
+  | imp _ _ ih₁ ih₂ =>
     simp [Formula.consts] at h
     simp [Formula.level]
     cases h with
@@ -645,14 +605,11 @@ lemma Terms.level_of_inj_consts {ts : Terms 𝓛 n} : ⌈ts⌉ₜₛ.level = 0 :
     rw [Term.level_of_inj_consts, Terms.level_of_inj_consts]
     trivial
 end
-termination_by
-  Term.level_of_inj_consts => t.size
-  Terms.level_of_inj_consts => ts.size
 
 lemma Formula.level_of_inj_consts {p : Formula 𝓛} : ⌈p⌉ₚ.level = 0 := by
   induction p <;> simp [Formula.injConsts, Formula.level]
   case atom => simp [Terms.level_of_inj_consts]
-  case implies _ _ ih₁ ih₂ => simp [ih₁, ih₂]
+  case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih => exact ih
 
 lemma level_of_inj_omega_witness {𝓛 : Language} {c : 𝓛.witnessAcc n} :
@@ -688,14 +645,11 @@ lemma Terms.level_of_inj_omega {ts : Terms (𝓛^n) m} : ts.injOmega.level ≤ n
     · apply Term.level_of_inj_omega
     · apply Terms.level_of_inj_omega
 end
-termination_by
-  Term.level_of_inj_omega => t.size
-  Terms.level_of_inj_omega => ts.size
 
 theorem Formula.level_of_inj_omega {p : Formula (𝓛^n)} : p.injOmega.level ≤ n := by
   induction p <;> simp [Formula.injOmega, Formula.level]
   case atom => apply Terms.level_of_inj_omega
-  case implies _ _ ih₁ ih₂ => exact ⟨ih₁, ih₂⟩
+  case imp _ _ ih₁ ih₂ => exact ⟨ih₁, ih₂⟩
   case all _ ih => exact ih
 
 mutual
@@ -722,9 +676,6 @@ lemma Terms.le_level_of_subst :
       · exact Or.inl $ Or.inr h'
       · exact Or.inr ⟨x, ⟨Or.inr h', h''⟩⟩
 end
-termination_by
-  Term.le_level_of_subst => t.size
-  Terms.le_level_of_subst => ts.size
 
 lemma Formula.le_level_of_subst :
   n ≤ (p[σ]ₚ).level → n ≤ p.level ∨ ∃ x ∈ p.free, n ≤ (σ x).level := by
@@ -732,7 +683,7 @@ lemma Formula.le_level_of_subst :
   induction p generalizing σ <;> simp [Formula.level] at *
   case atom => exact Terms.le_level_of_subst h
   case false => exact h
-  case implies _ _ ih₁ ih₂ =>
+  case imp _ _ ih₁ ih₂ =>
     cases' h with h h
     · rcases ih₁ h with h' | ⟨x, h', h''⟩
       · exact Or.inl $ Or.inl h'
@@ -774,16 +725,13 @@ lemma Terms.level_of_subst_le :
     rcases Terms.level_of_subst_le h₂ with ⟨h₂, h₂'⟩
     exact ⟨⟨h₁, h₂⟩, λ x h => Or.elim h (h₁' x) (h₂' x)⟩
 end
-termination_by
-  Term.level_of_subst_le => t.size
-  Terms.level_of_subst_le => ts.size
 
 lemma Formula.level_of_subst_le :
   (p[σ]ₚ).level ≤ n → p.level ≤ n ∧ ∀ x ∈ p.free, (σ x).level ≤ n := by
   intro h
   induction p generalizing σ <;> simp [Formula.level]
   case atom => exact Terms.level_of_subst_le h
-  case implies _ _ ih₁ ih₂ =>
+  case imp _ _ ih₁ ih₂ =>
     simp [Formula.level] at h
     rcases h with ⟨h₁, h₂⟩
     rcases ih₁ h₁ with ⟨h₁, h₁'⟩
@@ -799,17 +747,6 @@ lemma Formula.level_of_subst_le :
       simp [Subst.lift, Term.shift] at h₂
       rcases Term.level_of_subst_le h₂ with ⟨h₂, _⟩
       exact h₂
-
--- lemma lift_witness_nth {𝓛 : Language} (c : 𝓛.witnessNth k) :
---   k ≤ n → ∃ (c' : 𝓛.witnessAcc n), injOmegaWitness c
-
--- lemma lift_witness_acc {𝓛 : Language} (c : 𝓛.witnessAcc n) :
---   n ≤ m → ∃ (c' : 𝓛.witnessAcc m), injOmegaWitness c = injOmegaWitness c' := by
---   intro h
---   induction' h with m _ ih
---   · exists c
---   · rcases ih with ⟨c', h⟩
---     exists (Sum.inl c')
 
 lemma exists_witness_omega_witness {𝓛 : Language} {c : 𝓛.witnessOmega} :
   c.fst + 1 ≤ n → ∃ (c' : 𝓛.witnessAcc n), c = injOmegaWitness c' := by
@@ -853,9 +790,6 @@ lemma Terms.exists_inj_omega :
     exists t' ∷ₜ ts'
     simp [h₁, h₂, Terms.injOmega]
 end
-termination_by
-  Term.exists_inj_omega => t.size
-  Terms.exists_inj_omega => ts.size
 
 lemma Formula.exists_inj_omega :
   p.level ≤ n → ∃ (p' : Formula (𝓛^n)), p = p'.injOmega := by
@@ -866,7 +800,7 @@ lemma Formula.exists_inj_omega :
     exists p ⬝ₚ ts'
     simp [h, Formula.injOmega]
   case false => exists ⊥
-  case implies p q ih₁ ih₂ =>
+  case imp p q ih₁ ih₂ =>
     rcases h with ⟨h₁, h₂⟩
     rcases ih₁ h₁ with ⟨p', h₁⟩
     rcases ih₂ h₂ with ⟨q', h₂⟩

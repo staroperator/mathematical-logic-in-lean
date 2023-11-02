@@ -7,8 +7,8 @@ def Terms.ofVector : Vector (Term 𝓛) n → Terms 𝓛 n
   | 0, [] => []ₜ
   | n + 1, t :: l => t ∷ₜ Terms.ofVector ⟨l, by simp at h; exact h⟩
 
-@[simp] lemma Terms.of_vector_nil : Terms.ofVector Vector.nil = ([]ₜ : Terms 𝓛 0) := rfl
-@[simp] lemma Terms.of_vector_cons : Terms.ofVector (Vector.cons t v) = t ∷ₜ Terms.ofVector v := rfl
+@[simp] lemma Terms.of_vector_nil : Terms.ofVector []ᵥ = ([]ₜ : Terms 𝓛 0) := rfl
+@[simp] lemma Terms.of_vector_cons : Terms.ofVector (t ∷ᵥ v) = t ∷ₜ Terms.ofVector v := rfl
 
 instance : Coe (Vector (Term 𝓛) n) (Terms 𝓛 n) where
   coe := Terms.ofVector
@@ -35,9 +35,6 @@ theorem Terms.interp_term_model :
     rw [Term.interp_term_model, Terms.interp_term_model]
     trivial
 end
-termination_by
-  Term.interp_term_model => t.size
-  Terms.interp_term_model => ts.size
 
 lemma subst_const {c : Const 𝓛} : (c : Term 𝓛)[σ]ₜ = c := rfl
 
@@ -56,7 +53,7 @@ theorem Formula.interp_term_model :
   induction p generalizing ρ <;> simp [Formula.interp]
   case atom p ts => simp [Terms.interp_term_model]
   case false => exact h₁
-  case implies p q ih₁ ih₂ =>
+  case imp p q ih₁ ih₂ =>
     rw [ih₁, ih₂]
     constructor
     · intro h

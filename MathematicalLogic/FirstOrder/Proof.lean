@@ -69,7 +69,7 @@ theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
     | axioms h => exact mp (axioms Axioms.a1) (axioms h)
     | mp _ _ ih₁ ih₂ => exact mp2 (axioms Axioms.a2) ih₁ ih₂
 
-macro "pintro" : tactic => `(tactic| rw [deduction])
+macro "pintro" : tactic => `(tactic| apply deduction.mpr)
 macro "pintros" : tactic => `(tactic| repeat pintro)
 
 theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by

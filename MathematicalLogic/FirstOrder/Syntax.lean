@@ -1,6 +1,6 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Lattice
-import Mathlib.Order.BoundedOrder
+import MathematicalLogic.Notation
 
 structure Language where
   𝓕 : ℕ → Type
@@ -19,16 +19,8 @@ end
 
 prefix:max "#" => Term.var
 infix:70 " ⬝ₜ " => Term.func
-infixr:67 " ∷ₜ " => Terms.cons
-syntax "[" withoutPosition(term,*) "]ₜ"  : term
-macro_rules
-  | `([ $elems,* ]ₜ) => do
-    let rec expandListLit (i : Nat) (skip : Bool) (result : Lean.TSyntax `term) : Lean.MacroM Lean.Syntax := do
-      match i, skip with
-      | 0,   _     => pure result
-      | i+1, true  => expandListLit i false result
-      | i+1, false => expandListLit i true  (← ``(Terms.cons $(⟨elems.elemsAndSeps.get! i⟩) $result))
-    expandListLit elems.elemsAndSeps.size false (← ``(Terms.nil))
+notation "[]ₜ" => Terms.nil
+infixr:67 "∷ₜ" => Terms.cons
 
 instance : Coe (Const 𝓛) (Term 𝓛) where
   coe := λ c => c ⬝ₜ []ₜ
@@ -41,6 +33,14 @@ mutual
 | []ₜ => 0
 | t ∷ₜ ts => t.size + ts.size + 1
 end
+termination_by
+  Term.size t => sizeOf t
+  Terms.size ts => sizeOf ts
+
+instance (priority := high) : SizeOf (Term 𝓛) := ⟨Term.size⟩
+instance (priority := high) : SizeOf (Terms 𝓛 n) := ⟨Terms.size⟩
+@[simp] theorem Term.sizeOf_eq {t : Term 𝓛} : sizeOf t = t.size := rfl
+@[simp] theorem Terms.sizeOf_eq {ts : Terms 𝓛 n} : sizeOf ts = ts.size := rfl
 
 mutual
 @[simp] def Term.vars : Term 𝓛 → Set ℕ
@@ -64,20 +64,20 @@ mutual
 | t ∷ₜ ts, σ => t.subst σ ∷ₜ ts.subst σ
 end
 
-notation:max t "[" σ "]ₜ" => Term.subst t σ
-notation:max ts "[" σ "]ₜₛ" => Terms.subst ts σ
+notation:80 t "[" σ "]ₜ" => Term.subst t σ
+notation:80 ts "[" σ "]ₜₛ" => Terms.subst ts σ
 
 def Subst.id : Subst 𝓛 := λ x => #x
 
 mutual
 theorem Term.subst_id : t[Subst.id]ₜ = t :=
   match t with
-  | #x => by rw [Term.subst]; rfl
-  | f ⬝ₜ ts => by rw [Term.subst, Terms.subst_id]
+  | #x => by simp; rfl
+  | f ⬝ₜ ts => by simp; rw [Terms.subst_id]
 theorem Terms.subst_id : ts[Subst.id]ₜₛ = ts :=
   match ts with
   | []ₜ => by rfl
-  | t ∷ₜ ts => by rw [Terms.subst, Term.subst_id, Terms.subst_id]
+  | t ∷ₜ ts => by simp; rw [Term.subst_id, Terms.subst_id]; trivial
 end
 
 def Subst.comp (σ₁ σ₂ : Subst 𝓛) : Subst 𝓛 := λ x => (σ₁ x)[σ₂]ₜ
@@ -86,12 +86,12 @@ infixl:90 " ∘ₛ " => Subst.comp
 mutual
 theorem Term.subst_comp : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ :=
   match t with
-  | #x => by simp [Term.subst]; rfl
-  | f ⬝ₜ ts => by simp [Term.subst]; rw [Terms.subst_comp]
+  | #x => by simp; rfl
+  | f ⬝ₜ ts => by simp; rw [Terms.subst_comp]
 theorem Terms.subst_comp : ts[σ₁]ₜₛ[σ₂]ₜₛ = ts[σ₁ ∘ₛ σ₂]ₜₛ :=
   match ts with
   | []ₜ => by rfl
-  | t ∷ₜ ts => by simp only [Terms.subst]; rw [Term.subst_comp, Terms.subst_comp]
+  | t ∷ₜ ts => by simp; rw [Term.subst_comp, Terms.subst_comp]; trivial
 end
 
 def Subst.single : Term 𝓛 → Subst 𝓛
@@ -191,33 +191,22 @@ theorem Term.is_shift_iff : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
 inductive Formula : Language → Type where
 | atom : 𝓛.𝓟 n → Terms 𝓛 n → Formula 𝓛
 | false : Formula 𝓛
-| implies : Formula 𝓛 → Formula 𝓛 → Formula 𝓛
+| imp : Formula 𝓛 → Formula 𝓛 → Formula 𝓛
 | all : Formula 𝓛 → Formula 𝓛
 
-namespace Formula
-  variable (p q : Formula 𝓛)
-  
-  infix:70 " ⬝ₚ " => atom
-  infixr:55 " ⟶ " => implies
-  
-  instance : Bot (Formula 𝓛) where
-    bot := false
-  @[reducible] def neg := p ⟶ ⊥
-  prefix:58 "~ " => neg
-  instance : Top (Formula 𝓛) where
-    top := ~ ⊥
-  
-  @[reducible] def or := ~ p ⟶ q
-  infix:56 " ⋁ " => or
-  @[reducible] def and := ~ (p ⟶ ~ q)
-  infix:57 " ⋀ " => and
-  @[reducible] def iff := (p ⟶ q) ⋀ (q ⟶ p)
-  infix:55 " ⟷ " => iff
-  
-  prefix:59 "∀' " =>all
-  @[reducible] def exist := ~ ∀' (~ p)
-  prefix:59 "∃' " => exist
-end Formula
+infix:70 " ⬝ₚ " => Formula.atom
+instance : Bot (Formula 𝓛) := ⟨Formula.false⟩
+instance : ImpSymbol (Formula 𝓛) := ⟨Formula.imp⟩
+instance : NotSymbol (Formula 𝓛) := ⟨λ p => p ⟶ ⊥⟩
+instance : Top (Formula 𝓛) := ⟨~ ⊥⟩
+instance : OrSymbol (Formula 𝓛) := ⟨λ p q => ~ p ⟶ q⟩
+instance : AndSymbol (Formula 𝓛) := ⟨λ p q => ~ (p ⟶ ~ q)⟩
+instance : IffSymbol (Formula 𝓛) := ⟨λ p q => (p ⟶ q) ⋀ (q ⟶ p)⟩
+instance : ForallSymbol (Formula 𝓛) := ⟨Formula.all⟩
+instance : ExistsSymbol (Formula 𝓛) := ⟨λ p => ~ ∀' (~ p)⟩
+
+@[simp] theorem Formula.imp_eq : Formula.imp p q = p ⟶ q := rfl
+@[simp] theorem Formula.all_eq : Formula.all p = ∀' p := rfl
 
 @[simp] def Formula.free : Formula 𝓛 → Set ℕ
 | _ ⬝ₚ ts => ts.vars
@@ -240,17 +229,17 @@ theorem Formula.subst_ext : σ₁ = σ₂ → p[σ₁]ₚ = p[σ₂]ₚ := by in
 
 theorem Formula.subst_id : p[Subst.id]ₚ = p := by
   induction p with
-  | atom => simp [Formula.subst, Terms.subst_id]
+  | atom => simp [Terms.subst_id]
   | false => rfl
-  | implies _ _ ih₁ ih₂ => simp [Formula.subst, ih₁, ih₂]
-  | all _ ih => simp [Formula.subst, Subst.lift_id, ih]
+  | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
+  | all _ ih => simp [Subst.lift_id, ih]
 
 theorem Formula.subst_comp : p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ := by
   induction p generalizing σ₁ σ₂ with
-  | atom => simp [Formula.subst, Terms.subst_comp]
+  | atom => simp [Terms.subst_comp]
   | false => rfl
-  | implies _ _ ih₁ ih₂ => simp [Formula.subst, ih₁, ih₂]
-  | all _ ih => simp [Formula.subst, Terms.subst, Subst.lift_comp, ih]
+  | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
+  | all _ ih => simp [Subst.lift_comp, ih]
 
 theorem Formula.shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
   rw [Formula.shift, Formula.subst_comp]
@@ -262,15 +251,12 @@ theorem Formula.subst_ext_free {p : Formula 𝓛} :
   induction p generalizing σ₁ σ₂ with
   | atom => simp at h; simp [Terms.subst_ext_vars h]
   | false => rfl
-  | implies _ _ ih₁ ih₂ =>
-    simp at h
-    simp; rw [ih₁, ih₂]
-    · trivial
+  | imp _ _ ih₁ ih₂ =>
+    simp at h; simp; rw [ih₁, ih₂]
     · intros; apply h; right; assumption
     · intros; apply h; left; assumption
   | all _ ih =>
-    simp at h
-    simp; rw [ih]
+    simp at h; simp; rw [ih]
     intros x h₁
     cases x
     · rfl
@@ -280,7 +266,7 @@ theorem Formula.free_of_subst : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars :=
   induction p generalizing σ with
   | atom => simp [Terms.vars_of_subst]
   | false => simp
-  | implies p q ih₁ ih₂ =>
+  | imp p q ih₁ ih₂ =>
     conv => lhs; simp
     conv => rhs; rw [Formula.free]
     rw [ih₁, ih₂, Set.biUnion_union]

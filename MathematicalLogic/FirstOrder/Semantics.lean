@@ -21,12 +21,9 @@ def Term.interp : Term 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → 𝓜
 | #x, _, ρ => ρ x
 | f ⬝ₜ ts, 𝓜, ρ => 𝓜.𝓕 f (ts.interp 𝓜 ρ)
 def Terms.interp : Terms 𝓛 n → (𝓜 : Model 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
-| []ₜ, _, _ => Vector.nil
-| t ∷ₜ ts, 𝓜, ρ => Vector.cons (t.interp 𝓜 ρ) (ts.interp 𝓜 ρ)
+| []ₜ, _, _ => []ᵥ
+| t ∷ₜ ts, 𝓜, ρ => t.interp 𝓜 ρ ∷ᵥ ts.interp 𝓜 ρ
 end
-termination_by
-  Term.interp t _ _ => t.size
-  Terms.interp ts _ _ => ts.size
 
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => Term.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => Terms.interp ts 𝓜 ρ
@@ -54,9 +51,6 @@ theorem Terms.interp_subst : ⟦ ts[σ]ₜₛ ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜ
 | []ₜ => by rfl
 | t ∷ₜ ts => by simp [Terms.interp]; rw [Term.interp_subst, Terms.interp_subst]
 end
-termination_by
-  Term.interp_subst _ t _ _ _ => t.size
-  Terms.interp_subst _ _ ts _ _ _ => ts.size
 
 
 
@@ -72,7 +66,7 @@ theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜,
   induction p generalizing ρ σ with
   | atom => simp [Formula.interp, Terms.interp_subst]
   | false => rfl
-  | implies _ _ ih₁ ih₂ => simp [Formula.interp, ih₁, ih₂]
+  | imp _ _ ih₁ ih₂ => simp [Formula.interp, ih₁, ih₂]
   | all _ ih =>
       rw [Formula.interp]
       apply forall_congr
@@ -196,9 +190,6 @@ lemma Terms.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
     simp [Terms.interp]
     rw [Term.interp_ulift, Terms.interp_ulift]
 end
-termination_by
-  Term.interp_ulift => t.size
-  Terms.interp_ulift => ts.size
 
 lemma Formula.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
   ⟦ p ⟧ₚ 𝓜.ulift, ρ.ulift ↔ ⟦ p ⟧ₚ 𝓜, ρ := by
@@ -207,7 +198,7 @@ lemma Formula.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
     simp [Terms.interp_ulift]
     unfold Model.ulift
     simp [Vector.map_comp, ULift.down_comp_up]
-  case implies p q ih₁ ih₂ =>
+  case imp p q ih₁ ih₂ =>
     simp [ih₁, ih₂]
   case all p ih =>
     constructor
