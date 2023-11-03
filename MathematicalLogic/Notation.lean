@@ -38,4 +38,4 @@ end FormulaSymbol
 @[notation_class] class EquivSymbol (α : Type u) (β : outParam (Type v)) where
   equiv : α → α → β
 
-infix:70 " ≈ " => EquivSymbol.equiv
+infix:60 " ≈ " => EquivSymbol.equiv
