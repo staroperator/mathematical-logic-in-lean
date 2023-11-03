@@ -83,13 +83,13 @@ theorem contraposition2 : Γ ⊢ (p ⟶ ~ q) ⟶ q ⟶ ~ p := by
   pintros
   apply mp2 <;> passumption
 
-theorem truth : Γ ⊢ ⊤ := identity
+theorem true_intro : Γ ⊢ ⊤ := identity
 
-theorem explode : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) truth)
+theorem false_elim : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) true_intro)
 
 theorem contradiction : Γ ⊢ ~ p ⟶ p ⟶ q := by
   pintros
-  apply mp explode
+  apply mp false_elim
   apply mp <;> passumption
 
 theorem double_neg1 : Γ ⊢ p ⟶ ~ ~ p := by
@@ -145,7 +145,7 @@ theorem and_right : Γ ⊢ p ⋀ q ⟶ q := by
 
 theorem or_inl : Γ ⊢ p ⟶ p ⋁ q := by
   pintros
-  apply mp explode
+  apply mp false_elim
   apply mp <;> passumption
 
 theorem or_inr : Γ ⊢ q ⟶ p ⋁ q := by
@@ -192,6 +192,8 @@ theorem not_forall : Γ ⊢ ~ ∀' p ⟶ ∃' (~ p) := by
   · apply double_neg2
 
 theorem not_exists : Γ ⊢ ~ ∃' p ⟶ ∀' (~ p) := double_neg2
+
+theorem forall_elim : Γ ⊢ ∀' p ⟶ p[↦ₛ t]ₚ := axioms Axioms.a4
 
 theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⟶ ∃' p := by
   pintros

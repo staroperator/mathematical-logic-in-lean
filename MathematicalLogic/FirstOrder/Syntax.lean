@@ -9,10 +9,10 @@ structure Language where
 @[reducible] def Const (𝓛 : Language) := 𝓛.𝓕 0
 
 mutual
-inductive Term : Language → Type where
+inductive Term (𝓛 : Language) : Type where
 | var : ℕ → Term 𝓛
 | func : 𝓛.𝓕 n → Terms 𝓛 n → Term 𝓛
-inductive Terms : Language → ℕ → Type where
+inductive Terms (𝓛 : Language) : ℕ → Type where
 | nil : Terms 𝓛 0
 | cons : Term 𝓛 → Terms 𝓛 n → Terms 𝓛 (n + 1)
 end
@@ -188,25 +188,19 @@ theorem Term.is_shift_iff : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
 
 
 
-inductive Formula : Language → Type where
+inductive Formula (𝓛 : Language) : Type where
 | atom : 𝓛.𝓟 n → Terms 𝓛 n → Formula 𝓛
 | false : Formula 𝓛
 | imp : Formula 𝓛 → Formula 𝓛 → Formula 𝓛
 | all : Formula 𝓛 → Formula 𝓛
 
 infix:70 " ⬝ₚ " => Formula.atom
-instance : Bot (Formula 𝓛) := ⟨Formula.false⟩
-instance : ImpSymbol (Formula 𝓛) := ⟨Formula.imp⟩
-instance : NotSymbol (Formula 𝓛) := ⟨λ p => p ⟶ ⊥⟩
-instance : Top (Formula 𝓛) := ⟨~ ⊥⟩
-instance : OrSymbol (Formula 𝓛) := ⟨λ p q => ~ p ⟶ q⟩
-instance : AndSymbol (Formula 𝓛) := ⟨λ p q => ~ (p ⟶ ~ q)⟩
-instance : IffSymbol (Formula 𝓛) := ⟨λ p q => (p ⟶ q) ⋀ (q ⟶ p)⟩
-instance : ForallSymbol (Formula 𝓛) := ⟨Formula.all⟩
-instance : ExistsSymbol (Formula 𝓛) := ⟨λ p => ~ ∀' (~ p)⟩
+instance : FormulaSymbol (Formula 𝓛) := ⟨Formula.false, Formula.imp⟩
+prefix:59 "∀' " => Formula.all
+@[reducible] def Formula.exists (p : Formula 𝓛) := ~ ∀' (~ p)
+prefix:59 "∃' " => Formula.exists
 
 @[simp] theorem Formula.imp_eq : Formula.imp p q = p ⟶ q := rfl
-@[simp] theorem Formula.all_eq : Formula.all p = ∀' p := rfl
 
 @[simp] def Formula.free : Formula 𝓛 → Set ℕ
 | _ ⬝ₚ ts => ts.vars

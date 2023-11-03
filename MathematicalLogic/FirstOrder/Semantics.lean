@@ -17,10 +17,10 @@ def Assignment.cons (u : 𝓜.𝓤) (ρ : Assignment 𝓜) : Assignment 𝓜
 infixr:80 " ∷ₐ " => Assignment.cons
 
 mutual
-def Term.interp : Term 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → 𝓜.𝓤
+@[simp] def Term.interp : Term 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → 𝓜.𝓤
 | #x, _, ρ => ρ x
 | f ⬝ₜ ts, 𝓜, ρ => 𝓜.𝓕 f (ts.interp 𝓜 ρ)
-def Terms.interp : Terms 𝓛 n → (𝓜 : Model 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
+@[simp] def Terms.interp : Terms 𝓛 n → (𝓜 : Model 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
 | []ₜ, _, _ => []ᵥ
 | t ∷ₜ ts, 𝓜, ρ => t.interp 𝓜 ρ ∷ᵥ ts.interp 𝓜 ρ
 end
@@ -35,26 +35,26 @@ notation:80 ρ "[" σ "]ₐ" => Assignment.subst ρ σ
 
 lemma Assignment.subst_shift {ρ : Assignment 𝓜} : (u ∷ₐ ρ)[Subst.shift]ₐ = ρ := by
   funext x
-  simp [Assignment.subst, Subst.shift, Term.interp, Assignment.cons]
+  simp [Assignment.subst, Subst.shift, Assignment.cons]
 
 lemma Assignment.subst_single {ρ : Assignment 𝓜} : ρ[↦ₛ t]ₐ = (⟦ t ⟧ₜ 𝓜, ρ) ∷ₐ ρ := by
   funext x
   cases x with
   | zero => rfl
-  | succ => simp [Assignment.subst, Subst.single, Term.interp, Assignment.cons]
+  | succ => simp [Assignment.subst, Subst.single, Assignment.cons]
 
 mutual
 theorem Term.interp_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ[σ]ₐ := match t with
-| #x => by simp [Term.interp, Assignment.subst]
-| f ⬝ₜ ts => by simp [Term.interp]; rw [Terms.interp_subst]
+| #x => by simp [Assignment.subst]
+| f ⬝ₜ ts => by simp; rw [Terms.interp_subst]
 theorem Terms.interp_subst : ⟦ ts[σ]ₜₛ ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ[σ]ₐ := match ts with
 | []ₜ => by rfl
-| t ∷ₜ ts => by simp [Terms.interp]; rw [Term.interp_subst, Terms.interp_subst]
+| t ∷ₜ ts => by simp; rw [Term.interp_subst, Terms.interp_subst]
 end
 
 
 
-def Formula.interp : Formula 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → Prop
+@[simp] def Formula.interp : Formula 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → Prop
 | p ⬝ₚ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛ 𝓜, ρ)
 | ⊥, _, _ => False
 | p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
@@ -64,9 +64,9 @@ notation:80 "⟦" p "⟧ₚ " 𝓜 ", " ρ:80 => Formula.interp p 𝓜 ρ
 
 theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ[σ]ₐ := by
   induction p generalizing ρ σ with
-  | atom => simp [Formula.interp, Terms.interp_subst]
+  | atom => simp [Terms.interp_subst]
   | false => rfl
-  | imp _ _ ih₁ ih₂ => simp [Formula.interp, ih₁, ih₂]
+  | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih =>
       rw [Formula.interp]
       apply forall_congr
@@ -81,23 +81,23 @@ theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜,
 
 theorem Formula.interp_neg :
   ⟦ ~ p ⟧ₚ 𝓜, ρ = ¬ ⟦ p ⟧ₚ 𝓜, ρ := by
-  simp [Formula.interp]
+  simp
 
 theorem Formula.interp_and :
   ⟦ p ⋀ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [Formula.interp, imp_false]
+  simp [imp_false]
 
 theorem Formula.interp_or :
   ⟦ p ⋁ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [Formula.interp, imp_iff_not_or]
+  simp [imp_iff_not_or]
 
 theorem Formula.interp_iff :
   ⟦ p ⟷ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [Formula.interp, imp_false, iff_iff_implies_and_implies]
+  simp [imp_false, iff_iff_implies_and_implies]
 
 theorem Formula.interp_exists :
   ⟦ ∃' p ⟧ₚ 𝓜, ρ = ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ := by
-  simp [Formula.interp, imp_false]
+  simp [imp_false]
 
 
 
@@ -113,7 +113,7 @@ macro_rules
 theorem Entails.axioms {p : Formula 𝓛} : p ∈ Axioms 𝓛 → Γ ⊨ p := by
   intros h 𝓜 ρ h₁
   clear h₁
-  induction h generalizing ρ <;> simp [Formula.interp] <;> tauto
+  induction h generalizing ρ <;> simp <;> tauto
   case a4 p t =>
     intro h
     rw [Formula.interp_subst, Assignment.subst_single]
@@ -176,9 +176,9 @@ mutual
 lemma Term.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
   ⟦ t ⟧ₜ 𝓜.ulift, ρ.ulift = ULift.up (⟦ t ⟧ₜ 𝓜, ρ) :=
   match t with
-  | #x => by simp [Term.interp, Assignment.ulift]
+  | #x => by simp [Assignment.ulift]
   | f ⬝ₜ ts => by
-    simp [Term.interp]
+    simp
     rw [Terms.interp_ulift]
     unfold Model.ulift
     simp [Vector.map_comp, ULift.down_comp_up]
@@ -187,7 +187,7 @@ lemma Terms.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
   match ts with
   | []ₜ => rfl
   | t ∷ₜ ts => by
-    simp [Terms.interp]
+    simp
     rw [Term.interp_ulift, Terms.interp_ulift]
 end
 

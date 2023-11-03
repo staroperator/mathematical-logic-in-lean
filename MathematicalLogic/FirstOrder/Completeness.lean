@@ -1,11 +1,11 @@
 import MathematicalLogic.FirstOrder.Completeness.Witness
-import MathematicalLogic.FirstOrder.Completeness.MaximalConsistent
+import MathematicalLogic.FirstOrder.Completeness.Lindenbaum
 import MathematicalLogic.FirstOrder.Completeness.TermModel
 
 theorem model_existence : Consistent Γ → Satisfiable Γ := by
   intro h
   apply consistency_of_W at h
-  apply exists_maximal_consistent at h
+  apply lindenbaum at h
   rcases h with ⟨Δ, h₁, h₂⟩
   simp at h₁
   rcases h₁ with ⟨h₁, h₃⟩

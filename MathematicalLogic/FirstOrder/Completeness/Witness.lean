@@ -182,26 +182,26 @@ mutual
 lemma Term.interp_erase : ⟦ t ⟧ₜ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈t⌉ₜ ⟧ₜ 𝓜, ρ :=
   match t with
   | #x => by
-    simp [Term.injConsts, Term.interp]
+    simp [Term.injConsts]
   | Term.func (n := 0) f ([]ₜ) => rfl
   | Term.func (n := n + 1) f ts => by
-    simp [Term.injConsts, Term.interp]
+    simp [Term.injConsts]
     rw [Terms.interp_erase]
     rfl
 lemma Terms.interp_erase : ⟦ ts ⟧ₜₛ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈ts⌉ₜₛ ⟧ₜₛ 𝓜, ρ :=
   match ts with
   | []ₜ => rfl
   | t ∷ₜ ts => by
-    simp [Terms.injConsts, Terms.interp]
+    simp [Terms.injConsts]
     rw [Term.interp_erase, Terms.interp_erase]
 end
 
 lemma Formula.interp_erase :
   ⟦ p ⟧ₚ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈p⌉ₚ ⟧ₚ 𝓜, ρ := by
   induction p generalizing ρ with
-  | atom => simp [Formula.injConsts, Formula.interp, Terms.interp_erase]; rfl
+  | atom => simp [Formula.injConsts, Terms.interp_erase]; rfl
   | false => rfl
-  | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.interp, ih₁, ih₂]
+  | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, ih₁, ih₂]
   | all _ ih =>
     rw [Formula.injConsts, Formula.interp]
     apply forall_congr

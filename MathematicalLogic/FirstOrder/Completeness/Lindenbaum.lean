@@ -45,7 +45,7 @@ lemma consistent_chain_upper_bound
     apply Set.subset_sUnion_of_mem
     exact h
 
-theorem exists_maximal_consistent :
+theorem lindenbaum :
   Consistent Γ → ∃ Δ, Γ ⊆ Δ ∧ MaximalConsistent Δ := by
   intro h
   apply zorn_subset_nonempty _ consistent_chain_upper_bound at h

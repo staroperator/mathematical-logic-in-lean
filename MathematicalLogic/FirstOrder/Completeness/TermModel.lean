@@ -24,14 +24,14 @@ mutual
 theorem Term.interp_term_model :
   ⟦ t ⟧ₜ 𝓜ᵀ Γ, ρ = t[ρ]ₜ :=
   match t with
-  | #x => by simp [Term.interp]
-  | f ⬝ₜ ts => by simp [Term.interp]; rw [Terms.interp_term_model]
+  | #x => by simp
+  | f ⬝ₜ ts => by simp; rw [Terms.interp_term_model]
 theorem Terms.interp_term_model :
   (⟦ ts ⟧ₜₛ 𝓜ᵀ Γ, ρ : Terms 𝓛 n) = ts[ρ]ₜₛ :=
   match ts with
-  | []ₜ => by simp [Terms.interp]
+  | []ₜ => by simp
   | t ∷ₜ ts => by
-    simp [Terms.interp]
+    simp
     rw [Term.interp_term_model, Terms.interp_term_model]
     trivial
 end
@@ -50,7 +50,7 @@ theorem Formula.interp_term_model :
   MaximalConsistent Γ → WitnessProperty Γ →
   (⟦ p ⟧ₚ 𝓜ᵀ Γ, ρ ↔ Γ ⊢ p[ρ]ₚ) := by
   rintro ⟨h₁, h₂⟩ h₃
-  induction p generalizing ρ <;> simp [Formula.interp]
+  induction p generalizing ρ <;> simp
   case atom p ts => simp [Terms.interp_term_model]
   case false => exact h₁
   case imp p q ih₁ ih₂ =>
