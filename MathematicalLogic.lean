@@ -4,3 +4,4 @@ import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Completeness
 import MathematicalLogic.FirstOrder.Bounded
 import MathematicalLogic.FirstOrder.Theory
+import MathematicalLogic.Equality.Theory
