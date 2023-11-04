@@ -175,6 +175,7 @@ prefix:59 "∀* " => BFormula.alls
 | ∀ᵇ p => ∀' p.unbounded
 
 instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
+instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
 
 @[simp] def Formula.bound : Formula 𝓛 → ℕ
 | _ ⬝ₚ ts => ts.bound
@@ -280,11 +281,9 @@ theorem Sentence.foralls_elim_self {p : BFormula 𝓛 m} :
 def BAssignment (𝓜 : Model 𝓛) (m) := Fin m → 𝓜.𝓤
 
 def BAssignment.nil : BAssignment 𝓜 0 := finZeroElim
-
 notation "[]ₐ" => BAssignment.nil
 
 def BAssignment.cons (u : 𝓜.𝓤) (ρ : BAssignment 𝓜 m) : BAssignment 𝓜 (m + 1) := Fin.cons u ρ
-
 infixr:80 " ∷ₐ " => BAssignment.cons
 
 mutual
