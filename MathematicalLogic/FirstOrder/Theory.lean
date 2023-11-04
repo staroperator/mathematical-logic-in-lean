@@ -28,24 +28,24 @@ theorem Theory.generalization {𝓣 : Theory 𝓛} :
   rw [Theory.shift_eq]
   exact h
 
-def Theory.Model (𝓣 : Theory 𝓛) : Type (u + 1) :=
-  { 𝓜 : _root_.Model 𝓛 | ∀ p ∈ 𝓣, ⟦ p ⟧ₛ 𝓜 }
+def Model (𝓣 : Theory 𝓛) : Type (u + 1) :=
+  { 𝓜 : Structure 𝓛 | ∀ p ∈ 𝓣, ⟦ p ⟧ₛ 𝓜 }
 
-namespace Theory.Model
+namespace Model
 
-variable {𝓣 : Theory 𝓛} (𝓜 : 𝓣.Model)
+variable {𝓣 : Theory 𝓛} (𝓜 : Model 𝓣)
 
 @[reducible] def 𝓤 := 𝓜.val.𝓤
 @[reducible] def 𝓕 {n} := 𝓜.val.𝓕 (n := n)
 @[reducible] def 𝓟 {n} := 𝓜.val.𝓟 (n := n)
 
-end Theory.Model
-
-instance {𝓣 : Theory 𝓛} : CoeOut (𝓣.Model) (Model 𝓛) where
+instance : CoeOut (Model 𝓣) (Structure 𝓛) where
   coe := Subtype.val
 
+end Model
+
 theorem Theory.soundness
-  {𝓣 : Theory 𝓛} {𝓜 : 𝓣.Model} {ρ : Assignment 𝓜} :
+  {𝓣 : Theory 𝓛} {𝓜 : Model 𝓣} {ρ : Assignment 𝓜} :
   𝓣 ⊢ p → ⟦ p ⟧ₚ 𝓜, ρ := by
   rintro h
   apply _root_.soundness

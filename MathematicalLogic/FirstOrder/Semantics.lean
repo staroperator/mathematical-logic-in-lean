@@ -3,15 +3,15 @@ import MathematicalLogic.FirstOrder.Proof
 
 universe u v
 
-structure Model (𝓛 : Language) where
+structure Structure (𝓛 : Language) where
   𝓤 : Type u
   inhabited : Inhabited 𝓤
   𝓕 : 𝓛.𝓕 n → Vector 𝓤 n → 𝓤
   𝓟 : 𝓛.𝓟 n → Vector 𝓤 n → Prop
 
-instance {𝓜 : Model 𝓛} : Inhabited 𝓜.𝓤 := 𝓜.inhabited
+instance {𝓜 : Structure 𝓛} : Inhabited 𝓜.𝓤 := 𝓜.inhabited
 
-def Assignment (𝓜: Model 𝓛) := ℕ → 𝓜.𝓤
+def Assignment (𝓜: Structure 𝓛) := ℕ → 𝓜.𝓤
 
 instance : Inhabited (Assignment 𝓜) := ⟨λ _ => default⟩
 
@@ -22,10 +22,10 @@ def Assignment.cons (u : 𝓜.𝓤) (ρ : Assignment 𝓜) : Assignment 𝓜
 infixr:80 " ∷ₐ " => Assignment.cons
 
 mutual
-@[simp] def Term.interp : Term 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → 𝓜.𝓤
+@[simp] def Term.interp : Term 𝓛 → (𝓜 : Structure 𝓛) → Assignment 𝓜 → 𝓜.𝓤
 | #x, _, ρ => ρ x
 | f ⬝ₜ ts, 𝓜, ρ => 𝓜.𝓕 f (ts.interp 𝓜 ρ)
-@[simp] def Terms.interp : Terms 𝓛 n → (𝓜 : Model 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
+@[simp] def Terms.interp : Terms 𝓛 n → (𝓜 : Structure 𝓛) → Assignment 𝓜 → Vector 𝓜.𝓤 n
 | []ₜ, _, _ => []ᵥ
 | t ∷ₜ ts, 𝓜, ρ => t.interp 𝓜 ρ ∷ᵥ ts.interp 𝓜 ρ
 end
@@ -39,7 +39,7 @@ theorem Terms.interp_of_vector {v : Vector (Term 𝓛) n} :
   · rfl
   · simp; congr
 
-def Assignment.subst {𝓜 : Model 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜 :=
+def Assignment.subst {𝓜 : Structure 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜 :=
   λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
 
 notation:80 ρ "[" σ "]ₐ" => Assignment.subst ρ σ
@@ -65,7 +65,7 @@ end
 
 
 
-@[simp] def Formula.interp : Formula 𝓛 → (𝓜 : Model 𝓛) → Assignment 𝓜 → Prop
+@[simp] def Formula.interp : Formula 𝓛 → (𝓜 : Structure 𝓛) → Assignment 𝓜 → Prop
 | p ⬝ₚ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛ 𝓜, ρ)
 | ⊥, _, _ => False
 | p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
@@ -111,7 +111,7 @@ theorem Formula.interp_exists :
 
 
 def Entails (Γ : Context 𝓛) (p) :=
-  ∀ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜),
+  ∀ (𝓜 : Structure.{u} 𝓛) (ρ : Assignment 𝓜),
     (∀ q ∈ Γ, ⟦ q ⟧ₚ 𝓜, ρ) → ⟦ p ⟧ₚ 𝓜, ρ
 
 infix:50 " ⊨ " => Entails
@@ -150,7 +150,7 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
 
 
 def Satisfiable (Γ : Context 𝓛) :=
-  ∃ (𝓜 : Model.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
+  ∃ (𝓜 : Structure.{u} 𝓛) (ρ : Assignment 𝓜), ∀ p ∈ Γ, ⟦ p ⟧ₚ 𝓜, ρ
 
 theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
   rintro h₁ ⟨𝓜, ⟨ρ, h₂⟩⟩
@@ -162,7 +162,7 @@ theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u
 
 
 
-def Model.ulift (𝓜 : Model.{u} 𝓛) : Model.{max u v} 𝓛 where
+def Structure.ulift (𝓜 : Structure.{u} 𝓛) : Structure.{max u v} 𝓛 where
   𝓤 := ULift.{v} 𝓜.𝓤
   inhabited := ⟨ULift.up default⟩
   𝓕 := λ f v => ULift.up (𝓜.𝓕 f (v.map ULift.down))
@@ -171,7 +171,7 @@ def Model.ulift (𝓜 : Model.{u} 𝓛) : Model.{max u v} 𝓛 where
 def Assignment.ulift (ρ : Assignment 𝓜) : Assignment (𝓜.ulift) :=
   λ x => ULift.up (ρ x)
 
-lemma Assignment.ulift_cons {𝓜 : Model.{u} 𝓛} {ρ : Assignment.{u} 𝓜} {u : 𝓜.𝓤} : (u ∷ₐ ρ).ulift = Assignment.cons (𝓜 := 𝓜.ulift) (ULift.up u) ρ.ulift := by
+lemma Assignment.ulift_cons {𝓜 : Structure.{u} 𝓛} {ρ : Assignment.{u} 𝓜} {u : 𝓜.𝓤} : (u ∷ₐ ρ).ulift = Assignment.cons (𝓜 := 𝓜.ulift) (ULift.up u) ρ.ulift := by
   funext x; cases x <;> rfl
 
 lemma Vector.map_comp {v : Vector α n} : (v.map f).map g = v.map (g ∘ f) := by
@@ -183,16 +183,16 @@ lemma ULift.down_comp_up : ULift.down ∘ ULift.up = id (α := α) := by
   funext x; simp
 
 mutual
-lemma Term.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+lemma Term.interp_ulift {𝓜 : Structure 𝓛} {ρ : Assignment 𝓜} :
   ⟦ t ⟧ₜ 𝓜.ulift, ρ.ulift = ULift.up (⟦ t ⟧ₜ 𝓜, ρ) :=
   match t with
   | #x => by simp [Assignment.ulift]
   | f ⬝ₜ ts => by
     simp
     rw [Terms.interp_ulift]
-    unfold Model.ulift
+    unfold Structure.ulift
     simp [Vector.map_comp, ULift.down_comp_up]
-lemma Terms.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+lemma Terms.interp_ulift {𝓜 : Structure 𝓛} {ρ : Assignment 𝓜} :
   ⟦ ts ⟧ₜₛ 𝓜.ulift, ρ.ulift = (⟦ ts ⟧ₜₛ 𝓜, ρ).map ULift.up :=
   match ts with
   | []ₜ => rfl
@@ -201,12 +201,12 @@ lemma Terms.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
     rw [Term.interp_ulift, Terms.interp_ulift]
 end
 
-lemma Formula.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
+lemma Formula.interp_ulift {𝓜 : Structure 𝓛} {ρ : Assignment 𝓜} :
   ⟦ p ⟧ₚ 𝓜.ulift, ρ.ulift ↔ ⟦ p ⟧ₚ 𝓜, ρ := by
   induction p generalizing ρ <;> simp [Formula.interp]
   case atom p ts =>
     simp [Terms.interp_ulift]
-    unfold Model.ulift
+    unfold Structure.ulift
     simp [Vector.map_comp, ULift.down_comp_up]
   case imp p q ih₁ ih₂ =>
     simp [ih₁, ih₂]
@@ -221,13 +221,13 @@ lemma Formula.interp_ulift {𝓜 : Model 𝓛} {ρ : Assignment 𝓜} :
 
 theorem Entails.down : Γ ⊨.{max u v} p → Γ ⊨.{u} p := by
   intros h 𝓜 ρ h₁
-  have h₂ := h (Model.ulift.{u, v} 𝓜) ρ.ulift
+  have h₂ := h (Structure.ulift.{u, v} 𝓜) ρ.ulift
   simp [Formula.interp_ulift] at h₂
   exact h₂ h₁
 
 theorem Satisfiable.up : Satisfiable.{u} Γ → Satisfiable.{max u v} Γ := by
   intro h
   rcases h with ⟨𝓜, ρ, h⟩
-  exists (Model.ulift.{u, v} 𝓜), ρ.ulift
+  exists (Structure.ulift.{u, v} 𝓜), ρ.ulift
   simp [Formula.interp_ulift]
   exact h

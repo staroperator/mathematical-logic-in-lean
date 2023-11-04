@@ -168,7 +168,7 @@ theorem consts_keeps_consistency :
   apply h
   exact h₁
 
-def Model.eraseConsts (𝓜 : Model (𝓛 ⊎ 𝓒)) : Model 𝓛 where
+def Structure.eraseConsts (𝓜 : Structure (𝓛 ⊎ 𝓒)) : Structure 𝓛 where
   𝓤 := 𝓜.𝓤
   inhabited := inferInstance
   𝓕 := @λ n f =>
@@ -177,7 +177,7 @@ def Model.eraseConsts (𝓜 : Model (𝓛 ⊎ 𝓒)) : Model 𝓛 where
     | _ + 1 => 𝓜.𝓕 f
   𝓟 := 𝓜.𝓟
 
-local notation "⌊" 𝓜 "⌋ₘ" => Model.eraseConsts 𝓜
+local notation "⌊" 𝓜 "⌋ₘ" => Structure.eraseConsts 𝓜
 
 mutual
 lemma Term.interp_erase : ⟦ t ⟧ₜ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈t⌉ₜ ⟧ₜ 𝓜, ρ :=

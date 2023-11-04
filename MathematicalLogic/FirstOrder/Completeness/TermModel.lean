@@ -1,7 +1,7 @@
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Completeness.Basic
 
-@[reducible] def TermModel (Γ : Context 𝓛) : Model 𝓛 where
+@[reducible] def TermModel (Γ : Context 𝓛) : Structure 𝓛 where
   𝓤 := Term 𝓛
   inhabited := ⟨#0⟩
   𝓕 := λ f ts => f ⬝ₜ ts

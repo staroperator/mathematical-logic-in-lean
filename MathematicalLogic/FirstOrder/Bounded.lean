@@ -278,7 +278,7 @@ theorem Sentence.foralls_elim_self {p : BFormula 𝓛 m} :
 
 
 
-def BAssignment (𝓜 : Model 𝓛) (m) := Fin m → 𝓜.𝓤
+def BAssignment (𝓜 : Structure 𝓛) (m) := Fin m → 𝓜.𝓤
 
 def BAssignment.nil : BAssignment 𝓜 0 := finZeroElim
 notation "[]ₐ" => BAssignment.nil
@@ -290,10 +290,10 @@ def BAssignment.unbounded (ρ : BAssignment 𝓜 m) : Assignment 𝓜 :=
   λ x => if h : x < m then ρ ⟨x, h⟩ else default
 
 mutual
-@[simp] def BTerm.interp : BTerm 𝓛 m → (𝓜 : Model 𝓛) → BAssignment 𝓜 m → 𝓜.𝓤
+@[simp] def BTerm.interp : BTerm 𝓛 m → (𝓜 : Structure 𝓛) → BAssignment 𝓜 m → 𝓜.𝓤
 | #'x, _, ρ => ρ x
 | f ⬝ₜ ts, 𝓜, ρ => 𝓜.𝓕 f (ts.interp 𝓜 ρ)
-@[simp] def BTerms.interp : BTerms 𝓛 m n → (𝓜 : Model 𝓛) → BAssignment 𝓜 m → Vector 𝓜.𝓤 n
+@[simp] def BTerms.interp : BTerms 𝓛 m n → (𝓜 : Structure 𝓛) → BAssignment 𝓜 m → Vector 𝓜.𝓤 n
 | []ₜ, _, _ => []ᵥ
 | t ∷ₜ ts, 𝓜, ρ => t.interp 𝓜 ρ ∷ᵥ ts.interp 𝓜 ρ
 end
@@ -301,7 +301,7 @@ end
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => BTerm.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => BTerms.interp ts 𝓜 ρ
 
-@[simp] def BFormula.interp : BFormula 𝓛 m → (𝓜 : Model 𝓛) → BAssignment 𝓜 m → Prop
+@[simp] def BFormula.interp : BFormula 𝓛 m → (𝓜 : Structure 𝓛) → BAssignment 𝓜 m → Prop
 | p ⬝ₚ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛ 𝓜, ρ)
 | ⊥, _, _ => False
 | p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
