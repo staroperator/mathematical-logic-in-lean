@@ -286,6 +286,9 @@ notation "[]ₐ" => BAssignment.nil
 def BAssignment.cons (u : 𝓜.𝓤) (ρ : BAssignment 𝓜 m) : BAssignment 𝓜 (m + 1) := Fin.cons u ρ
 infixr:80 " ∷ₐ " => BAssignment.cons
 
+def BAssignment.unbounded (ρ : BAssignment 𝓜 m) : Assignment 𝓜 :=
+  λ x => if h : x < m then ρ ⟨x, h⟩ else default
+
 mutual
 @[simp] def BTerm.interp : BTerm 𝓛 m → (𝓜 : Model 𝓛) → BAssignment 𝓜 m → 𝓜.𝓤
 | #'x, _, ρ => ρ x
@@ -308,14 +311,12 @@ notation:80 "⟦" p "⟧ₚ" 𝓜 ", " ρ:80 => BFormula.interp p 𝓜 ρ
 notation:80 "⟦" p "⟧ₛ" 𝓜:80 => BFormula.interp p 𝓜 []ₐ
 
 mutual
-theorem BTerm.unbounded_interp_eq
-  {t : BTerm 𝓛 m} {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+theorem BTerm.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
   (∀ x, ρ x = ρ' x) → ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ' :=
   match t with
   | #'x => by intro h; simp [h]
   | f ⬝ₜ ts => by intro h; simp; rw [BTerms.unbounded_interp_eq h]
-theorem BTerms.unbounded_interp_eq
-  {ts : BTerms 𝓛 m n} {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+theorem BTerms.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
   (∀ x, ρ x = ρ' x) → ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ' :=
   match ts with
   | []ₜ => by intro; rfl
@@ -325,8 +326,7 @@ theorem BTerms.unbounded_interp_eq
     rw [BTerm.unbounded_interp_eq h, BTerms.unbounded_interp_eq h]
 end
 
-theorem BFormula.unbounded_interp_eq
-  {p : BFormula 𝓛 m} {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+theorem BFormula.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
   (∀ x, ρ x = ρ' x) → ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ' := by
   intro h
   induction p generalizing ρ' <;> simp
@@ -345,3 +345,18 @@ theorem Sentence.unbounded_interp_eq
   {p : Sentence 𝓛} {ρ : Assignment 𝓜} : ⟦ p ⟧ₛ 𝓜 = ⟦ p ⟧ₚ 𝓜, ρ := by
   apply BFormula.unbounded_interp_eq
   apply finZeroElim
+
+theorem BTerm.unbounded_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ.unbounded := by
+  apply BTerm.unbounded_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
+
+theorem BTerms.unbounded_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ.unbounded := by
+  apply BTerms.unbounded_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
+
+theorem BFormula.unbounded_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ.unbounded := by
+  apply BFormula.unbounded_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]

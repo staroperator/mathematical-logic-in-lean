@@ -170,6 +170,7 @@ theorem consts_keeps_consistency :
 
 def Model.eraseConsts (𝓜 : Model (𝓛 ⊎ 𝓒)) : Model 𝓛 where
   𝓤 := 𝓜.𝓤
+  inhabited := inferInstance
   𝓕 := @λ n f =>
     match n with
     | 0 => 𝓜.𝓕 (Sum.inl f)

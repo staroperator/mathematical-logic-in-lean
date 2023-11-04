@@ -5,10 +5,15 @@ universe u v
 
 structure Model (𝓛 : Language) where
   𝓤 : Type u
+  inhabited : Inhabited 𝓤
   𝓕 : 𝓛.𝓕 n → Vector 𝓤 n → 𝓤
   𝓟 : 𝓛.𝓟 n → Vector 𝓤 n → Prop
 
+instance {𝓜 : Model 𝓛} : Inhabited 𝓜.𝓤 := 𝓜.inhabited
+
 def Assignment (𝓜: Model 𝓛) := ℕ → 𝓜.𝓤
+
+instance : Inhabited (Assignment 𝓜) := ⟨λ _ => default⟩
 
 def Assignment.cons (u : 𝓜.𝓤) (ρ : Assignment 𝓜) : Assignment 𝓜
 | 0 => u
@@ -155,6 +160,7 @@ theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u
 
 def Model.ulift (𝓜 : Model.{u} 𝓛) : Model.{max u v} 𝓛 where
   𝓤 := ULift.{v} 𝓜.𝓤
+  inhabited := ⟨ULift.up default⟩
   𝓕 := λ f v => ULift.up (𝓜.𝓕 f (v.map ULift.down))
   𝓟 := λ p v => 𝓜.𝓟 p (v.map ULift.down)
 

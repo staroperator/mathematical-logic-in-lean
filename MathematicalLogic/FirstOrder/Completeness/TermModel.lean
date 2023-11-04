@@ -15,6 +15,7 @@ instance : Coe (Vector (Term 𝓛) n) (Terms 𝓛 n) where
 
 @[reducible] def TermModel (Γ : Context 𝓛) : Model 𝓛 where
   𝓤 := Term 𝓛
+  inhabited := ⟨#0⟩
   𝓕 := λ f ts => f ⬝ₜ ts
   𝓟 := λ p ts => Γ ⊢ p ⬝ₚ ts
 
