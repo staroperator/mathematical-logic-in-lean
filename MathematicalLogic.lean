@@ -5,3 +5,4 @@ import MathematicalLogic.FirstOrder.Completeness
 import MathematicalLogic.FirstOrder.Bounded
 import MathematicalLogic.FirstOrder.Theory
 import MathematicalLogic.Equality.Theory
+import MathematicalLogic.Equality.Model
