@@ -1,18 +1,6 @@
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Completeness.Basic
 
-def Terms.ofVector : Vector (Term 𝓛) n → Terms 𝓛 n
-| ⟨l, h⟩ =>
-  match n, l with
-  | 0, [] => []ₜ
-  | n + 1, t :: l => t ∷ₜ Terms.ofVector ⟨l, by simp at h; exact h⟩
-
-@[simp] lemma Terms.of_vector_nil : Terms.ofVector []ᵥ = ([]ₜ : Terms 𝓛 0) := rfl
-@[simp] lemma Terms.of_vector_cons : Terms.ofVector (t ∷ᵥ v) = t ∷ₜ Terms.ofVector v := rfl
-
-instance : Coe (Vector (Term 𝓛) n) (Terms 𝓛 n) where
-  coe := Terms.ofVector
-
 @[reducible] def TermModel (Γ : Context 𝓛) : Model 𝓛 where
   𝓤 := Term 𝓛
   inhabited := ⟨#0⟩

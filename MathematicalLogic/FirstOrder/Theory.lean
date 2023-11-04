@@ -31,6 +31,16 @@ theorem Theory.generalization {𝓣 : Theory 𝓛} :
 def Theory.Model (𝓣 : Theory 𝓛) : Type (u + 1) :=
   { 𝓜 : _root_.Model 𝓛 | ∀ p ∈ 𝓣, ⟦ p ⟧ₛ 𝓜 }
 
+namespace Theory.Model
+
+variable {𝓣 : Theory 𝓛} (𝓜 : 𝓣.Model)
+
+@[reducible] def 𝓤 := 𝓜.val.𝓤
+@[reducible] def 𝓕 {n} := 𝓜.val.𝓕 (n := n)
+@[reducible] def 𝓟 {n} := 𝓜.val.𝓟 (n := n)
+
+end Theory.Model
+
 instance {𝓣 : Theory 𝓛} : CoeOut (𝓣.Model) (Model 𝓛) where
   coe := Subtype.val
 

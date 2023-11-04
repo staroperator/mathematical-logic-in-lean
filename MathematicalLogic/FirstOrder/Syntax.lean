@@ -20,10 +20,22 @@ end
 prefix:max "#" => Term.var
 infix:70 " ⬝ₜ " => Term.func
 notation "[]ₜ" => Terms.nil
-infixr:67 "∷ₜ" => Terms.cons
+infixr:75 " ∷ₜ " => Terms.cons
 
 instance : Coe (Const 𝓛) (Term 𝓛) where
   coe := λ c => c ⬝ₜ []ₜ
+
+def Terms.ofVector : Vector (Term 𝓛) n → Terms 𝓛 n
+| ⟨l, h⟩ =>
+  match n, l with
+  | 0, [] => []ₜ
+  | n + 1, t :: l => t ∷ₜ Terms.ofVector ⟨l, by simp at h; exact h⟩
+
+@[simp] lemma Terms.of_vector_nil : Terms.ofVector []ᵥ = ([]ₜ : Terms 𝓛 0) := rfl
+@[simp] lemma Terms.of_vector_cons : Terms.ofVector (t ∷ᵥ v) = t ∷ₜ Terms.ofVector v := rfl
+
+instance : Coe (Vector (Term 𝓛) n) (Terms 𝓛 n) where
+  coe := Terms.ofVector
 
 mutual
 @[simp] def Term.size : Term 𝓛 → ℕ
@@ -51,6 +63,39 @@ mutual
 | t ∷ₜ ts => t.vars ∪ ts.vars
 end
 
+def Terms.append : Terms 𝓛 n → Terms 𝓛 m → Terms 𝓛 (m + n)
+| []ₜ, ts => ts
+| t ∷ₜ ts, ts' => t ∷ₜ ts.append ts'
+
+instance : HAppend (Terms 𝓛 n) (Terms 𝓛 m) (Terms 𝓛 (m + n)) := ⟨Terms.append⟩
+
+@[simp] theorem Terms.nil_append {ts : Terms 𝓛 n} : ([]ₜ : Terms 𝓛 0) ++ ts = ts := rfl
+@[simp] theorem Terms.cons_append {ts : Terms 𝓛 n} {ts' : Terms 𝓛 m} : t ∷ₜ ts ++ ts' = t ∷ₜ (ts ++ ts') := rfl
+
+theorem Terms.append_nil {ts : Terms 𝓛 n} :
+  HEq (ts ++ ([]ₜ : Terms 𝓛 0)) ts :=
+  match ts with
+  | []ₜ => by simp
+  | t ∷ₜ ts => by
+    simp; congr
+    · simp
+    · apply Terms.append_nil
+
+theorem Terms.append_assoc {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} {ts₃ : Terms 𝓛 k} :
+  HEq (ts₁ ++ (ts₂ ++ ts₃)) (ts₁ ++ ts₂ ++ ts₃) :=
+  match ts₁ with
+  | []ₜ => by simp
+  | t ∷ₜ ts => by
+    simp; congr 1
+    · simp [Nat.add_assoc]
+    · apply Terms.append_assoc
+
+theorem Terms.append_cons {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} :
+  HEq (ts₁ ++ t₁ ∷ₜ ts₂) ((ts₁ ++ t₁ ∷ₜ []ₜ) ++ ts₂) := by
+  conv in t₁ ∷ₜ ts₂ =>
+    rw [←Terms.nil_append (ts := ts₂), ←Terms.cons_append]
+  apply Terms.append_assoc
+
 
 
 def Subst (𝓛) := ℕ → Term 𝓛
@@ -66,6 +111,11 @@ end
 
 notation:80 t "[" σ "]ₜ" => Term.subst t σ
 notation:80 ts "[" σ "]ₜₛ" => Terms.subst ts σ
+
+theorem Terms.subst_append : (ts₁ ++ ts₂)[σ]ₜₛ = ts₁[σ]ₜₛ ++ ts₂[σ]ₜₛ :=
+  match ts₁ with
+  | []ₜ => rfl
+  | t ∷ₜ ts => by simp; apply Terms.subst_append
 
 def Subst.id : Subst 𝓛 := λ x => #x
 
@@ -102,10 +152,16 @@ prefix:max "↦ₛ " => Subst.single
 def Subst.shift : Subst 𝓛 := λ x => #(x + 1)
 def Term.shift (t : Term 𝓛) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
+def Terms.shift (ts : Terms 𝓛 n) := ts[Subst.shift]ₜₛ
+prefix:max "↑ₜₛ" => Terms.shift
+
+lemma Subst.shift_comp_single : Subst.shift ∘ₛ ↦ₛ t = Subst.id := rfl
 
 theorem Term.shift_subst_single : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by
-  rw [Term.shift, Term.subst_comp]
-  conv => rhs; rw [←Term.subst_id (t := t₁)]
+  rw [Term.shift, Term.subst_comp, Subst.shift_comp_single, Term.subst_id]
+
+theorem Terms.shift_subst_single : (↑ₜₛts)[↦ₛ t]ₜₛ = ts := by
+  rw [Terms.shift, Terms.subst_comp, Subst.shift_comp_single, Terms.subst_id]
 
 def Subst.lift : Subst 𝓛 → Subst 𝓛
 | _, 0 => #0

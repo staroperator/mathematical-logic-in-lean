@@ -198,14 +198,14 @@ lemma Terms.interp_erase : ⟦ ts ⟧ₜₛ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈ts⌉ₜ�
 end
 
 lemma Formula.interp_erase :
-  ⟦ p ⟧ₚ ⌊𝓜⌋ₘ, ρ = ⟦ ⌈p⌉ₚ ⟧ₚ 𝓜, ρ := by
+  ⟦ p ⟧ₚ ⌊𝓜⌋ₘ, ρ ↔ ⟦ ⌈p⌉ₚ ⟧ₚ 𝓜, ρ := by
   induction p generalizing ρ with
   | atom => simp [Formula.injConsts, Terms.interp_erase]; rfl
   | false => rfl
   | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, ih₁, ih₂]
   | all _ ih =>
     rw [Formula.injConsts, Formula.interp]
-    apply forall_congr
+    apply forall_congr'
     intro
     rw [ih]
     rfl

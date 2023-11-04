@@ -27,16 +27,15 @@ infix:50 " ⊢ " => Proof
 
 namespace Proof
 
-elab "passumption_at " n:num : tactic => do
-  Lean.Elab.Tactic.evalTactic $ ← `(tactic| apply Proof.assumption)
-  for _ in [:n.getNat] do
-    Lean.Elab.Tactic.evalTactic $ ← `(tactic| apply Or.inr)
-  Lean.Elab.Tactic.evalTactic $ ← `(tactic| exact Or.inl rfl)
-
 syntax "passumption" ("at" num)? : tactic
 macro_rules
-| `(tactic| passumption) => `(tactic| apply Proof.assumption; repeat (first | exact Or.inl rfl | apply Or.inr))
-| `(tactic| passumption at $n) => `(tactic| passumption_at $n)
+| `(tactic| passumption) =>
+  `(tactic| apply assumption; repeat (first | exact Or.inl rfl | apply Or.inr))
+| `(tactic| passumption at $n) => do
+  let mut t ← `(tactic| exact Or.inl rfl)
+  for _ in [:n.getNat] do
+    t ← `(tactic| (apply Or.inr; $t))
+  `(tactic| (apply Proof.assumption; $t))
 
 theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
   λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
@@ -47,6 +46,12 @@ theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   | assumption h => exact assumption (h₁ h)
   | axioms h => exact axioms h
   | mp _ _ ih₁ ih₂ => exact mp ih₁ ih₂
+
+theorem weaken_add : Γ ⊢ p → Γ,' q ⊢ p := by
+  apply weaken
+  apply Set.subset_insert
+
+macro "pweaken" : tactic => `(tactic| repeat apply weaken_add)
 
 theorem identity : Γ ⊢ p ⟶ p :=
   mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
@@ -124,6 +129,8 @@ theorem not_imp_right : Γ ⊢ ~ (p ⟶ q) ⟶ ~ q := by
 theorem and_intro : Γ ⊢ p ⟶ q ⟶ p ⋀ q := by
   pintros
   apply mp2 <;> passumption
+
+macro "psplit" : tactic => `(tactic| repeat any_goals (first | apply mp2 and_intro | apply true_intro))
 
 theorem and_left : Γ ⊢ p ⋀ q ⟶ p := by
   pintro

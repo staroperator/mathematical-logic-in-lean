@@ -33,6 +33,12 @@ end
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => Term.interp t 𝓜 ρ
 notation:80 "⟦" ts "⟧ₜₛ " 𝓜 ", " ρ:80 => Terms.interp ts 𝓜 ρ
 
+theorem Terms.interp_of_vector {v : Vector (Term 𝓛) n} :
+  ⟦ v ⟧ₜₛ 𝓜, ρ = Vector.ofFn (λ x => ⟦ v.get x ⟧ₜ 𝓜, ρ) := by
+  induction v using Vector.inductionOn
+  · rfl
+  · simp; congr
+
 def Assignment.subst {𝓜 : Model 𝓛} (ρ : Assignment 𝓜) (σ : Subst 𝓛) : Assignment 𝓜 :=
   λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
 
@@ -67,42 +73,40 @@ end
 
 notation:80 "⟦" p "⟧ₚ " 𝓜 ", " ρ:80 => Formula.interp p 𝓜 ρ
 
-theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ[σ]ₐ := by
+theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ 𝓜, ρ[σ]ₐ := by
   induction p generalizing ρ σ with
   | atom => simp [Terms.interp_subst]
   | false => rfl
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih =>
       rw [Formula.interp]
-      apply forall_congr
+      apply forall_congr'
       intro u
       rw [ih]
-      congr
+      congr!
       funext x
       cases x
       · rfl
       · simp [Assignment.subst, Subst.lift, Term.shift]
         conv => lhs; simp [Term.interp_subst, Assignment.subst_shift]
 
+theorem Formula.interp_imp :
+  ⟦ p ⟶ q ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ 𝓜, ρ → ⟦ q ⟧ₚ 𝓜, ρ := by simp
+
 theorem Formula.interp_neg :
-  ⟦ ~ p ⟧ₚ 𝓜, ρ = ¬ ⟦ p ⟧ₚ 𝓜, ρ := by
-  simp
+  ⟦ ~ p ⟧ₚ 𝓜, ρ ↔ ¬ ⟦ p ⟧ₚ 𝓜, ρ := by simp
 
 theorem Formula.interp_and :
-  ⟦ p ⋀ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [imp_false]
+  ⟦ p ⋀ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
 
 theorem Formula.interp_or :
-  ⟦ p ⋁ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [imp_iff_not_or]
+  ⟦ p ⋁ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
 
 theorem Formula.interp_iff :
-  ⟦ p ⟷ q ⟧ₚ 𝓜, ρ = (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by
-  simp [imp_false, iff_iff_implies_and_implies]
+  ⟦ p ⟷ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
 
 theorem Formula.interp_exists :
-  ⟦ ∃' p ⟧ₚ 𝓜, ρ = ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ := by
-  simp [imp_false]
+  ⟦ ∃' p ⟧ₚ 𝓜, ρ ↔ ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ := by simp [imp_false]
 
 
 
