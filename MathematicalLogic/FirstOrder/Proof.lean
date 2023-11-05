@@ -75,7 +75,15 @@ theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
     | mp _ _ ih₁ ih₂ => exact mp2 (axioms Axioms.a2) ih₁ ih₂
 
 macro "pintro" : tactic => `(tactic| apply deduction.mpr)
-macro "pintros" : tactic => `(tactic| repeat pintro)
+
+syntax "pintros" (num)? : tactic
+macro_rules
+| `(tactic| pintros) => `(tactic| repeat pintro)
+| `(tactic| pintros $n) => do
+  let mut t ← `(tactic| skip)
+  for _ in [:n.getNat] do
+    t ← `(tactic| (pintro; $t))
+  pure t
 
 theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by
   pintros
@@ -175,10 +183,39 @@ theorem or_elim : Γ ⊢ p ⋁ q ⟶ (p ⟶ r) ⟶ (q ⟶ r) ⟶ r := by
 theorem excluded_middle : Γ ⊢ ~ p ⋁ p := double_neg2
 
 theorem iff_intro : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ p) ⟶ (p ⟷ q) := and_intro
-
 theorem iff_left : Γ ⊢ (p ⟷ q) ⟶ (p ⟶ q) := and_left
-
 theorem iff_right : Γ ⊢ (p ⟷ q) ⟶ (q ⟶ p) := and_right
+
+theorem iff_refl : Γ ⊢ p ⟷ p := mp2 iff_intro identity identity
+theorem iff_symm : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ p) := by
+  pintro
+  psplit
+  · apply mp iff_right; passumption
+  · apply mp iff_left; passumption
+theorem iff_trans : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ r) ⟶ (p ⟷ r) := by
+  pintros 2
+  psplit <;> apply mp2 composition
+  · apply mp iff_left; passumption
+  · apply mp iff_left; passumption
+  · apply mp iff_right; passumption
+  · apply mp iff_right; passumption
+theorem iff_congr_imp : Γ ⊢ (p₁ ⟷ p₂) ⟶ (q₁ ⟷ q₂) ⟶ ((p₁ ⟶ q₁) ⟷ (p₂ ⟶ q₂)) := by
+  pintros 2
+  psplit <;> pintros
+  · apply mp
+    · apply mp iff_left; passumption
+    apply mp
+    · passumption
+    apply mp
+    · apply mp iff_right; passumption
+    · passumption
+  · apply mp
+    · apply mp iff_right; passumption
+    apply mp
+    · passumption
+    apply mp
+    · apply mp iff_left; passumption
+    · passumption
 
 theorem generalization : ↑ₚₛΓ ⊢ p → Γ ⊢ ∀' p := by
   intro h
