@@ -34,8 +34,3 @@ def iff := (p ⟶ q) ⋀ (q ⟶ p)
 infix:55 " ⟷ " => iff
 
 end FormulaSymbol
-
-@[notation_class] class EquivSymbol (α : Type u) (β : outParam (Type v)) where
-  equiv : α → α → β
-
-infix:60 " ≈ " => EquivSymbol.equiv

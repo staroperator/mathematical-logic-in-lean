@@ -52,7 +52,7 @@ theorem Term.Rewritable.soundness {Γ : Context 𝓛} {t₁' : Term 𝓛} :
   | Term.Rewritable.func h => Proof.mp (Proof.weaken h₂ Proof.congr_func) (Terms.Rewritable.soundness h₁ h₂ h)
 theorem Terms.Rewritable.soundness {Γ : Context 𝓛} {ts₁ : Terms 𝓛 n} :
   Γ ⊢ t₁ ≈ t₂ → 𝓣.toContext ⊆ Γ → Terms.Rewritable t₁ t₂ ts₁ ts₂ →
-  Γ ⊢ ts₁ ≈ ts₂ := λ h₁ h₂ h =>
+  Γ ⊢ ts₁ ≋ ts₂ := λ h₁ h₂ h =>
   match h with
   | Terms.Rewritable.nil => Proof.true_intro
   | Terms.Rewritable.cons h h' => Proof.mp2 Proof.and_intro (Term.Rewritable.soundness h₁ h₂ h) (Terms.Rewritable.soundness h₁ h₂ h')
@@ -89,8 +89,7 @@ macro "prw" "by" t:tactic : tactic => `(tactic| (
       | apply Terms.Rewritable.cons
       | apply Term.Rewritable.matched
       | apply Term.Rewritable.func
-      | apply Term.Rewritable.refl
-      | skip))
+      | apply Term.Rewritable.refl))
 
 macro "prw" t:term : tactic => `(tactic| prw by exact $t)
 macro "prw" n:num : tactic => `(tactic| prw by passumption at $n)

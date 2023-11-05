@@ -42,8 +42,8 @@ mutual
 | t ∷ₜ ts => t.unbounded ∷ₜ ts.unbounded
 end
 
-instance : CoeOut (BTerm 𝓛 m) (Term 𝓛) := ⟨BTerm.unbounded⟩
-instance : CoeOut (BTerms 𝓛 m n) (Terms 𝓛 n) := ⟨BTerms.unbounded⟩
+-- instance : CoeOut (BTerm 𝓛 m) (Term 𝓛) := ⟨BTerm.unbounded⟩
+-- instance : CoeOut (BTerms 𝓛 m n) (Terms 𝓛 n) := ⟨BTerms.unbounded⟩
 
 mutual
 @[simp] def Term.bound : Term 𝓛 → ℕ
@@ -96,13 +96,14 @@ notation:80 t "[" σ "]ₜ" => BTerm.subst t σ
 notation:80 ts "[" σ "]ₜₛ" => BTerms.subst ts σ
 
 def BSubst.id : BSubst 𝓛 m m := λ x => #'x
+notation "idₛ" => BSubst.id
 
 mutual
-theorem BTerm.subst_id : t[BSubst.id]ₜ = t :=
+theorem BTerm.subst_id {t : BTerm 𝓛 m} : t[idₛ]ₜ = t :=
   match t with
   | #'x => by simp [BSubst.id]
   | f ⬝ₜ ts => by simp; apply BTerms.subst_id
-theorem BTerms.subst_id : ts[BSubst.id]ₜₛ = ts :=
+theorem BTerms.subst_id {ts : BTerms 𝓛 m n} : ts[idₛ]ₜₛ = ts :=
   match ts with
   | []ₜ => rfl
   | t ∷ₜ ts => by simp; rw [BTerm.subst_id, BTerms.subst_id]; trivial
@@ -121,13 +122,13 @@ prefix:max "⇑ₛ" => BSubst.lift
 mutual
 theorem BTerm.unbounded_subst_eq
   {t : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → t[σ]ₜ = t[σ']ₜ :=
+  (∀ x, (σ x).unbounded = σ' x) → t[σ]ₜ.unbounded = t.unbounded[σ']ₜ :=
   match t with
   | #'x => by intro h; simp [h]
   | f ⬝ₜ ts => by intro h; simp; exact BTerms.unbounded_subst_eq h
 theorem BTerms.unbounded_subst_eq
   {ts : BTerms 𝓛 m n} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → ts[σ]ₜₛ = (ts : Terms 𝓛 n)[σ']ₜₛ :=
+  (∀ x, (σ x).unbounded = σ' x) → ts[σ]ₜₛ.unbounded = ts.unbounded[σ']ₜₛ :=
   match ts with
   | []ₜ => by intro; rfl
   | t ∷ₜ ts => by
@@ -174,8 +175,8 @@ prefix:59 "∀* " => BFormula.alls
 | p ⟶ q => p.unbounded ⟶ q.unbounded
 | ∀ᵇ p => ∀' p.unbounded
 
-instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
-instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
+-- instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
+instance : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
 
 @[simp] def Formula.bound : Formula 𝓛 → ℕ
 | _ ⬝ₚ ts => ts.bound
@@ -205,7 +206,11 @@ theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
 
 notation:80 p "[" σ "]ₚ" => BFormula.subst p σ
 
-theorem BFormula.subst_id : p[BSubst.id]ₚ = p := by
+def BFormula.shift (p : BFormula 𝓛 m) := p[BSubst.shift]ₚ
+prefix:max "↑ₚ" => BFormula.shift
+
+theorem BFormula.subst_id {p : BFormula 𝓛 m} :
+  p[(idₛ : BSubst 𝓛 m m)]ₚ = p := by
   induction p <;> simp
   case atom => simp [BTerms.subst_id]
   case false => rfl
@@ -220,7 +225,7 @@ theorem BFormula.subst_id : p[BSubst.id]ₚ = p := by
 
 theorem BFormula.unbounded_subst_eq
   {p : BFormula 𝓛 m} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → p[σ]ₚ = p[σ']ₚ := by
+  (∀ x, (σ x).unbounded = σ' x) → p[σ]ₚ.unbounded = p.unbounded[σ']ₚ := by
   intro h
   induction p generalizing k σ' <;> simp
   case atom p ts => simp [BTerms.unbounded_subst_eq h]
@@ -235,7 +240,7 @@ theorem BFormula.unbounded_subst_eq
 theorem Formula.bounded_subst_single_unbounded
   {p : Formula 𝓛} {h₁ : m + 1 ≥ p.bound}
   {t : Term 𝓛} {h₂ : m ≥ t.bound} :
-  (p.bounded h₁)[BSubst.single (t.bounded h₂)]ₚ = p[↦ₛ t]ₚ := by
+  (p.bounded h₁)[BSubst.single (t.bounded h₂)]ₚ.unbounded = p[↦ₛ t]ₚ := by
   conv => rhs; rw [←Formula.bounded_unbounded (h := h₁)]
   apply BFormula.unbounded_subst_eq
   intro x
@@ -255,7 +260,7 @@ theorem Sentence.shift_eq {p : Sentence 𝓛} : ↑ₚ(p : Formula 𝓛) = p :=
 
 theorem Sentence.foralls_elim
   {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
-  Γ ⊢ ∀* p ⟶ p[σ]ₚ := by
+  Γ ⊢ ∀* p ⟶ p.unbounded[σ]ₚ := by
   induction' m with m ih generalizing σ
   · rw [Sentence.unbounded_subst_eq]
     exact Proof.identity
@@ -271,7 +276,7 @@ theorem Sentence.foralls_elim
     apply Proof.forall_elim
 
 theorem Sentence.foralls_elim_self {p : BFormula 𝓛 m} :
-  Γ ⊢ ∀* p ⟶ (p : Formula 𝓛) := by
+  Γ ⊢ ∀* p ⟶ p.unbounded := by
   have h := Sentence.foralls_elim (Γ := Γ) (p := p) (σ := Subst.id)
   simp [Formula.subst_id] at h
   exact h
@@ -312,12 +317,12 @@ notation:80 "⟦" p "⟧ₛ" 𝓜:80 => BFormula.interp p 𝓜 []ₐ
 
 mutual
 theorem BTerm.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ' :=
+  (∀ x, ρ x = ρ' x) → ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t.unbounded ⟧ₜ 𝓜, ρ' :=
   match t with
   | #'x => by intro h; simp [h]
   | f ⬝ₜ ts => by intro h; simp; rw [BTerms.unbounded_interp_eq h]
 theorem BTerms.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ' :=
+  (∀ x, ρ x = ρ' x) → ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts.unbounded ⟧ₜₛ 𝓜, ρ' :=
   match ts with
   | []ₜ => by intro; rfl
   | t ∷ₜ ts => by
@@ -327,7 +332,7 @@ theorem BTerms.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment �
 end
 
 theorem BFormula.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ' := by
+  (∀ x, ρ x = ρ' x) → ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p.unbounded ⟧ₚ 𝓜, ρ' := by
   intro h
   induction p generalizing ρ' <;> simp
   case atom => simp [BTerms.unbounded_interp_eq h]
@@ -347,16 +352,16 @@ theorem Sentence.unbounded_interp_eq
   apply finZeroElim
 
 theorem BTerm.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ.unbounded := by
+  ⟦ t ⟧ₜ 𝓜, ρ = ⟦ t.unbounded ⟧ₜ 𝓜, ρ.unbounded := by
   apply BTerm.unbounded_interp_eq
   intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
 
 theorem BTerms.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ.unbounded := by
+  ⟦ ts ⟧ₜₛ 𝓜, ρ = ⟦ ts.unbounded ⟧ₜₛ 𝓜, ρ.unbounded := by
   apply BTerms.unbounded_interp_eq
   intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
 
 theorem BFormula.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ.unbounded := by
+  ⟦ p ⟧ₚ 𝓜, ρ = ⟦ p.unbounded ⟧ₚ 𝓜, ρ.unbounded := by
   apply BFormula.unbounded_interp_eq
   intro ⟨x, h⟩; simp [BAssignment.unbounded, h]

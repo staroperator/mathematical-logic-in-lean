@@ -57,11 +57,11 @@ instance setoidVec (n) : Setoid (Vector 𝓜.𝓤 n) :=
   ⟨𝓜.eqv, ⟨λ _ => eqv_refl, eqv_symm, eqv_trans⟩⟩
 
 lemma eqv_interp {n} {ts₁ ts₂ : Terms 𝓛 n} :
-  ⟦ ts₁ ≈ ts₂ ⟧ₚ 𝓜, ρ = 𝓜.eqv (⟦ ts₁ ⟧ₜₛ 𝓜, ρ) (⟦ ts₂ ⟧ₜₛ 𝓜, ρ) :=
+  ⟦ ts₁ ≋ ts₂ ⟧ₚ 𝓜, ρ = 𝓜.eqv (⟦ ts₁ ⟧ₜₛ 𝓜, ρ) (⟦ ts₂ ⟧ₜₛ 𝓜, ρ) :=
   match ts₁, ts₂ with
   | []ₜ, []ₜ => by simp; exact True.intro
   | t₁ ∷ₜ ts₁, t₂ ∷ₜ ts₂ => by
-    simp only [EquivSymbol.equiv, Terms.eq, Formula.interp_and, Terms.interp, eqv_cons]
+    simp only [Terms.eq, Formula.interp_and, Terms.interp, eqv_cons]
     congr
     · simp; rfl
     · exact eqv_interp

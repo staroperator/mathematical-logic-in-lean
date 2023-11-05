@@ -74,7 +74,7 @@ theorem satisfiable_by_term_model :
   MaximalConsistent Γ → WitnessProperty Γ → Satisfiable Γ := by
   intros h₁ h₂
   apply Satisfiable.up.{0}
-  exists 𝓜ᵀ Γ, Subst.id
+  exists 𝓜ᵀ Γ, idₛ
   intros p h
   rw [Formula.interp_term_model h₁ h₂, Formula.subst_id]
   apply Proof.assumption

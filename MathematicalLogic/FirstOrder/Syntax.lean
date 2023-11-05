@@ -118,13 +118,14 @@ theorem Terms.subst_append : (ts₁ ++ ts₂)[σ]ₜₛ = ts₁[σ]ₜₛ ++ ts�
   | t ∷ₜ ts => by simp; apply Terms.subst_append
 
 def Subst.id : Subst 𝓛 := λ x => #x
+notation "idₛ" => Subst.id
 
 mutual
-theorem Term.subst_id : t[Subst.id]ₜ = t :=
+theorem Term.subst_id : t[idₛ]ₜ = t :=
   match t with
   | #x => by simp; rfl
   | f ⬝ₜ ts => by simp; rw [Terms.subst_id]
-theorem Terms.subst_id : ts[Subst.id]ₜₛ = ts :=
+theorem Terms.subst_id : ts[idₛ]ₜₛ = ts :=
   match ts with
   | []ₜ => by rfl
   | t ∷ₜ ts => by simp; rw [Term.subst_id, Terms.subst_id]; trivial
@@ -155,7 +156,7 @@ prefix:max "↑ₜ" => Term.shift
 def Terms.shift (ts : Terms 𝓛 n) := ts[Subst.shift]ₜₛ
 prefix:max "↑ₜₛ" => Terms.shift
 
-lemma Subst.shift_comp_single : Subst.shift ∘ₛ ↦ₛ t = Subst.id := rfl
+lemma Subst.shift_comp_single : Subst.shift ∘ₛ ↦ₛ t = idₛ := rfl
 
 theorem Term.shift_subst_single : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by
   rw [Term.shift, Term.subst_comp, Subst.shift_comp_single, Term.subst_id]
@@ -172,7 +173,7 @@ theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   rw [Term.shift, Term.shift, Term.subst_comp, Term.subst_comp]
   congr
 
-theorem Subst.lift_id : ⇑ₛ(Subst.id : Subst 𝓛) = Subst.id := by
+theorem Subst.lift_id : ⇑ₛ(idₛ : Subst 𝓛) = idₛ := by
   funext x
   cases x <;> simp [Subst.lift, Subst.id, Term.shift, Subst.shift, Term.subst]
 
@@ -277,7 +278,7 @@ prefix:max "↑ₚ" => Formula.shift
 
 theorem Formula.subst_ext : σ₁ = σ₂ → p[σ₁]ₚ = p[σ₂]ₚ := by intro h; rw [h]
 
-theorem Formula.subst_id : p[Subst.id]ₚ = p := by
+theorem Formula.subst_id : p[idₛ]ₚ = p := by
   induction p with
   | atom => simp [Terms.subst_id]
   | false => rfl

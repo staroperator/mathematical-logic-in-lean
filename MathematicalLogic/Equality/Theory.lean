@@ -5,30 +5,44 @@ class EqLanguage (𝓛 : Language) where
 
 variable [EqLanguage 𝓛]
 
-instance : EquivSymbol (Term 𝓛) (Formula 𝓛) where
-  equiv := λ t₁ t₂ => EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
+
+def Term.eq (t₁ t₂ : Term 𝓛) := EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
+infix:60 " ≈ " => Term.eq
+
+def Term.neq (t₁ t₂ : Term 𝓛) := ~ t₁ ≈ t₂
+infix:60 " ≉ " => Term.neq
 
 def Terms.eq : Terms 𝓛 n → Terms 𝓛 n → Formula 𝓛
 | []ₜ, []ₜ => ⊤
 | t ∷ₜ ts, t' ∷ₜ ts' => (t ≈ t') ⋀ ts.eq ts'
+infix:60 " ≋ " => Terms.eq
 
-instance : EquivSymbol (Terms 𝓛 n) (Formula 𝓛) where
-  equiv := Terms.eq
+def Formula.exists_unique (p : Formula 𝓛) :=
+  ∃' (p ⋀ ∀' (↑ₚp ⟶ #1 ≈ (#0 : Term 𝓛)))
 
-instance : EquivSymbol (BTerm 𝓛 m) (BFormula 𝓛 m) where
-  equiv := λ t₁ t₂ => EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
+prefix:max "∃'! " => Formula.exists_unique
+
+def BTerm.eq (t₁ t₂ : BTerm 𝓛 m) : BFormula 𝓛 m :=
+  EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
+infix:60 " ≈ " => BTerm.eq
+
+def BTerm.neq (t₁ t₂ : BTerm 𝓛 m) : BFormula 𝓛 m := ~ t₁ ≈ t₂
+infix:60 " ≉ " => BTerm.neq
 
 def BTerms.eq : BTerms 𝓛 m n → BTerms 𝓛 m n → BFormula 𝓛 m
 | []ₜ, []ₜ => ⊤
 | t ∷ₜ ts, t' ∷ₜ ts' => (t ≈ t') ⋀ ts.eq ts'
+infix:60 " ≋ " => BTerms.eq
 
-instance : EquivSymbol (BTerms 𝓛 m n) (BFormula 𝓛 m) where
-  equiv := BTerms.eq
+def BFormula.exists_unique (p : BFormula 𝓛 (m + 1)) :=
+  ∃ᵇ (p ⋀ ∀ᵇ (↑ₚp ⟶ #'1 ≈ (#'0 : BTerm 𝓛 (m + 2))))
+prefix:max "∃ᵇ! " => BFormula.exists_unique
+
+-- infix:60 " ≉ " => λ t₁ t₂ => ~ (t₁ ≈ t₂)
 
 inductive EQ : Theory 𝓛 where
-| e1 : EQ (∀ᵇ (#'0 ≈ (#'0 : BTerm 𝓛 1)))
-| e2 {t₁ t₂ : BTerm 𝓛 m} {p : BFormula 𝓛 (m + 1)} :
-  EQ (∀* ((t₁ ≈ t₂) ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ))
+| e1 : EQ (∀ᵇ (#'0 ≈ #'0))
+| e2 : EQ (∀* ((t₁ ≈ t₂) ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ))
 
 class EqTheory (𝓣 : Theory 𝓛) where
   eqAxioms : EQ ⊆ 𝓣
@@ -40,7 +54,7 @@ namespace Proof
 variable {𝓣 : Theory 𝓛} [EqTheory 𝓣]
 
 theorem refl {t : Term 𝓛} : 𝓣 ⊢ t ≈ t := by
-  have h : 𝓣 ⊢ ∀ᵇ (#'0 ≈ (#'0 : BTerm 𝓛 1))
+  have h : 𝓣 ⊢ (∀ᵇ (#'0 ≈ #'0) : BFormula 𝓛 0)
   · apply Theory.axioms
     apply EqTheory.eqAxioms
     apply EQ.e1
@@ -51,7 +65,7 @@ theorem refl {t : Term 𝓛} : 𝓣 ⊢ t ≈ t := by
 
 macro "prefl" : tactic => `(tactic| (pweaken; exact refl))
 
-theorem refl_terms {ts : Terms 𝓛 n} : 𝓣 ⊢ ts ≈ ts :=
+theorem refl_terms {ts : Terms 𝓛 n} : 𝓣 ⊢ ts ≋ ts :=
   match ts with
   | []ₜ => Proof.true_intro
   | t ∷ₜ ts => by
@@ -60,7 +74,7 @@ theorem refl_terms {ts : Terms 𝓛 n} : 𝓣 ⊢ ts ≈ ts :=
     · apply refl_terms
 
 theorem subst {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
-  𝓣 ⊢ (t₁ ≈ t₂) ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ := by
+  𝓣 ⊢ t₁ ≈ t₂ ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ := by
   let m := max p.bound (max t₁.bound t₂.bound)
   let t₁' := t₁.bounded (m := m) (by simp)
   let t₂' := t₂.bounded (m := m) (by simp)
@@ -74,7 +88,7 @@ theorem subst {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
   exact h
 
 theorem symm {t₁ t₂ : Term 𝓛} :
-  𝓣 ⊢ (t₁ ≈ t₂) ⟶ t₂ ≈ t₁ := by
+  𝓣 ⊢ t₁ ≈ t₂ ⟶ t₂ ≈ t₁ := by
   pintro
   have h := subst (𝓣 := 𝓣) (t₁ := t₁) (t₂ := t₂) (p := #0 ≈ ↑ₜt₁)
   simp [Term.shift_subst_single] at h
@@ -86,7 +100,7 @@ theorem symm {t₁ t₂ : Term 𝓛} :
 macro "psymm" : tactic => `(tactic| (apply Proof.mp; pweaken; exact symm))
 
 theorem symm_terms {ts₁ ts₂ : Terms 𝓛 n} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ ts₂ ≈ ts₁ :=
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ ts₂ ≋ ts₁ :=
   match ts₁, ts₂ with
   | []ₜ, []ₜ => Proof.identity
   | t₁ ∷ₜ ts₁, t₂ ∷ₜ ts₂ => by
@@ -100,7 +114,7 @@ theorem symm_terms {ts₁ ts₂ : Terms 𝓛 n} :
       passumption
 
 theorem trans {t₁ t₂ t₃ : Term 𝓛} :
-  𝓣 ⊢ (t₁ ≈ t₂) ⟶ t₂ ≈ t₃ ⟶ t₁ ≈ t₃ := by
+  𝓣 ⊢ t₁ ≈ t₂ ⟶ t₂ ≈ t₃ ⟶ t₁ ≈ t₃ := by
   pintro
   have h := subst (𝓣 := 𝓣) (t₁ := t₂) (t₂ := t₁) (p := #0 ≈ ↑ₜt₃)
   simp [Term.shift_subst_single] at h
@@ -112,14 +126,14 @@ theorem trans {t₁ t₂ t₃ : Term 𝓛} :
 macro "ptrans" t:term : tactic => `(tactic| (apply Proof.mp2; pweaken; exact trans (t₂ := $t)))
 
 theorem subst_iff {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
-  𝓣 ⊢ (t₁ ≈ t₂) ⟶ (p[↦ₛ t₁]ₚ ⟷ p[↦ₛ t₂]ₚ) := by
+  𝓣 ⊢ t₁ ≈ t₂ ⟶ (p[↦ₛ t₁]ₚ ⟷ p[↦ₛ t₂]ₚ) := by
   pintro
   apply Proof.mp2 Proof.iff_intro <;> apply Proof.mp (Proof.weaken_add subst)
   · passumption
   · psymm; passumption
 
 theorem subst_term {t t₁ t₂ : Term 𝓛} :
-  𝓣 ⊢ (t₁ ≈ t₂) ⟶ t[↦ₛ t₁]ₜ ≈ t[↦ₛ t₂]ₜ := by
+  𝓣 ⊢ t₁ ≈ t₂ ⟶ t[↦ₛ t₁]ₜ ≈ t[↦ₛ t₂]ₜ := by
   pintro
   have h := subst (𝓣 := 𝓣) (t₁ := t₁) (t₂ := t₂) (p := ↑ₜ(t[↦ₛ t₁]ₜ) ≈ t)
   simp [Term.shift_subst_single] at h
@@ -136,7 +150,7 @@ lemma cast_func {f : 𝓛.𝓕 n} {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} 
 
 lemma congr_func_aux
   {f : 𝓛.𝓕 (n + m)} {ts₁ ts₂ : Terms 𝓛 n} {ts : Terms 𝓛 m} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ f ⬝ₜ (ts ++ ts₁) ≈ f ⬝ₜ (ts ++ ts₂) :=
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ f ⬝ₜ (ts ++ ts₁) ≈ f ⬝ₜ (ts ++ ts₂) :=
   match n, ts₁, ts₂ with
   | 0, []ₜ, []ₜ => by pintro; prefl
   | n + 1, t₁ ∷ₜ ts₁, t₂ ∷ₜ ts₂ => by
@@ -156,7 +170,7 @@ lemma congr_func_aux
       passumption
 
 theorem congr_func {f : 𝓛.𝓕 n} {ts₁ ts₂ : Terms 𝓛 n} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ f ⬝ₜ ts₁ ≈ f ⬝ₜ ts₂ :=
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ f ⬝ₜ ts₁ ≈ f ⬝ₜ ts₂ :=
   congr_func_aux (ts := []ₜ)
 
 lemma cast_atom {p : 𝓛.𝓟 n} {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} (h : n = m) :
@@ -168,7 +182,7 @@ lemma cast_atom {p : 𝓛.𝓟 n} {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} 
 
 lemma congr_atom_aux
   {p : 𝓛.𝓟 (n + m)} {ts₁ ts₂ : Terms 𝓛 n} {ts : Terms 𝓛 m} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ p ⬝ₚ (ts ++ ts₁) ⟶ p ⬝ₚ (ts ++ ts₂) :=
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ p ⬝ₚ (ts ++ ts₁) ⟶ p ⬝ₚ (ts ++ ts₂) :=
   match n, ts₁, ts₂ with
   | 0, []ₜ, []ₜ => by pintro; exact Proof.identity
   | n + 1, t₁ ∷ₜ ts₁, t₂ ∷ₜ ts₂ => by
@@ -188,11 +202,11 @@ lemma congr_atom_aux
       passumption
 
 theorem congr_atom {p : 𝓛.𝓟 n} {ts₁ ts₂ : Terms 𝓛 n} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ p ⬝ₚ ts₁ ⟶ p ⬝ₚ ts₂ :=
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ p ⬝ₚ ts₁ ⟶ p ⬝ₚ ts₂ :=
   congr_atom_aux (ts := []ₜ)
 
 theorem congr_atom_iff {p : 𝓛.𝓟 n} {ts₁ ts₂ : Terms 𝓛 n} :
-  𝓣 ⊢ (ts₁ ≈ ts₂) ⟶ (p ⬝ₚ ts₁ ⟷ p ⬝ₚ ts₂) := by
+  𝓣 ⊢ ts₁ ≋ ts₂ ⟶ (p ⬝ₚ ts₁ ⟷ p ⬝ₚ ts₂) := by
   pintro
   apply Proof.mp2 Proof.iff_intro <;> apply Proof.mp (Proof.weaken_add congr_atom)
   · passumption
