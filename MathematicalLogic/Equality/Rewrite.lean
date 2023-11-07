@@ -17,7 +17,7 @@ end
 
 inductive Formula.Rewritable (t₁ t₂ : Term 𝓛) : Formula 𝓛 → Formula 𝓛 → Prop where
 | atom : Terms.Rewritable t₁ t₂ ts₁ ts₂ → Formula.Rewritable t₁ t₂ (p ⬝ₚ ts₁) (p ⬝ₚ ts₂)
-| false : Formula.Rewritable t₁ t₂ ⊥ ⊥
+| fal : Formula.Rewritable t₁ t₂ ⊥ ⊥
 | imp :
   Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ →
   Formula.Rewritable t₁ t₂ (p₁ ⟶ q₁) (p₂ ⟶ q₂)
@@ -29,7 +29,7 @@ def eq : Term.Rewritable t₁ t₂ t₁' t₂' → Term.Rewritable t₁ t₂ t�
   λ h₁ h₂ => atom (Terms.Rewritable.cons h₁ (Terms.Rewritable.cons h₂ Terms.Rewritable.nil))
 
 def not : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ (~ p₁) (~ p₂) :=
-  λ h => imp h false
+  λ h => imp h fal
 
 def or : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⋁ q₁) (p₂ ⋁ q₂) :=
   λ h₁ h₂ => imp (not h₁) h₂
@@ -67,7 +67,7 @@ theorem Formula.Rewritable.soundness {Γ : Context 𝓛} :
     apply Proof.mp
     · exact Proof.weaken h₂ Proof.congr_atom_iff
     · exact Terms.Rewritable.soundness h₁ h₂ h
-  | false => exact Proof.iff_refl
+  | fal => exact Proof.iff_refl
   | imp _ _ ih₁ ih₂ =>
     apply Proof.mp2 Proof.iff_congr_imp <;> assumption
   | all => exact Proof.iff_refl

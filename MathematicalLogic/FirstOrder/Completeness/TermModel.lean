@@ -41,7 +41,7 @@ theorem Formula.interp_term_model :
   rintro ⟨h₁, h₂⟩ h₃
   induction p generalizing ρ <;> simp
   case atom p ts => simp [Terms.interp_term_model]
-  case false => exact h₁
+  case fal => exact h₁
   case imp p q ih₁ ih₂ =>
     rw [ih₁, ih₂]
     constructor

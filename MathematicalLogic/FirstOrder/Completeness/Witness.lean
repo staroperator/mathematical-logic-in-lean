@@ -81,7 +81,7 @@ end
 lemma Formula.erase_inj : ⌊(⌈p⌉ₚ : Formula (𝓛 ⊎ 𝓒))⌋ₚ x = p := by
   induction p generalizing x with
   | atom => simp [Formula.injConsts, Formula.eraseConsts, Terms.erase_inj]
-  | false => rfl
+  | fal => rfl
   | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, Formula.eraseConsts, ih₁, ih₂]
   | all _ ih => simp [Formula.injConsts, Formula.eraseConsts, ih]
 
@@ -199,12 +199,10 @@ end
 
 lemma Formula.interp_erase :
   ⟦ p ⟧ₚ ⌊𝓜⌋ₘ, ρ ↔ ⟦ ⌈p⌉ₚ ⟧ₚ 𝓜, ρ := by
-  induction p generalizing ρ with
-  | atom => simp [Formula.injConsts, Terms.interp_erase]; rfl
-  | false => rfl
-  | imp _ _ ih₁ ih₂ => simp [Formula.injConsts, ih₁, ih₂]
-  | all _ ih =>
-    rw [Formula.injConsts, Formula.interp]
+  induction p generalizing ρ <;> simp
+  case atom => simp [Formula.injConsts, Terms.interp_erase]; rfl
+  case imp _ _ ih₁ ih₂ => simp [Formula.injConsts, ih₁, ih₂]
+  case all _ ih =>
     apply forall_congr'
     intro
     rw [ih]
@@ -242,15 +240,15 @@ mutual
 lemma Term.consts_of_subst :
   t[σ]ₜ.consts = t.consts ∪ ⋃ x ∈ t.vars, (σ x).consts :=
   match t with
-  | #x => by simp [Term.consts]
-  | Term.func (n := 0) c ([]ₜ) => by simp
+  | #x => by simp [Term.vars, Term.consts]
+  | Term.func (n := 0) c ([]ₜ) => by simp [Term.vars, Terms.vars]
   | Term.func (n := n + 1) f ts => by
-    simp [Term.consts]
+    simp [Term.consts, Term.vars]
     rw [Terms.consts_of_subst]
 lemma Terms.consts_of_subst :
   ts[σ]ₜₛ.consts = ts.consts ∪ ⋃ x ∈ ts.vars, (σ x).consts :=
   match ts with
-  | []ₜ => by simp
+  | []ₜ => by simp [Terms.vars]
   | t ∷ₜ ts => by
     conv => lhs; simp [Terms.consts]
     conv => rhs; rw [Terms.consts, Terms.vars, Set.biUnion_union]
@@ -264,7 +262,7 @@ lemma Formula.consts_of_subst :
     <;> (conv => lhs; simp [Formula.consts])
     <;> (conv => rhs; rw [Formula.consts, Formula.free]; try rw [Set.biUnion_union])
   case atom => simp [Terms.consts_of_subst]
-  case false => simp
+  case fal => simp
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂, Set.union_assoc, Set.union_left_comm]
   case all _ ih =>
     simp [ih]
@@ -344,6 +342,7 @@ lemma Formula.subst_const_of_non_const_aux [DecidableEq (Const 𝓛)] {p : Formu
   intro h
   induction p generalizing x <;> simp [Formula.substConst]
   case atom => simp [Terms.subst_const_of_non_const_aux h]
+  case fal => rfl
   case imp _ _ ih₁ ih₂ =>
     simp [Formula.consts, not_or] at h
     rcases h with ⟨h₁, h₂⟩
@@ -577,7 +576,7 @@ lemma Formula.const_less_than_level {p : Formula 𝓛*} :
     simp [Formula.level]
     apply Terms.const_less_than_level
     exact h
-  | false => simp [Formula.consts] at h
+  | fal => simp [Formula.consts] at h
   | imp _ _ ih₁ ih₂ =>
     simp [Formula.consts] at h
     simp [Formula.level]
@@ -657,18 +656,20 @@ mutual
 lemma Term.le_level_of_subst :
   n ≤ (t[σ]ₜ).level → n ≤ t.level ∨ ∃ x ∈ t.vars, n ≤ (σ x).level :=
   match t with
-  | #x => by simp [Term.subst, Term.level]; exact Or.inr
-  | Term.func (n := 0) (Sum.inl f) ([]ₜ) => by simp
-  | Term.func (n := 0) (Sum.inr c) ([]ₜ) => by simp
+  | #x => by
+    simp [Term.subst, Term.vars, Term.level]
+    exact Or.inr
+  | Term.func (n := 0) (Sum.inl f) ([]ₜ) => by simp [Term.vars, Terms.vars]
+  | Term.func (n := 0) (Sum.inr c) ([]ₜ) => by simp [Term.vars, Terms.vars]
   | Term.func (n := n + 1) f ts => by
-    simp [Term.level]
+    simp [Term.vars, Term.level]
     exact Terms.le_level_of_subst
 lemma Terms.le_level_of_subst :
   n ≤ (ts[σ]ₜₛ).level → n ≤ ts.level ∨ ∃ x ∈ ts.vars, n ≤ (σ x).level :=
   match ts with
-  | []ₜ => by simp
+  | []ₜ => by simp [Terms.vars]
   | t ∷ₜ ts => by
-    simp [Terms.level]
+    simp [Terms.vars, Terms.level]
     intro h; cases' h with h h
     · rcases Term.le_level_of_subst h with h' | ⟨x, h', h''⟩
       · exact Or.inl $ Or.inl h'
@@ -681,9 +682,9 @@ end
 lemma Formula.le_level_of_subst :
   n ≤ (p[σ]ₚ).level → n ≤ p.level ∨ ∃ x ∈ p.free, n ≤ (σ x).level := by
   intro h
-  induction p generalizing σ <;> simp [Formula.level] at *
+  induction p generalizing σ <;> simp [Formula.free, Formula.level] at *
   case atom => exact Terms.le_level_of_subst h
-  case false => exact h
+  case fal => exact h
   case imp _ _ ih₁ ih₂ =>
     cases' h with h h
     · rcases ih₁ h with h' | ⟨x, h', h''⟩
@@ -709,18 +710,18 @@ mutual
 lemma Term.level_of_subst_le :
   (t[σ]ₜ).level ≤ n → t.level ≤ n ∧ ∀ x ∈ t.vars, (σ x).level ≤ n :=
   match t with
-  | #x => by simp [Term.subst, Term.level]
-  | Term.func (n := 0) (Sum.inl f) ([]ₜ) => by simp
-  | Term.func (n := 0) (Sum.inr c) ([]ₜ) => by simp
+  | #x => by simp [Term.subst, Term.vars, Term.level]
+  | Term.func (n := 0) (Sum.inl f) ([]ₜ) => by simp [Term.vars, Terms.vars]
+  | Term.func (n := 0) (Sum.inr c) ([]ₜ) => by simp [Term.vars, Terms.vars]
   | Term.func (n := n + 1) f ts => by
-    simp [Term.level]
+    simp [Term.vars, Term.level]
     exact Terms.level_of_subst_le
 lemma Terms.level_of_subst_le :
   (ts[σ]ₜₛ).level ≤ n → ts.level ≤ n ∧ ∀ x ∈ ts.vars, (σ x).level ≤ n :=
   match ts with
-  | []ₜ => by simp
+  | []ₜ => by simp [Terms.vars]
   | t ∷ₜ ts => by
-    simp [Terms.level]
+    simp [Terms.vars, Terms.level]
     intro h₁ h₂
     rcases Term.level_of_subst_le h₁ with ⟨h₁, h₁'⟩
     rcases Terms.level_of_subst_le h₂ with ⟨h₂, h₂'⟩
@@ -730,7 +731,7 @@ end
 lemma Formula.level_of_subst_le :
   (p[σ]ₚ).level ≤ n → p.level ≤ n ∧ ∀ x ∈ p.free, (σ x).level ≤ n := by
   intro h
-  induction p generalizing σ <;> simp [Formula.level]
+  induction p generalizing σ <;> simp [Formula.free, Formula.level]
   case atom => exact Terms.level_of_subst_le h
   case imp _ _ ih₁ ih₂ =>
     simp [Formula.level] at h
@@ -800,7 +801,7 @@ lemma Formula.exists_inj_omega :
     rcases Terms.exists_inj_omega h with ⟨ts', h⟩
     exists p ⬝ₚ ts'
     simp [h, Formula.injOmega]
-  case false => exists ⊥
+  case fal => exists ⊥
   case imp p q ih₁ ih₂ =>
     rcases h with ⟨h₁, h₂⟩
     rcases ih₁ h₁ with ⟨p', h₁⟩

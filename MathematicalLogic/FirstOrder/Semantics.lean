@@ -76,7 +76,7 @@ notation:80 "⟦" p "⟧ₚ " 𝓜 ", " ρ:80 => Formula.interp p 𝓜 ρ
 theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ 𝓜, ρ[σ]ₐ := by
   induction p generalizing ρ σ with
   | atom => simp [Terms.interp_subst]
-  | false => rfl
+  | fal => rfl
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih =>
       rw [Formula.interp]

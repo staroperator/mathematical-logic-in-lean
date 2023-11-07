@@ -55,10 +55,10 @@ instance (priority := high) : SizeOf (Terms 𝓛 n) := ⟨Terms.size⟩
 @[simp] theorem Terms.sizeOf_eq {ts : Terms 𝓛 n} : sizeOf ts = ts.size := rfl
 
 mutual
-@[simp] def Term.vars : Term 𝓛 → Set ℕ
+def Term.vars : Term 𝓛 → Set ℕ
 | #x => {x}
 | _ ⬝ₜ ts => ts.vars
-@[simp] def Terms.vars : Terms 𝓛 n → Set ℕ
+def Terms.vars : Terms 𝓛 n → Set ℕ
 | []ₜ => {}
 | t ∷ₜ ts => t.vars ∪ ts.vars
 end
@@ -101,10 +101,10 @@ theorem Terms.append_cons {ts₁ : Terms 𝓛 n} {ts₂ : Terms 𝓛 m} :
 def Subst (𝓛) := ℕ → Term 𝓛
 
 mutual
-@[simp] def Term.subst : Term 𝓛 → Subst 𝓛 → Term 𝓛
+def Term.subst : Term 𝓛 → Subst 𝓛 → Term 𝓛
 | #x, σ => σ x
 | f ⬝ₜ ts, σ => f ⬝ₜ (ts.subst σ)
-@[simp] def Terms.subst : Terms 𝓛 n → Subst 𝓛 → Terms 𝓛 n
+def Terms.subst : Terms 𝓛 n → Subst 𝓛 → Terms 𝓛 n
 | []ₜ, _ => []ₜ
 | t ∷ₜ ts, σ => t.subst σ ∷ₜ ts.subst σ
 end
@@ -112,18 +112,25 @@ end
 notation:80 t "[" σ "]ₜ" => Term.subst t σ
 notation:80 ts "[" σ "]ₜₛ" => Terms.subst ts σ
 
+@[simp] theorem Term.subst_var : (#x)[σ]ₜ = σ x := by simp [Term.subst]
+@[simp] theorem Term.subst_func : (f ⬝ₜ ts)[σ]ₜ = f ⬝ₜ ts[σ]ₜₛ := by simp [Term.subst]
+@[simp] theorem Terms.subst_nil : []ₜ[σ]ₜₛ = []ₜ := rfl
+@[simp] theorem Terms.subst_cons : (t ∷ₜ ts)[σ]ₜₛ = t[σ]ₜ ∷ₜ ts[σ]ₜₛ := by simp [Terms.subst]
+
 theorem Terms.subst_append : (ts₁ ++ ts₂)[σ]ₜₛ = ts₁[σ]ₜₛ ++ ts₂[σ]ₜₛ :=
   match ts₁ with
   | []ₜ => rfl
-  | t ∷ₜ ts => by simp; apply Terms.subst_append
+  | t ∷ₜ ts => by simp [Terms.subst]; apply Terms.subst_append
 
 def Subst.id : Subst 𝓛 := λ x => #x
 notation "idₛ" => Subst.id
 
+@[simp] theorem Subst.id_app : (idₛ x : Term 𝓛) = #x := rfl
+
 mutual
 theorem Term.subst_id : t[idₛ]ₜ = t :=
   match t with
-  | #x => by simp; rfl
+  | #x => by simp
   | f ⬝ₜ ts => by simp; rw [Terms.subst_id]
 theorem Terms.subst_id : ts[idₛ]ₜₛ = ts :=
   match ts with
@@ -133,6 +140,8 @@ end
 
 def Subst.comp (σ₁ σ₂ : Subst 𝓛) : Subst 𝓛 := λ x => (σ₁ x)[σ₂]ₜ
 infixl:90 " ∘ₛ " => Subst.comp
+
+-- @[simp] theorem Subst.comp_app : (σ₁ ∘ σ₂) x = (σ₁ x)[σ₂]ₜ := rfl
 
 mutual
 theorem Term.subst_comp : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ :=
@@ -150,9 +159,16 @@ def Subst.single : Term 𝓛 → Subst 𝓛
 | _, x + 1 => #x
 prefix:max "↦ₛ " => Subst.single
 
+@[simp] theorem Subst.single_app_zero : (↦ₛ t) 0 = t := rfl
+@[simp] theorem Subst.single_app_succ : (↦ₛ t) (x + 1) = #x := rfl
+
 def Subst.shift : Subst 𝓛 := λ x => #(x + 1)
+-- @[simp] theorem Subst.shift_app : (Subst.shift x : Term 𝓛) = #(x + 1) := rfl
+
 def Term.shift (t : Term 𝓛) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
+@[simp] theorem Term.shift_var : ↑ₜ(#x : Term 𝓛) = #(x + 1) := by simp [Term.shift, Subst.shift]
+
 def Terms.shift (ts : Terms 𝓛 n) := ts[Subst.shift]ₜₛ
 prefix:max "↑ₜₛ" => Terms.shift
 
@@ -168,6 +184,8 @@ def Subst.lift : Subst 𝓛 → Subst 𝓛
 | _, 0 => #0
 | σ, x + 1 => ↑ₜ(σ x)
 prefix:max "⇑ₛ" => Subst.lift
+@[simp] theorem Subst.lift_app_zero : ⇑ₛσ 0 = #0 := rfl
+@[simp] theorem Subst.lift_app_succ : ⇑ₛσ (x + 1) = ↑ₜ(σ x) := rfl
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   rw [Term.shift, Term.shift, Term.subst_comp, Term.subst_comp]
@@ -175,26 +193,23 @@ theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
 
 theorem Subst.lift_id : ⇑ₛ(idₛ : Subst 𝓛) = idₛ := by
   funext x
-  cases x <;> simp [Subst.lift, Subst.id, Term.shift, Subst.shift, Term.subst]
+  cases x <;> simp
 
 theorem Subst.lift_comp : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛσ₂ := by
   funext x
   cases x with
   | zero => rfl
   | succ =>
-    simp [Subst.comp, Term.subst]
-    rw [Subst.lift]; simp
-    rw [Subst.lift]; simp
-    rw [Term.shift_subst_lift]
+    simp [Subst.comp, Term.subst, Term.shift_subst_lift]
 
 mutual
 theorem Term.subst_ext_vars {t : Term 𝓛} :
   (∀ x ∈ t.vars, σ₁ x = σ₂ x) → t[σ₁]ₜ = t[σ₂]ₜ :=
   match t with
-  | #x => by intro h; simp [h]
+  | #x => by intro h; simp [h, Term.vars]
   | f ⬝ₜ ts => by
     intro h
-    simp at h
+    simp [Term.vars] at h
     simp
     apply Terms.subst_ext_vars
     exact h
@@ -204,7 +219,7 @@ theorem Terms.subst_ext_vars {ts : Terms 𝓛 n} :
   | []ₜ => by intro; rfl
   | t ∷ₜ ts => by
     intro h
-    simp at h
+    simp [Terms.vars] at h
     simp
     constructor
     · apply Term.subst_ext_vars; intros; apply h; left; assumption
@@ -214,13 +229,13 @@ end
 mutual
 theorem Term.vars_of_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars :=
   match t with
-  | #x => by simp
-  | f ⬝ₜ ts => by simp; rw [Terms.vars_of_subst]
+  | #x => by simp [Term.vars]
+  | f ⬝ₜ ts => by simp [Term.vars]; rw [Terms.vars_of_subst]
 theorem Terms.vars_of_subst : ts[σ]ₜₛ.vars = ⋃ x ∈ ts.vars, (σ x).vars :=
   match ts with
-  | []ₜ => by simp
+  | []ₜ => by simp [Terms.vars]
   | t ∷ₜ ts => by
-    conv => lhs; simp
+    conv => lhs; simp [Terms.vars]
     conv => rhs; rw [Terms.vars]
     rw [Term.vars_of_subst, Terms.vars_of_subst, Set.biUnion_union]
 end
@@ -247,31 +262,38 @@ theorem Term.is_shift_iff : (∃ t', t = ↑ₜt') ↔ 0 ∉ t.vars := by
 
 inductive Formula (𝓛 : Language) : Type where
 | atom : 𝓛.𝓟 n → Terms 𝓛 n → Formula 𝓛
-| false : Formula 𝓛
+| fal : Formula 𝓛
 | imp : Formula 𝓛 → Formula 𝓛 → Formula 𝓛
 | all : Formula 𝓛 → Formula 𝓛
 
 infix:70 " ⬝ₚ " => Formula.atom
-instance : FormulaSymbol (Formula 𝓛) := ⟨Formula.false, Formula.imp⟩
+instance : FormulaSymbol (Formula 𝓛) := ⟨Formula.fal, Formula.imp⟩
 prefix:59 "∀' " => Formula.all
 @[reducible] def Formula.exists (p : Formula 𝓛) := ~ ∀' (~ p)
 prefix:59 "∃' " => Formula.exists
 
+-- @[simp] theorem Formula.fal_eq : Formula.fal = (⊥ : Formula 𝓛) := rfl
 @[simp] theorem Formula.imp_eq : Formula.imp p q = p ⟶ q := rfl
 
-@[simp] def Formula.free : Formula 𝓛 → Set ℕ
+def Formula.free : Formula 𝓛 → Set ℕ
 | _ ⬝ₚ ts => ts.vars
 | ⊥ => {}
 | p ⟶ q => p.free ∪ q.free
 | ∀' p => { x | x + 1 ∈ p.free }
 
-@[simp] def Formula.subst : Formula 𝓛 → Subst 𝓛 → Formula 𝓛
+def Formula.subst : Formula 𝓛 → Subst 𝓛 → Formula 𝓛
 | p ⬝ₚ ts, σ => p ⬝ₚ ts[σ]ₜₛ
 | ⊥, _ => ⊥
 | p ⟶ q, σ => p.subst σ ⟶ q.subst σ
 | ∀' p, σ => ∀' (p.subst ⇑ₛσ)
 
 notation:80 p "[" σ "]ₚ" => Formula.subst p σ
+
+@[simp] theorem Formula.subst_atom : (p ⬝ₚ ts)[σ]ₚ = p ⬝ₚ ts[σ]ₜₛ := rfl
+@[simp] theorem Formula.subst_fal : ⊥[σ]ₚ = ⊥ := rfl
+@[simp] theorem Formula.subst_imp : (p ⟶ q)[σ]ₚ = p[σ]ₚ ⟶ q[σ]ₚ := rfl
+@[simp] theorem Formula.subst_neg : (~ p)[σ]ₚ = ~ p[σ]ₚ := rfl
+@[simp] theorem Formula.subst_all : (∀' p)[σ]ₚ = ∀' p[⇑ₛσ]ₚ := rfl
 
 def Formula.shift : Formula 𝓛 → Formula 𝓛 := λ p => p[Subst.shift]ₚ
 prefix:max "↑ₚ" => Formula.shift
@@ -281,14 +303,14 @@ theorem Formula.subst_ext : σ₁ = σ₂ → p[σ₁]ₚ = p[σ₂]ₚ := by in
 theorem Formula.subst_id : p[idₛ]ₚ = p := by
   induction p with
   | atom => simp [Terms.subst_id]
-  | false => rfl
+  | fal => rfl
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih => simp [Subst.lift_id, ih]
 
 theorem Formula.subst_comp : p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ := by
   induction p generalizing σ₁ σ₂ with
   | atom => simp [Terms.subst_comp]
-  | false => rfl
+  | fal => rfl
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih => simp [Subst.lift_comp, ih]
 
@@ -300,14 +322,17 @@ theorem Formula.subst_ext_free {p : Formula 𝓛} :
   (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
   intro h
   induction p generalizing σ₁ σ₂ with
-  | atom => simp at h; simp [Terms.subst_ext_vars h]
-  | false => rfl
+  | atom =>
+    simp [Formula.free] at h
+    simp [Terms.subst_ext_vars h]
+  | fal => rfl
   | imp _ _ ih₁ ih₂ =>
     simp at h; simp; rw [ih₁, ih₂]
     · intros; apply h; right; assumption
     · intros; apply h; left; assumption
   | all _ ih =>
-    simp at h; simp; rw [ih]
+    simp [Formula.free] at h
+    simp; rw [ih]
     intros x h₁
     cases x
     · rfl
@@ -315,14 +340,14 @@ theorem Formula.subst_ext_free {p : Formula 𝓛} :
 
 theorem Formula.free_of_subst : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
   induction p generalizing σ with
-  | atom => simp [Terms.vars_of_subst]
-  | false => simp
+  | atom => simp [Formula.free, Terms.vars_of_subst]
+  | fal => simp [Formula.free]
   | imp p q ih₁ ih₂ =>
-    conv => lhs; simp
+    conv => lhs; simp [Formula.free]
     conv => rhs; rw [Formula.free]
     rw [ih₁, ih₂, Set.biUnion_union]
   | all p ih =>
-    conv => lhs; simp [ih]
+    conv => lhs; simp [Formula.free, ih]
     conv => rhs; rw [Formula.free]
     apply Set.ext
     intro x; simp
@@ -333,7 +358,7 @@ theorem Formula.free_of_subst : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars :=
       | succ y =>
         simp [Subst.lift, Term.shift, Term.vars_of_subst] at h₂
         rcases h₂ with ⟨z, ⟨h₂, h₃⟩⟩
-        simp [Subst.shift] at h₃
+        simp [Subst.shift, Term.vars] at h₃
         subst h₃
         exists y
     · rintro ⟨y, ⟨h₁, h₂⟩⟩

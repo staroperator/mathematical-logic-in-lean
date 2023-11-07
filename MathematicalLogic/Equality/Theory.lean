@@ -5,7 +5,6 @@ class EqLanguage (𝓛 : Language) where
 
 variable [EqLanguage 𝓛]
 
-
 def Term.eq (t₁ t₂ : Term 𝓛) := EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
 infix:60 " ≈ " => Term.eq
 
@@ -38,7 +37,14 @@ def BFormula.exists_unique (p : BFormula 𝓛 (m + 1)) :=
   ∃ᵇ (p ⋀ ∀ᵇ (↑ₚp ⟶ #'1 ≈ (#'0 : BTerm 𝓛 (m + 2))))
 prefix:max "∃ᵇ! " => BFormula.exists_unique
 
--- infix:60 " ≉ " => λ t₁ t₂ => ~ (t₁ ≈ t₂)
+@[simp] theorem Term.subst_eq {t₁ t₂ : Term 𝓛} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [Term.eq]
+@[simp] theorem Term.subst_neq {t₁ t₂ : Term 𝓛} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [Term.neq]
+
+@[simp] theorem BTerm.unbounded_eq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≈ t₂).unbounded = t₁.unbounded ≈ t₂.unbounded := by simp [BTerm.eq, Term.eq]
+@[simp] theorem BTerm.unbounded_neq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≉ t₂).unbounded = t₁.unbounded ≉ t₂.unbounded := by simp [BTerm.neq, Term.neq]
+
+@[simp] theorem BTerm.subst_eq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [BTerm.eq]
+@[simp] theorem BTerm.subst_neq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [BTerm.neq]
 
 inductive EQ : Theory 𝓛 where
 | e1 : EQ (∀ᵇ (#'0 ≈ #'0))
@@ -92,7 +98,6 @@ theorem symm {t₁ t₂ : Term 𝓛} :
   pintro
   have h := subst (𝓣 := 𝓣) (t₁ := t₁) (t₂ := t₂) (p := #0 ≈ ↑ₜt₁)
   simp [Term.shift_subst_single] at h
-  simp [Subst.single] at h
   apply Proof.mp2 (Proof.weaken_add h)
   · passumption
   · prefl
@@ -118,7 +123,6 @@ theorem trans {t₁ t₂ t₃ : Term 𝓛} :
   pintro
   have h := subst (𝓣 := 𝓣) (t₁ := t₂) (t₂ := t₁) (p := #0 ≈ ↑ₜt₃)
   simp [Term.shift_subst_single] at h
-  simp [Subst.single] at h
   apply Proof.mp (Proof.weaken_add h)
   psymm
   passumption
@@ -158,7 +162,6 @@ lemma congr_func_aux
     ptrans f ⬝ₜ (ts ++ t₂ ∷ₜ ts₁)
     · have h := subst_term (𝓣 := 𝓣) (t₁ := t₁) (t₂ := t₂) (t := f ⬝ₜ (↑ₜₛts ++ #0 ∷ₜ ↑ₜₛts₁))
       simp [Terms.subst_append, Terms.shift_subst_single] at h
-      simp [Subst.single] at h
       apply Proof.mp (Proof.weaken_add h)
       apply Proof.mp Proof.and_left
       passumption
@@ -190,7 +193,6 @@ lemma congr_atom_aux
     apply Proof.mp2 Proof.composition
     · have h := subst (𝓣 := 𝓣) (t₁ := t₁) (t₂ := t₂) (p := p ⬝ₚ (↑ₜₛts ++ #0 ∷ₜ ↑ₜₛts₁))
       simp [Terms.subst_append, Terms.shift_subst_single] at h
-      simp [Subst.single] at h
       apply Proof.mp (Proof.weaken_add h)
       apply Proof.mp Proof.and_left
       passumption

@@ -7,14 +7,14 @@ notation "[]ᵥ" => Vector.nil
 infixr:67 "∷ᵥ" => Vector.cons
 
 class FormulaSymbol (α : Type u) where
-  false : α
+  fal : α
   imp : α → α → α
 
 namespace FormulaSymbol
 
 variable [FormulaSymbol α] (p q : α)
 
-instance : Bot α := ⟨false⟩
+instance : Bot α := ⟨fal⟩
 
 infixr:55 " ⟶ " => imp
 attribute [match_pattern] imp

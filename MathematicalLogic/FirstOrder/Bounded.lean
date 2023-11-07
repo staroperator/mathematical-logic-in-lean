@@ -34,13 +34,18 @@ instance (priority := high) : SizeOf (BTerms 𝓛 m n) := ⟨BTerms.size⟩
 @[simp] theorem BTerms.sizeOf_eq {ts : BTerms 𝓛 m n} : sizeOf ts = ts.size := rfl
 
 mutual
-@[simp] def BTerm.unbounded : BTerm 𝓛 m → Term 𝓛
+def BTerm.unbounded : BTerm 𝓛 m → Term 𝓛
 | #'x => #x
 | f ⬝ₜ ts => f ⬝ₜ ts.unbounded
-@[simp] def BTerms.unbounded : BTerms 𝓛 m n → Terms 𝓛 n
+def BTerms.unbounded : BTerms 𝓛 m n → Terms 𝓛 n
 | []ₜ => []ₜ
 | t ∷ₜ ts => t.unbounded ∷ₜ ts.unbounded
 end
+
+@[simp] theorem BTerm.unbounded_var : (#'x : BTerm 𝓛 m).unbounded = #x := by simp [BTerm.unbounded]
+@[simp] theorem BTerm.unbounded_func : (f ⬝ₜ ts : BTerm 𝓛 m).unbounded = f ⬝ₜ ts.unbounded := by simp [BTerm.unbounded]
+@[simp] theorem BTerms.unbounded_nil : ([]ₜ : BTerms 𝓛 m 0).unbounded = ([]ₜ : Terms 𝓛 0) := rfl
+@[simp] theorem BTerms.unbounded_cons : (t ∷ₜ ts : BTerms 𝓛 m _).unbounded = t.unbounded ∷ₜ ts.unbounded := by simp [BTerms.unbounded]
 
 -- instance : CoeOut (BTerm 𝓛 m) (Term 𝓛) := ⟨BTerm.unbounded⟩
 -- instance : CoeOut (BTerms 𝓛 m n) (Terms 𝓛 n) := ⟨BTerms.unbounded⟩
@@ -84,16 +89,21 @@ end
 def BSubst (𝓛 m k) := Fin m → BTerm 𝓛 k
 
 mutual
-@[simp] def BTerm.subst : BTerm 𝓛 m → BSubst 𝓛 m k → BTerm 𝓛 k
+def BTerm.subst : BTerm 𝓛 m → BSubst 𝓛 m k → BTerm 𝓛 k
 | #'x, σ => σ x
 | f ⬝ₜ ts, σ => f ⬝ₜ ts.subst σ
-@[simp] def BTerms.subst : BTerms 𝓛 m n → BSubst 𝓛 m k → BTerms 𝓛 k n
+def BTerms.subst : BTerms 𝓛 m n → BSubst 𝓛 m k → BTerms 𝓛 k n
 | []ₜ, σ => []ₜ
 | t ∷ₜ ts, σ => t.subst σ ∷ₜ ts.subst σ
 end
 
 notation:80 t "[" σ "]ₜ" => BTerm.subst t σ
 notation:80 ts "[" σ "]ₜₛ" => BTerms.subst ts σ
+
+@[simp] theorem BTerm.subst_var : (#'x : BTerm 𝓛 m)[σ]ₜ = σ x := by simp [BTerm.subst]
+@[simp] theorem BTerm.subst_func : (f ⬝ₜ ts : BTerm 𝓛 m)[σ]ₜ = f ⬝ₜ ts[σ]ₜₛ := by simp [BTerm.subst]
+@[simp] theorem BTerms.subst_nil {σ : BSubst 𝓛 m k} : ([]ₜ)[σ]ₜₛ = ([]ₜ : BTerms 𝓛 k 0) := by simp [BTerms.subst]
+@[simp] theorem BTerms.subst_cons : (t ∷ₜ ts : BTerms 𝓛 m _)[σ]ₜₛ = t[σ]ₜ ∷ₜ ts[σ]ₜₛ := by simp [BTerms.subst]
 
 def BSubst.id : BSubst 𝓛 m m := λ x => #'x
 notation "idₛ" => BSubst.id
@@ -149,12 +159,12 @@ theorem BTerm.unbounded_shift_eq {t : BTerm 𝓛 m} :
 
 inductive BFormula (𝓛 : Language) : ℕ → Type where
 | atom : 𝓛.𝓟 n → BTerms 𝓛 m n → BFormula 𝓛 m
-| false : BFormula 𝓛 m
+| fal : BFormula 𝓛 m
 | imp : BFormula 𝓛 m → BFormula 𝓛 m → BFormula 𝓛 m
 | all : BFormula 𝓛 (m + 1) → BFormula 𝓛 m
 
 infix:70 " ⬝ₚ " => BFormula.atom
-instance : FormulaSymbol (BFormula 𝓛 m) := ⟨BFormula.false, BFormula.imp⟩
+instance : FormulaSymbol (BFormula 𝓛 m) := ⟨BFormula.fal, BFormula.imp⟩
 prefix:59 "∀ᵇ " => BFormula.all
 @[reducible] def BFormula.exists (p : BFormula 𝓛 (m + 1)) := ~ ∀ᵇ (~ p)
 prefix:59 "∃ᵇ " => BFormula.exists
@@ -169,11 +179,17 @@ def BFormula.alls : ∀ {m}, BFormula 𝓛 m → Sentence 𝓛
 
 prefix:59 "∀* " => BFormula.alls
 
-@[simp] def BFormula.unbounded : BFormula 𝓛 m → Formula 𝓛
+def BFormula.unbounded : BFormula 𝓛 m → Formula 𝓛
 | p ⬝ₚ ts => p ⬝ₚ ts.unbounded
 | ⊥ => ⊥
 | p ⟶ q => p.unbounded ⟶ q.unbounded
 | ∀ᵇ p => ∀' p.unbounded
+
+@[simp] theorem BFormula.unbounded_atom : (p ⬝ₚ ts : BFormula 𝓛 m).unbounded = p ⬝ₚ ts.unbounded := rfl
+@[simp] theorem BFormula.unbounded_fal : (⊥ : BFormula 𝓛 m).unbounded = ⊥ := rfl
+@[simp] theorem BFormula.unbounded_imp : (p ⟶ q : BFormula 𝓛 m).unbounded = p.unbounded ⟶ q.unbounded := rfl
+@[simp] theorem BFormula.unbounded_neg : (~ p : BFormula 𝓛 m).unbounded = ~ p.unbounded := rfl
+@[simp] theorem BFormula.unbounded_all : (∀ᵇ p).unbounded = ∀' p.unbounded := rfl
 
 -- instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
 instance : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
@@ -192,13 +208,13 @@ def Formula.bounded : (p : Formula 𝓛) → m ≥ p.bound → BFormula 𝓛 m
 
 theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
   (p.bounded h).unbounded = p := by
-  induction p generalizing m <;> simp
+  induction p generalizing m <;> simp [Formula.bounded]
   case atom => simp [Terms.bounded_unbounded]
-  case false => rfl
+  case fal => rfl
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih => simp [ih]
 
-@[simp] def BFormula.subst : BFormula 𝓛 m → BSubst 𝓛 m k → BFormula 𝓛 k
+def BFormula.subst : BFormula 𝓛 m → BSubst 𝓛 m k → BFormula 𝓛 k
 | p ⬝ₚ ts, σ => p ⬝ₚ ts[σ]ₜₛ
 | ⊥, _ => ⊥
 | p ⟶ q, σ => p.subst σ ⟶ q.subst σ
@@ -206,14 +222,20 @@ theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
 
 notation:80 p "[" σ "]ₚ" => BFormula.subst p σ
 
+@[simp] theorem BFormula.subst_atom {σ : BSubst 𝓛 m k} : (p ⬝ₚ ts)[σ]ₚ = p ⬝ₚ ts[σ]ₜₛ := rfl
+@[simp] theorem BFormula.subst_fal {σ : BSubst 𝓛 m k} : ⊥[σ]ₚ = ⊥ := rfl
+@[simp] theorem BFormula.subst_imp {σ : BSubst 𝓛 m k} : (p ⟶ q)[σ]ₚ = p[σ]ₚ ⟶ q[σ]ₚ := rfl
+@[simp] theorem BFormula.subst_neg {σ : BSubst 𝓛 m k} : (~ p)[σ]ₚ = ~ p[σ]ₚ := rfl
+@[simp] theorem BFormula.subst_all {σ : BSubst 𝓛 m k} : (∀ᵇ p)[σ]ₚ = ∀ᵇ p[⇑ₛσ]ₚ := rfl
+
 def BFormula.shift (p : BFormula 𝓛 m) := p[BSubst.shift]ₚ
 prefix:max "↑ₚ" => BFormula.shift
 
 theorem BFormula.subst_id {p : BFormula 𝓛 m} :
   p[(idₛ : BSubst 𝓛 m m)]ₚ = p := by
-  induction p <;> simp
+  induction p <;> try simp
   case atom => simp [BTerms.subst_id]
-  case false => rfl
+  case fal => rfl
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih =>
     conv => rhs; rw [←ih]
@@ -227,8 +249,9 @@ theorem BFormula.unbounded_subst_eq
   {p : BFormula 𝓛 m} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
   (∀ x, (σ x).unbounded = σ' x) → p[σ]ₚ.unbounded = p.unbounded[σ']ₚ := by
   intro h
-  induction p generalizing k σ' <;> simp
+  induction p generalizing k σ' <;> try simp
   case atom p ts => simp [BTerms.unbounded_subst_eq h]
+  case fal => rfl
   case imp p q ih₁ ih₂ => simp [ih₁ h, ih₂ h]
   case all p ih =>
     apply ih
