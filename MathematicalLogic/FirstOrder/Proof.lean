@@ -27,16 +27,6 @@ infix:50 " ⊢ " => Proof
 
 namespace Proof
 
-syntax "passumption" ("at" num)? : tactic
-macro_rules
-| `(tactic| passumption) =>
-  `(tactic| apply assumption; repeat (first | exact Or.inl rfl | apply Or.inr))
-| `(tactic| passumption at $n) => do
-  let mut t ← `(tactic| exact Or.inl rfl)
-  for _ in [:n.getNat] do
-    t ← `(tactic| (apply Or.inr; $t))
-  `(tactic| (apply Proof.assumption; $t))
-
 theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
   λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
 
@@ -51,8 +41,6 @@ theorem weaken_add : Γ ⊢ p → Γ,' q ⊢ p := by
   apply weaken
   apply Set.subset_insert
 
-macro "pweaken" : tactic => `(tactic| repeat apply weaken_add)
-
 theorem identity : Γ ⊢ p ⟶ p :=
   mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
 
@@ -63,7 +51,9 @@ theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
     · apply weaken
       · apply Set.subset_union_right
       · exact h
-    · passumption
+    · apply assumption
+      left
+      rfl
   · intro h
     induction h with
     | assumption h =>
@@ -72,29 +62,73 @@ theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
       | inl h => cases h; apply identity
       | inr h => exact mp (axioms Axioms.a1) (assumption h)
     | axioms h => exact mp (axioms Axioms.a1) (axioms h)
-    | mp _ _ ih₁ ih₂ => exact mp2 (axioms Axioms.a2) ih₁ ih₂
+    | mp _ _ ih₁ ih₂ => exact mp (mp (axioms Axioms.a2) ih₁) ih₂
+
+macro "repeatn" n:num t:tactic : tactic => do
+  let mut t' ← `(tactic| skip)
+  for _ in [:n.getNat] do
+    t' ← `(tactic| ($t'; $t))
+  return t'
+
+macro "passumption" : tactic =>
+  `(tactic| (
+    apply assumption
+    repeat first | exact Or.inl rfl | apply Or.inr
+  ))
+
+macro "passumption" n:num : tactic =>
+  `(tactic| (
+    apply assumption
+    repeatn $n apply Or.inr
+    exact Or.inl rfl
+  ))
+
+macro "pweaken_ctx" : tactic => `(tactic| (intro _ h; (repeat apply Set.subset_insert); exact h))
+
+macro "papply" t:term : tactic =>
+  `(tactic| (
+    first
+    | apply mp $t
+    | apply mp2 $t
+    | apply λ h₁ h₂ h₃ => mp (mp (mp $t h₁) h₂) h₃
+    | apply λ h₁ h₂ h₃ h₄ => mp (mp (mp (mp $t h₁) h₂) h₃) h₄
+  ))
+
+macro "pweaken_apply" t:term : tactic =>
+  `(tactic| (
+    first
+    | apply mp (weaken (by pweaken_ctx) $t)
+    | apply mp2 (weaken (by pweaken_ctx) $t)
+    | apply λ h₁ h₂ h₃ => mp (mp (mp (weaken (by pweaken_ctx) $t) h₁) h₂) h₃
+    | apply λ h₁ h₂ h₃ h₄ => mp (mp (mp (mp (weaken (by pweaken_ctx) $t) h₁) h₂) h₃) h₄
+  ))
+
+macro "papply_assumption" n:num : tactic =>
+  `(tactic| papply (by passumption $n))
+
+macro "papply" n:num : tactic =>
+  `(tactic| (
+    first
+    | apply mp; passumption $n
+    | apply mp2; passumption $n
+    | apply λ h h₁ h₂ h₃ => mp (mp (mp h h₁) h₂) h₃; passumption $n
+    | apply λ h h₁ h₂ h₃ h₄ => mp (mp (mp (mp h h₁) h₂) h₃) h₄; passumption $n
+  ))
 
 macro "pintro" : tactic => `(tactic| apply deduction.mpr)
-
-syntax "pintros" (num)? : tactic
-macro_rules
-| `(tactic| pintros) => `(tactic| repeat pintro)
-| `(tactic| pintros $n) => do
-  let mut t ← `(tactic| skip)
-  for _ in [:n.getNat] do
-    t ← `(tactic| (pintro; $t))
-  pure t
+macro "pintros" : tactic => `(tactic| repeat pintro)
+macro "pintros" n:num : tactic => `(tactic| repeatn $n pintro)
 
 theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by
   pintros
-  apply mp
-  · passumption
-  · apply mp <;> passumption
+  papply_assumption 1
+  papply 2
+  passumption
 
 theorem contraposition : Γ ⊢ (p ⟶ q) ⟶ ~ q ⟶ ~ p := composition
 theorem contraposition2 : Γ ⊢ (p ⟶ ~ q) ⟶ q ⟶ ~ p := by
   pintros
-  apply mp2 <;> passumption
+  papply 2 <;> passumption
 
 theorem true_intro : Γ ⊢ ⊤ := identity
 
@@ -102,65 +136,63 @@ theorem false_elim : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axiom
 
 theorem contradiction : Γ ⊢ ~ p ⟶ p ⟶ q := by
   pintros
-  apply mp false_elim
-  apply mp <;> passumption
+  papply false_elim
+  papply 1
+  passumption
 
 theorem double_neg1 : Γ ⊢ p ⟶ ~ ~ p := by
   pintros
-  apply mp <;> passumption
+  papply 0
+  passumption
 
 theorem double_neg2 : Γ ⊢ ~ ~ p ⟶ p := by
   pintro
-  apply mp2 (axioms Axioms.a3)
+  papply axioms Axioms.a3
   · pintros
     apply mp <;> passumption
   · passumption
 
 theorem contraposition3 : Γ ⊢ (~ p ⟶ q) ⟶ ~ q ⟶ p := by
-  apply mp2 composition
+  papply composition
   · exact contraposition
-  · apply mp (axioms Axioms.a2)
+  · papply (axioms Axioms.a2)
     pintro
-    apply double_neg2
+    exact double_neg2
 
 theorem not_imp_left : Γ ⊢ ~ (p ⟶ q) ⟶ p := by
   pintro
-  apply mp double_neg2
-  apply mp2 contraposition
+  papply double_neg2
+  papply contraposition
   · exact contradiction (q := q)
   · passumption
 
 theorem not_imp_right : Γ ⊢ ~ (p ⟶ q) ⟶ ~ q := by
-  apply mp contraposition
+  papply contraposition
   exact Proof.axioms Axioms.a1
 
 theorem and_intro : Γ ⊢ p ⟶ q ⟶ p ⋀ q := by
   pintros
   apply mp2 <;> passumption
 
-macro "psplit" : tactic => `(tactic| repeat any_goals (first | apply mp2 and_intro | apply true_intro))
-
 theorem and_left : Γ ⊢ p ⋀ q ⟶ p := by
   pintro
-  apply mp double_neg2
+  papply double_neg2
   pintro
-  apply mp
-  · passumption at 1
-  · pintros
-    apply mp <;> passumption
+  papply 1
+  pintros
+  apply mp <;> passumption
 
 theorem and_right : Γ ⊢ p ⋀ q ⟶ q := by
   pintro
   apply mp double_neg2
   pintro
-  apply mp
-  · passumption at 1
-  · pintro
-    passumption
+  papply 1
+  pintro
+  passumption
 
 theorem or_inl : Γ ⊢ p ⟶ p ⋁ q := by
   pintros
-  apply mp false_elim
+  papply false_elim
   apply mp <;> passumption
 
 theorem or_inr : Γ ⊢ q ⟶ p ⋁ q := by
@@ -169,15 +201,16 @@ theorem or_inr : Γ ⊢ q ⟶ p ⋁ q := by
 
 theorem or_elim : Γ ⊢ p ⋁ q ⟶ (p ⟶ r) ⟶ (q ⟶ r) ⟶ r := by
   pintros
-  apply mp double_neg2
+  papply double_neg2
   pintro
-  apply mp; passumption
-  apply mp; passumption at 2
-  apply mp2 (axioms Axioms.a3)
-  · apply mp2 composition; passumption
-    apply mp2 composition
+  papply 0
+  papply 2
+  papply (axioms Axioms.a3)
+  · apply mp2 composition
     · passumption
-    · apply double_neg1
+    · apply mp2 composition
+      · passumption
+      · apply double_neg1
   · passumption
 
 theorem excluded_middle : Γ ⊢ ~ p ⋁ p := double_neg2
@@ -189,33 +222,27 @@ theorem iff_right : Γ ⊢ (p ⟷ q) ⟶ (q ⟶ p) := and_right
 theorem iff_refl : Γ ⊢ p ⟷ p := mp2 iff_intro identity identity
 theorem iff_symm : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ p) := by
   pintro
-  psplit
-  · apply mp iff_right; passumption
-  · apply mp iff_left; passumption
+  papply iff_intro
+  · papply iff_right; passumption
+  · papply iff_left; passumption
 theorem iff_trans : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ r) ⟶ (p ⟷ r) := by
   pintros 2
-  psplit <;> apply mp2 composition
-  · apply mp iff_left; passumption
-  · apply mp iff_left; passumption
-  · apply mp iff_right; passumption
-  · apply mp iff_right; passumption
+  papply iff_intro <;> apply mp2 composition
+  · papply iff_left; passumption
+  · papply iff_left; passumption
+  · papply iff_right; passumption
+  · papply iff_right; passumption
 theorem iff_congr_imp : Γ ⊢ (p₁ ⟷ p₂) ⟶ (q₁ ⟷ q₂) ⟶ ((p₁ ⟶ q₁) ⟷ (p₂ ⟶ q₂)) := by
   pintros 2
-  psplit <;> pintros
-  · apply mp
-    · apply mp iff_left; passumption
-    apply mp
-    · passumption
-    apply mp
-    · apply mp iff_right; passumption
-    · passumption
-  · apply mp
-    · apply mp iff_right; passumption
-    apply mp
-    · passumption
-    apply mp
-    · apply mp iff_left; passumption
-    · passumption
+  papply iff_intro <;> pintros
+  · papply iff_left; passumption
+    papply 1
+    papply iff_right; passumption
+    passumption
+  · papply iff_right; passumption
+    papply 1
+    papply iff_left; passumption
+    passumption
 
 theorem generalization : ↑ₚₛΓ ⊢ p → Γ ⊢ ∀' p := by
   intro h
@@ -228,8 +255,8 @@ theorem generalization : ↑ₚₛΓ ⊢ p → Γ ⊢ ∀' p := by
   | mp _ _ ih₁ ih₂ => exact mp2 (axioms Axioms.a6) ih₁ ih₂
 
 theorem not_forall : Γ ⊢ ~ ∀' p ⟶ ∃' (~ p) := by
-  apply mp contraposition
-  apply mp (axioms Axioms.a6)
+  papply contraposition
+  papply (axioms Axioms.a6)
   apply generalization
   apply weaken
   · apply Set.empty_subset
@@ -242,27 +269,27 @@ theorem forall_elim : Γ ⊢ ∀' p ⟶ p[↦ₛ t]ₚ := axioms Axioms.a4
 theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⟶ ∃' p := by
   pintros
   suffices h : _ ⊢ (~ p)[↦ₛ t]ₚ by
-    apply mp h
+    papply h
     passumption
-  apply mp (axioms Axioms.a4)
+  papply (axioms Axioms.a4)
   passumption
 
 theorem exists_elim : Γ ⊢ ∃' p ⟶ (∀' (p ⟶ ↑ₚq)) ⟶ q := by
   pintros
-  apply mp double_neg2
+  papply double_neg2
   pintros
-  apply mp; passumption at 2
+  papply 2
   suffices h : _ ⊢ ∀' (↑ₚ(~ q) ⟶ ~ p) by
     apply mp2 (axioms Axioms.a6) h
-    apply mp (axioms Axioms.a5)
+    papply (axioms Axioms.a5)
     passumption
-  apply mp2 (axioms Axioms.a6)
+  papply (axioms Axioms.a6)
   · apply generalization
-    apply contraposition
+    exact contraposition
   · passumption
 
 theorem exists_self : Γ ⊢ ∃' ↑ₚp ⟶ p := by
-  apply mp contraposition3
+  papply contraposition3
   apply axioms Axioms.a5
 
 theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by

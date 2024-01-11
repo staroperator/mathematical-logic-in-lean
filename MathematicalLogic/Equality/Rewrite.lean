@@ -5,9 +5,9 @@ variable [EqLanguage 𝓛] {𝓣 : Theory 𝓛} [EqTheory 𝓣]
 mutual
 inductive Term.Rewritable (t₁ t₂ : Term 𝓛) : Term 𝓛 → Term 𝓛 → Prop where
 | matched : Term.Rewritable t₁ t₂ t₁ t₂
-| refl : Term.Rewritable t₁ t₂ t t
 | func {ts₁ ts₂ : Terms 𝓛 n} :
   Terms.Rewritable t₁ t₂ ts₁ ts₂ → Term.Rewritable t₁ t₂ (f ⬝ₜ ts₁) (f ⬝ₜ ts₂)
+| refl : Term.Rewritable t₁ t₂ t t
 inductive Terms.Rewritable (t₁ t₂ : Term 𝓛) : Terms 𝓛 n → Terms 𝓛 n → Prop where
 | nil : Terms.Rewritable t₁ t₂ []ₜ []ₜ
 | cons :
@@ -23,24 +23,24 @@ inductive Formula.Rewritable (t₁ t₂ : Term 𝓛) : Formula 𝓛 → Formula 
   Formula.Rewritable t₁ t₂ (p₁ ⟶ q₁) (p₂ ⟶ q₂)
 | all : Formula.Rewritable t₁ t₂ (∀' p) (∀' p)
 
-namespace Formula.Rewritable
+-- namespace Formula.Rewritable
 
-def eq : Term.Rewritable t₁ t₂ t₁' t₂' → Term.Rewritable t₁ t₂ t₃' t₄' → Formula.Rewritable t₁ t₂ (t₁' ≈ t₃') (t₂' ≈ (t₄' : Term 𝓛)) :=
-  λ h₁ h₂ => atom (Terms.Rewritable.cons h₁ (Terms.Rewritable.cons h₂ Terms.Rewritable.nil))
+-- def eq : Term.Rewritable t₁ t₂ t₁' t₂' → Term.Rewritable t₁ t₂ t₃' t₄' → Formula.Rewritable t₁ t₂ (t₁' ≈ t₃') (t₂' ≈ (t₄' : Term 𝓛)) :=
+--   λ h₁ h₂ => atom (Terms.Rewritable.cons h₁ (Terms.Rewritable.cons h₂ Terms.Rewritable.nil))
 
-def not : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ (~ p₁) (~ p₂) :=
-  λ h => imp h fal
+-- def not : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ (~ p₁) (~ p₂) :=
+--   λ h => imp h fal
 
-def or : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⋁ q₁) (p₂ ⋁ q₂) :=
-  λ h₁ h₂ => imp (not h₁) h₂
+-- def or : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⋁ q₁) (p₂ ⋁ q₂) :=
+--   λ h₁ h₂ => imp (not h₁) h₂
 
-def and : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⋀ q₁) (p₂ ⋀ q₂) :=
-  λ h₁ h₂ => not (imp h₁ (not h₂))
+-- def and : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⋀ q₁) (p₂ ⋀ q₂) :=
+--   λ h₁ h₂ => not (imp h₁ (not h₂))
 
-def iff : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⟷ q₁) (p₂ ⟷ q₂) :=
-  λ h₁ h₂ => and (imp h₁ h₂) (imp h₂ h₁)
+-- def iff : Formula.Rewritable t₁ t₂ p₁ p₂ → Formula.Rewritable t₁ t₂ q₁ q₂ → Formula.Rewritable t₁ t₂ (p₁ ⟷ q₁) (p₂ ⟷ q₂) :=
+--   λ h₁ h₂ => and (imp h₁ h₂) (imp h₂ h₁)
 
-end Formula.Rewritable
+-- end Formula.Rewritable
 
 mutual
 theorem Term.Rewritable.soundness {Γ : Context 𝓛} {t₁' : Term 𝓛} :
@@ -73,23 +73,12 @@ theorem Formula.Rewritable.soundness {Γ : Context 𝓛} :
   | all => exact Proof.iff_refl
 
 macro "prw" "by" t:tactic : tactic => `(tactic| (
-  apply Proof.mp2 Proof.iff_right
-  · apply Formula.Rewritable.soundness (by intros _ h; (repeat apply Set.subset_insert); exact h)
-    · ($t; skip)
-    · focus repeat first
-      | apply Formula.Rewritable.all
-      | apply Formula.Rewritable.iff
-      | apply Formula.Rewritable.and
-      | apply Formula.Rewritable.or
-      | apply Formula.Rewritable.not
-      | apply Formula.Rewritable.imp
-      | apply Formula.Rewritable.eq
-      | apply Formula.Rewritable.atom
-      | apply Terms.Rewritable.nil
-      | apply Terms.Rewritable.cons
-      | apply Term.Rewritable.matched
-      | apply Term.Rewritable.func
-      | apply Term.Rewritable.refl))
+    apply Proof.mp2 Proof.iff_right
+    · apply Formula.Rewritable.soundness (by pweaken_ctx)
+      · ($t; skip)
+      · focus repeat' constructor
+    simp
+  ))
 
 macro "prw" t:term : tactic => `(tactic| prw by exact $t)
-macro "prw" n:num : tactic => `(tactic| prw by passumption at $n)
+macro "prw" n:num : tactic => `(tactic| prw by passumption $n)

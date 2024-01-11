@@ -46,6 +46,9 @@ prefix:max "∃ᵇ! " => BFormula.exists_unique
 @[simp] theorem BTerm.subst_eq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [BTerm.eq]
 @[simp] theorem BTerm.subst_neq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [BTerm.neq]
 
+@[simp] theorem Term.eq_eq {t₁ t₂ : Term 𝓛} : EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ) = t₁ ≈ t₂ := rfl
+@[simp] theorem BTerm.eq_eq {t₁ t₂ : BTerm 𝓛 m} : EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ) = t₁ ≈ t₂ := rfl
+
 inductive EQ : Theory 𝓛 where
 | e1 : EQ (∀ᵇ (#'0 ≈ #'0))
 | e2 : EQ (∀* ((t₁ ≈ t₂) ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ))
@@ -69,7 +72,7 @@ theorem refl {t : Term 𝓛} : 𝓣 ⊢ t ≈ t := by
   simp [Subst.single] at h
   exact h
 
-macro "prefl" : tactic => `(tactic| (pweaken; exact refl))
+macro "prefl" : tactic => `(tactic| exact weaken (by pweaken_ctx) refl)
 
 theorem refl_terms {ts : Terms 𝓛 n} : 𝓣 ⊢ ts ≋ ts :=
   match ts with
@@ -102,7 +105,7 @@ theorem symm {t₁ t₂ : Term 𝓛} :
   · passumption
   · prefl
 
-macro "psymm" : tactic => `(tactic| (apply Proof.mp; pweaken; exact symm))
+macro "psymm" : tactic => `(tactic| (apply mp (weaken (by pweaken_ctx) symm)))
 
 theorem symm_terms {ts₁ ts₂ : Terms 𝓛 n} :
   𝓣 ⊢ ts₁ ≋ ts₂ ⟶ ts₂ ≋ ts₁ :=
@@ -127,7 +130,12 @@ theorem trans {t₁ t₂ t₃ : Term 𝓛} :
   psymm
   passumption
 
-macro "ptrans" t:term : tactic => `(tactic| (apply Proof.mp2; pweaken; exact trans (t₂ := $t)))
+
+
+syntax "ptrans" (ppSpace colGt term)? : tactic
+macro_rules
+| `(tactic| ptrans) => `(tactic| (apply mp2 (weaken (by pweaken_ctx) trans)))
+| `(tactic| ptrans $t) => `(tactic| (apply mp2 (weaken (by pweaken_ctx) (trans (t₂ := $t)))))
 
 theorem subst_iff {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
   𝓣 ⊢ t₁ ≈ t₂ ⟶ (p[↦ₛ t₁]ₚ ⟷ p[↦ₛ t₂]ₚ) := by
