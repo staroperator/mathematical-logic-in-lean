@@ -81,4 +81,8 @@ macro "prw" "by" t:tactic : tactic => `(tactic| (
   ))
 
 macro "prw" t:term : tactic => `(tactic| prw by exact $t)
+macro "prw" "←" t:term : tactic => `(tactic| prw by (psymm; exact $t))
+macro "prww" t:term : tactic => `(tactic| prw by (apply Proof.weaken _ $t; pweaken_ctx))
+macro "prww" "←" t:term : tactic => `(tactic| prw by (psymm; apply Proof.weaken _ $t; pweaken_ctx))
 macro "prw" n:num : tactic => `(tactic| prw by passumption $n)
+macro "prw" "←" n:num : tactic => `(tactic| prw by (psymm; passumption $n))

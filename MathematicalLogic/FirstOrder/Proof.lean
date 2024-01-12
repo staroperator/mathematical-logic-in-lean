@@ -94,7 +94,7 @@ macro "papply" t:term : tactic =>
     | apply λ h₁ h₂ h₃ h₄ => mp (mp (mp (mp $t h₁) h₂) h₃) h₄
   ))
 
-macro "pweaken_apply" t:term : tactic =>
+macro "papplyw" t:term : tactic =>
   `(tactic| (
     first
     | apply mp (weaken (by pweaken_ctx) $t)
