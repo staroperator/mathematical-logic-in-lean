@@ -154,11 +154,17 @@ theorem Terms.subst_comp : ts[σ₁]ₜₛ[σ₂]ₜₛ = ts[σ₁ ∘ₛ σ₂]
   | t ∷ₜ ts => by simp; rw [Term.subst_comp, Terms.subst_comp]; trivial
 end
 
+def Subst.cons (t : Term 𝓛) (σ : Subst 𝓛) : Subst 𝓛
+| 0 => t
+| x + 1 => σ x
+infix:90 " ∷ₛ " => Subst.cons
+@[simp] theorem Subst.cons_app_zero : (t ∷ₛ σ) 0 = t := rfl
+@[simp] theorem Subst.cons_app_succ : (t ∷ₛ σ) (x + 1) = σ x := rfl
+
 def Subst.single : Term 𝓛 → Subst 𝓛
 | t, 0 => t
 | _, x + 1 => #x
 prefix:max "↦ₛ " => Subst.single
-
 @[simp] theorem Subst.single_app_zero : (↦ₛ t) 0 = t := rfl
 @[simp] theorem Subst.single_app_succ : (↦ₛ t) (x + 1) = #x := rfl
 
@@ -179,6 +185,9 @@ theorem Term.shift_subst_single : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by
 
 theorem Terms.shift_subst_single : (↑ₜₛts)[↦ₛ t]ₜₛ = ts := by
   rw [Terms.shift, Terms.subst_comp, Subst.shift_comp_single, Terms.subst_id]
+
+theorem Term.shift_subst_cons : (↑ₜt₁)[t₂ ∷ₛ σ]ₜ = t₁[σ]ₜ := by
+  rw [Term.shift, Term.subst_comp]; rfl
 
 def Subst.lift : Subst 𝓛 → Subst 𝓛
 | _, 0 => #0

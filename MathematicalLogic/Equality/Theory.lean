@@ -18,40 +18,39 @@ infix:60 " ≋ " => Terms.eq
 
 def Formula.exists_unique (p : Formula 𝓛) :=
   ∃' (p ⋀ ∀' (↑ₚp ⟶ #1 ≈ (#0 : Term 𝓛)))
-
 prefix:max "∃'! " => Formula.exists_unique
 
 def BTerm.eq (t₁ t₂ : BTerm 𝓛 m) : BFormula 𝓛 m :=
-  EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ)
-infix:60 " ≈ " => BTerm.eq
+  EqLanguage.eq ⬝ₚᵇ (t₁ ∷ₜᵇ t₂ ∷ₜᵇ []ₜᵇ)
+infix:60 " ≈ᵇ " => BTerm.eq
 
-def BTerm.neq (t₁ t₂ : BTerm 𝓛 m) : BFormula 𝓛 m := ~ t₁ ≈ t₂
-infix:60 " ≉ " => BTerm.neq
+def BTerm.neq (t₁ t₂ : BTerm 𝓛 m) : BFormula 𝓛 m := ~ t₁ ≈ᵇ t₂
+infix:60 " ≉ᵇ " => BTerm.neq
 
 def BTerms.eq : BTerms 𝓛 m n → BTerms 𝓛 m n → BFormula 𝓛 m
-| []ₜ, []ₜ => ⊤
-| t ∷ₜ ts, t' ∷ₜ ts' => (t ≈ t') ⋀ ts.eq ts'
-infix:60 " ≋ " => BTerms.eq
+| []ₜᵇ, []ₜᵇ => ⊤
+| t ∷ₜᵇ ts, t' ∷ₜᵇ ts' => (t ≈ᵇ t') ⋀ ts.eq ts'
+infix:60 " ≋ᵇ " => BTerms.eq
 
 def BFormula.exists_unique (p : BFormula 𝓛 (m + 1)) :=
-  ∃ᵇ (p ⋀ ∀ᵇ (↑ₚp ⟶ #'1 ≈ (#'0 : BTerm 𝓛 (m + 2))))
+  ∃ᵇ (p ⋀ ∀ᵇ (↑ₚᵇp ⟶ #ᵇ1 ≈ᵇ #ᵇ0))
 prefix:max "∃ᵇ! " => BFormula.exists_unique
 
 @[simp] theorem Term.subst_eq {t₁ t₂ : Term 𝓛} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [Term.eq]
 @[simp] theorem Term.subst_neq {t₁ t₂ : Term 𝓛} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [Term.neq]
 
-@[simp] theorem BTerm.unbounded_eq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≈ t₂).unbounded = t₁.unbounded ≈ t₂.unbounded := by simp [BTerm.eq, Term.eq]
-@[simp] theorem BTerm.unbounded_neq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≉ t₂).unbounded = t₁.unbounded ≉ t₂.unbounded := by simp [BTerm.neq, Term.neq]
+@[simp] theorem BTerm.unbounded_eq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≈ᵇ t₂ : Formula 𝓛) = t₁ ≈ t₂ := by simp [BTerm.eq, Term.eq]
+@[simp] theorem BTerm.unbounded_neq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≉ᵇ t₂ : Formula 𝓛) = t₁ ≉ t₂ := by simp [BTerm.neq, Term.neq]
 
-@[simp] theorem BTerm.subst_eq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [BTerm.eq]
-@[simp] theorem BTerm.subst_neq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [BTerm.neq]
+@[simp] theorem BTerm.subst_eq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≈ᵇ t₂)[σ]ₚᵇ = t₁[σ]ₜᵇ ≈ᵇ t₂[σ]ₜᵇ := by simp [BTerm.eq]
+@[simp] theorem BTerm.subst_neq {t₁ t₂ : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} : (t₁ ≉ᵇ t₂)[σ]ₚᵇ = t₁[σ]ₜᵇ ≉ᵇ t₂[σ]ₜᵇ := by simp [BTerm.neq]
 
 @[simp] theorem Term.eq_eq {t₁ t₂ : Term 𝓛} : EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ) = t₁ ≈ t₂ := rfl
-@[simp] theorem BTerm.eq_eq {t₁ t₂ : BTerm 𝓛 m} : EqLanguage.eq ⬝ₚ (t₁ ∷ₜ t₂ ∷ₜ []ₜ) = t₁ ≈ t₂ := rfl
+@[simp] theorem BTerm.eq_eq {t₁ t₂ : BTerm 𝓛 m} : EqLanguage.eq ⬝ₚᵇ (t₁ ∷ₜᵇ t₂ ∷ₜᵇ []ₜᵇ) = t₁ ≈ᵇ t₂ := rfl
 
 inductive EQ : Theory 𝓛 where
-| e1 : EQ (∀ᵇ (#'0 ≈ #'0))
-| e2 : EQ (∀* ((t₁ ≈ t₂) ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ))
+| e1 : EQ (∀ᵇ (#ᵇ0 ≈ᵇ #ᵇ0))
+| e2 : EQ (∀* (t₁ ≈ᵇ t₂ ⟶ p[↦ᵇ t₁]ₚᵇ ⟶ p[↦ᵇ t₂]ₚᵇ))
 
 class EqTheory (𝓣 : Theory 𝓛) where
   eqAxioms : EQ ⊆ 𝓣
@@ -63,7 +62,7 @@ namespace Proof
 variable {𝓣 : Theory 𝓛} [EqTheory 𝓣]
 
 theorem refl {t : Term 𝓛} : 𝓣 ⊢ t ≈ t := by
-  have h : 𝓣 ⊢ (∀ᵇ (#'0 ≈ #'0) : BFormula 𝓛 0)
+  have h : 𝓣 ⊢ (∀ᵇ (#ᵇ0 ≈ᵇ #ᵇ0) : Sentence 𝓛)
   · apply Theory.axioms
     apply EqTheory.eqAxioms
     apply EQ.e1
@@ -88,7 +87,7 @@ theorem subst {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
   let t₁' := t₁.bounded (m := m) (by simp)
   let t₂' := t₂.bounded (m := m) (by simp)
   let p' := p.bounded (m := m + 1) (by simp [Nat.le_succ_of_le])
-  have h : 𝓣 ⊢ ∀* ((t₁' ≈ t₂') ⟶ p'[↦ₛ t₁']ₚ ⟶ p'[↦ₛ t₂']ₚ)
+  have h : 𝓣 ⊢ ∀* ((t₁' ≈ᵇ t₂') ⟶ p'[↦ᵇ t₁']ₚᵇ ⟶ p'[↦ᵇ t₂']ₚᵇ)
   · apply Theory.axioms
     apply EqTheory.eqAxioms
     apply EQ.e2
