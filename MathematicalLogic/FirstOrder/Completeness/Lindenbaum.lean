@@ -14,8 +14,8 @@ lemma consistent_chain_upper_bound
   constructor
   · intro h₄
     rcases Proof.compactness h₄ with ⟨Γ, h₁', h₂', h₃'⟩
-    have h : ∃ Δ ∈ S, Γ ⊆ Δ
-    · apply Set.Finite.induction_on' (C := λ Γ => ∃ Δ ∈ S, Γ ⊆ Δ) h₂'
+    have h : ∃ Δ ∈ S, Γ ⊆ Δ := by
+      apply Set.Finite.induction_on' (C := λ Γ => ∃ Δ ∈ S, Γ ⊆ Δ) h₂'
       · rcases h₃ with ⟨Δ, h₃⟩
         exists Δ
         constructor <;> simp [h₃]

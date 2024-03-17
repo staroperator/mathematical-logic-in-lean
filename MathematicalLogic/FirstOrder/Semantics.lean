@@ -97,7 +97,7 @@ theorem Formula.interp_neg :
   ⟦ ~ p ⟧ₚ 𝓜, ρ ↔ ¬ ⟦ p ⟧ₚ 𝓜, ρ := by simp
 
 theorem Formula.interp_and :
-  ⟦ p ⋀ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
+  ⟦ p ⋀ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∧ ⟦ q ⟧ₚ 𝓜, ρ) := by simp
 
 theorem Formula.interp_or :
   ⟦ p ⋁ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
@@ -176,7 +176,7 @@ lemma Assignment.ulift_cons {𝓜 : Structure.{u} 𝓛} {ρ : Assignment.{u} �
 
 lemma Vector.map_comp {v : Vector α n} : (v.map f).map g = v.map (g ∘ f) := by
   induction n with
-  | zero => simp
+  | zero => simp [Vector.eq_nil]
   | succ n ih => rw [←Vector.cons_head_tail (v := v)]; simp only [Vector.map_cons, Function.comp, ih]
 
 lemma ULift.down_comp_up : ULift.down ∘ ULift.up = id (α := α) := by

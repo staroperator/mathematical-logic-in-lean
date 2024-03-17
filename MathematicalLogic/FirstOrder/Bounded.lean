@@ -24,9 +24,6 @@ mutual
 | []ₜᵇ => 0
 | t ∷ₜᵇ ts => t.size + ts.size + 1
 end
-termination_by
-  BTerm.size t => sizeOf t
-  BTerms.size ts => sizeOf ts
 
 instance (priority := high) : SizeOf (BTerm 𝓛 m) := ⟨BTerm.size⟩
 instance (priority := high) : SizeOf (BTerms 𝓛 m n) := ⟨BTerms.size⟩
@@ -298,8 +295,8 @@ theorem Sentence.foralls_elim {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
   · let σ' := λ x => σ (x + 1)
     apply Proof.mp2 Proof.composition (ih (σ := σ'))
     simp
-    have h : ⇑ₛσ' ∘ₛ ↦ₛ (σ 0) = σ
-    · funext x
+    have h : ⇑ₛσ' ∘ₛ ↦ₛ (σ 0) = σ := by
+      funext x
       cases x
       · rfl
       · simp [Subst.comp, Subst.lift, Term.shift_subst_single]

@@ -1,5 +1,6 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Lattice
+import Mathlib.Order.Cover
 import MathematicalLogic.Notation
 
 structure Language where
@@ -45,9 +46,6 @@ mutual
 | []ₜ => 0
 | t ∷ₜ ts => t.size + ts.size + 1
 end
-termination_by
-  Term.size t => sizeOf t
-  Terms.size ts => sizeOf ts
 
 instance (priority := high) : SizeOf (Term 𝓛) := ⟨Term.size⟩
 instance (priority := high) : SizeOf (Terms 𝓛 n) := ⟨Terms.size⟩

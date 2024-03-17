@@ -836,8 +836,8 @@ lemma level_of_W_formula
   subst h₁
   apply Nat.le_antisymm
   · simp [Formula.level]
-    have h : Formula.level p' ≤ n
-    · rw [h₂]; apply Formula.level_of_inj_omega
+    have h : Formula.level p' ≤ n := by
+      rw [h₂]; apply Formula.level_of_inj_omega
     constructor
     · exact Nat.le_succ_of_le h
     · apply Nat.le_of_not_lt
@@ -873,11 +873,11 @@ lemma level_less_than_W_formula
   rcases h₁ with ⟨q', c', m, q'', h₁'', h₂'', h₃'', h₄''⟩
   simp [h₁'', Formula.consts, Formula.consts_of_subst] at h₄
   rcases h₄ with h₄ | ⟨x, h₄, h₅⟩
-  · replace h₄ : n < q'.level
-    · subst h₃'; apply Formula.const_less_than_level at h₄; exact h₄
-    have h₅ : q'.level ≤ m
-    · subst h₂''; apply Formula.level_of_inj_omega
-    have h₆ : q.level = m + 1 := 
+  · replace h₄ : n < q'.level := by
+      subst h₃'; apply Formula.const_less_than_level at h₄; exact h₄
+    have h₅ : q'.level ≤ m := by
+      subst h₂''; apply Formula.level_of_inj_omega
+    have h₆ : q.level = m + 1 :=
       level_of_W_formula h₁'' h₂'' h₃'' h₄''
     have h₇ : p.level = n + 1 :=
       level_of_W_formula h₁' h₂' h₃' h₄'
@@ -904,21 +904,21 @@ lemma Set.Finite.induction_on_sorted
   rcases S with ⟨S, h₁⟩
   unfold Finset.toSet at *; simp at *
   generalize h : List.insertionSort r S.toList = l
-  replace h₁ : l.Nodup
-  · rw [←h, List.Perm.nodup_iff (List.perm_insertionSort _ _)]
+  replace h₁ : l.Nodup := by
+    rw [←h, List.Perm.nodup_iff (List.perm_insertionSort _ _)]
     simp [←Multiset.coe_nodup]
     exact h₁
-  have h₂ : l.Sorted r
-  · rw [←h]
+  have h₂ : l.Sorted r := by
+    rw [←h]
     apply List.sorted_insertionSort
-  have h₃ : ∀ x, x ∈ l ↔ x ∈ S
-  · intro x
+  have h₃ : ∀ x, x ∈ l ↔ x ∈ S := by
+    intro x
     rw [←h, ←Multiset.mem_toList]
     apply List.Perm.mem_iff
     apply List.perm_insertionSort
   simp [←h₃]
-  replace h₃ : ∀ x, x ∈ l → x ∈ S
-  · simp [h₃]
+  replace h₃ : ∀ x, x ∈ l → x ∈ S := by
+    simp [h₃]
   clear h
   induction' h₂ with a l h₂ _ ih
   · simp; apply H0
