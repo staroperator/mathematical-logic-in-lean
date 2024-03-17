@@ -1,13 +1,13 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Lattice
-import Mathlib.Order.Cover
 import MathematicalLogic.Notation
 
 structure Language where
   𝓕 : ℕ → Type
   𝓟 : ℕ → Type
 
-@[reducible] def Const (𝓛 : Language) := 𝓛.𝓕 0
+variable {𝓛 : Language}
+abbrev Const (𝓛 : Language) := 𝓛.𝓕 0
 
 mutual
 inductive Term (𝓛 : Language) : Type where
@@ -138,13 +138,12 @@ end
 
 def Subst.comp (σ₁ σ₂ : Subst 𝓛) : Subst 𝓛 := λ x => (σ₁ x)[σ₂]ₜ
 infixl:90 " ∘ₛ " => Subst.comp
-
--- @[simp] theorem Subst.comp_app : (σ₁ ∘ σ₂) x = (σ₁ x)[σ₂]ₜ := rfl
+@[simp] theorem Subst.comp_app {σ₁ σ₂ : Subst 𝓛} : (σ₁ ∘ₛ σ₂) x = (σ₁ x)[σ₂]ₜ := rfl
 
 mutual
 theorem Term.subst_comp : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ :=
   match t with
-  | #x => by simp; rfl
+  | #x => by simp
   | f ⬝ₜ ts => by simp; rw [Terms.subst_comp]
 theorem Terms.subst_comp : ts[σ₁]ₜₛ[σ₂]ₜₛ = ts[σ₁ ∘ₛ σ₂]ₜₛ :=
   match ts with
@@ -167,7 +166,7 @@ prefix:max "↦ₛ " => Subst.single
 @[simp] theorem Subst.single_app_succ : (↦ₛ t) (x + 1) = #x := rfl
 
 def Subst.shift : Subst 𝓛 := λ x => #(x + 1)
--- @[simp] theorem Subst.shift_app : (Subst.shift x : Term 𝓛) = #(x + 1) := rfl
+@[simp] theorem Subst.shift_app : (Subst.shift x : Term 𝓛) = #(x + 1) := rfl
 
 def Term.shift (t : Term 𝓛) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
@@ -279,7 +278,7 @@ prefix:59 "∀' " => Formula.all
 @[reducible] def Formula.exists (p : Formula 𝓛) := ~ ∀' (~ p)
 prefix:59 "∃' " => Formula.exists
 
--- @[simp] theorem Formula.fal_eq : Formula.fal = (⊥ : Formula 𝓛) := rfl
+@[simp] theorem Formula.fal_eq : Formula.fal = (⊥ : Formula 𝓛) := rfl
 @[simp] theorem Formula.imp_eq : Formula.imp p q = p ⟶ q := rfl
 
 def Formula.free : Formula 𝓛 → Set ℕ

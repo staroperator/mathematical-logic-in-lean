@@ -342,7 +342,6 @@ lemma Formula.subst_const_of_non_const_aux [DecidableEq (Const 𝓛)] {p : Formu
   intro h
   induction p generalizing x <;> simp [Formula.substConst]
   case atom => simp [Terms.subst_const_of_non_const_aux h]
-  case fal => rfl
   case imp _ _ ih₁ ih₂ =>
     simp [Formula.consts, not_or] at h
     rcases h with ⟨h₁, h₂⟩

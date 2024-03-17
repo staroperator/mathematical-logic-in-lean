@@ -175,6 +175,7 @@ prefix:59 "∀ᵇ " => BFormula.all
 @[reducible] def BFormula.exists (p : BFormula 𝓛 (m + 1)) := ~ ∀ᵇ (~ p)
 prefix:59 "∃ᵇ " => BFormula.exists
 
+@[simp] theorem BFormula.fal_eq : BFormula.fal = (⊥ : BFormula 𝓛 m) := rfl
 @[simp] theorem BFormula.imp_eq : BFormula.imp p q = p ⟶ q := rfl
 
 @[reducible] def Sentence (𝓛) := BFormula 𝓛 0
@@ -216,7 +217,6 @@ theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
   (p.bounded h).unbounded = p := by
   induction p generalizing m <;> simp [Formula.bounded]
   case atom => simp [Terms.bounded_unbounded]
-  case fal => rfl
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih => simp [ih]
 
@@ -240,7 +240,6 @@ prefix:max "↑ₚᵇ" => BFormula.shift
 theorem BFormula.subst_id : p[idᵇ]ₚᵇ = p := by
   induction p <;> try simp
   case atom => simp [BTerms.subst_id]
-  case fal => rfl
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih =>
     conv => rhs; rw [←ih]
@@ -256,7 +255,6 @@ theorem BFormula.unbounded_subst_eq
   intro h
   induction p generalizing k σ' <;> try simp
   case atom p ts => simp [BTerms.unbounded_subst_eq h]
-  case fal => rfl
   case imp p q ih₁ ih₂ => simp [ih₁ h, ih₂ h]
   case all p ih =>
     apply ih
