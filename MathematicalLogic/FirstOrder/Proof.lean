@@ -9,6 +9,8 @@ infixl:51 ",' " => Context.add
 def Context.lift : Context 𝓛 → Context 𝓛 := λ Γ => {↑ₚp | p ∈ Γ}
 prefix:max "↑ₚₛ" => Context.lift
 
+theorem Context.lift_add : ↑ₚₛ(Γ,' p) = ↑ₚₛΓ,' ↑ₚp := Set.image_insert_eq
+
 inductive Axioms (𝓛) : Context 𝓛 where
 | a1 : Axioms 𝓛 (p ⟶ (q ⟶ p))
 | a2 : Axioms 𝓛 ((p ⟶ q ⟶ r) ⟶ (p ⟶ q) ⟶ p ⟶ r)
@@ -27,9 +29,6 @@ infix:50 " ⊢ " => Proof
 
 namespace Proof
 
-theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
-  λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
-
 theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   intros h₁ h₂
   induction h₂ with
@@ -40,6 +39,9 @@ theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
 theorem weaken_add : Γ ⊢ p → Γ,' q ⊢ p := by
   apply weaken
   apply Set.subset_insert
+
+theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
+  λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
 
 theorem identity : Γ ⊢ p ⟶ p :=
   mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
@@ -83,7 +85,10 @@ macro "passumption" n:num : tactic =>
     exact Or.inl rfl
   ))
 
-macro "pweaken_ctx" : tactic => `(tactic| (intro _ h; (repeat apply Set.subset_insert); exact h))
+macro "pweaken_ctx" : tactic =>
+  `(tactic| (intro _ h; (repeat apply Set.subset_insert); exact h))
+
+-- macro "papply_by" t:tactic : tactic
 
 macro "papply" t:term : tactic =>
   `(tactic| (
@@ -118,6 +123,13 @@ macro "papply" n:num : tactic =>
 macro "pintro" : tactic => `(tactic| apply deduction.mpr)
 macro "pintros" : tactic => `(tactic| repeat pintro)
 macro "pintros" n:num : tactic => `(tactic| repeatn $n pintro)
+
+theorem psuffices (h₁ : Γ,' p ⊢ q) (h₂ : Γ ⊢ p) : Γ ⊢ q :=
+  mp (deduction.mpr h₁) h₂
+theorem phave (h₁ : Γ ⊢ p) (h₂ : Γ,' p ⊢ q) : Γ ⊢ q :=
+  mp (deduction.mpr h₂) h₁
+macro "psuffices" t:term : tactic => `(tactic| apply psuffices (p := $t))
+macro "phave" t:term : tactic => `(tactic| apply phave (p := $t) )
 
 theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by
   pintros
@@ -296,34 +308,34 @@ theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p 
   intro h
   induction h with
   | @assumption p h =>
-      exists {p}
-      constructor
-      · simp [h]
-      constructor
-      · simp
-      · passumption; rfl
+    exists {p}
+    constructor
+    · simp [h]
+    constructor
+    · simp
+    · passumption; rfl
   | axioms h =>
-      exists ∅
-      constructor
-      · simp
-      constructor
-      · simp
-      · exact axioms h
+    exists ∅
+    constructor
+    · simp
+    constructor
+    · simp
+    · exact axioms h
   | mp _ _ ih₁ ih₂ =>
-      rcases ih₁ with ⟨Δ₁, h₁, h₂, h₃⟩
-      rcases ih₂ with ⟨Δ₂, h₄, h₅, h₆⟩
-      exists Δ₁ ∪ Δ₂
-      constructor
-      · simp [h₁, h₄]
-      constructor
-      · simp [h₂, h₅]
-      · apply Proof.mp
-        · apply weaken
-          · apply Set.subset_union_left
-          · exact h₃
-        · apply weaken
-          · apply Set.subset_union_right
-          · exact h₆
+    rcases ih₁ with ⟨Δ₁, h₁, h₂, h₃⟩
+    rcases ih₂ with ⟨Δ₂, h₄, h₅, h₆⟩
+    exists Δ₁ ∪ Δ₂
+    constructor
+    · simp [h₁, h₄]
+    constructor
+    · simp [h₂, h₅]
+    · apply Proof.mp
+      · apply weaken
+        · apply Set.subset_union_left
+        · exact h₃
+      · apply weaken
+        · apply Set.subset_union_right
+        · exact h₆
 
 end Proof
 
