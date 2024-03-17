@@ -16,7 +16,7 @@ end
 inductive Formula.Rewritable (Γ : Context 𝓛) : Formula 𝓛 → Formula 𝓛 → Prop where
 | atom : Terms.Rewritable Γ ts₁ ts₂ → Formula.Rewritable Γ (p ⬝ₚ ts₁) (p ⬝ₚ ts₂)
 | imp : Formula.Rewritable Γ p₁ p₂ → Formula.Rewritable Γ q₁ q₂ →
-  Formula.Rewritable Γ (p₁ ⟶ q₁) (p₂ ⟶ q₂)
+  Formula.Rewritable Γ (p₁ ⇒ q₁) (p₂ ⇒ q₂)
 | refl : Formula.Rewritable Γ p p
 
 mutual
@@ -30,7 +30,7 @@ theorem Terms.Rewritable.soundness (h : 𝓣.toContext ⊆ Γ) : Terms.Rewritabl
 end
 
 theorem Formula.Rewritable.soundness (h : 𝓣.toContext ⊆ Γ) :
-  Formula.Rewritable Γ p q → Γ ⊢ p ⟷ q
+  Formula.Rewritable Γ p q → Γ ⊢ p ⇔ q
 | Formula.Rewritable.atom h₁ => Proof.mp (Proof.weaken h Proof.congr_atom_iff) (Terms.Rewritable.soundness h h₁)
 | Formula.Rewritable.imp h₁ h₂ => Proof.mp2 Proof.iff_congr_imp (Formula.Rewritable.soundness h h₁) (Formula.Rewritable.soundness h h₂)
 | Formula.Rewritable.refl => Proof.iff_refl

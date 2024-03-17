@@ -68,7 +68,7 @@ end
 @[simp] def Formula.interp : Formula 𝓛 → (𝓜 : Structure 𝓛) → Assignment 𝓜 → Prop
 | p ⬝ₚ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛ 𝓜, ρ)
 | ⊥, _, _ => False
-| p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
+| p ⇒ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
 | ∀' p, 𝓜, ρ => ∀ u, p.interp 𝓜 (u ∷ₐ ρ)
 
 notation:80 "⟦" p "⟧ₚ " 𝓜 ", " ρ:80 => Formula.interp p 𝓜 ρ
@@ -91,7 +91,7 @@ theorem Formula.interp_subst : ⟦ p[σ]ₚ ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ �
         conv => lhs; simp [Term.interp_subst, Assignment.subst_shift]
 
 theorem Formula.interp_imp :
-  ⟦ p ⟶ q ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ 𝓜, ρ → ⟦ q ⟧ₚ 𝓜, ρ := by simp
+  ⟦ p ⇒ q ⟧ₚ 𝓜, ρ ↔ ⟦ p ⟧ₚ 𝓜, ρ → ⟦ q ⟧ₚ 𝓜, ρ := by simp
 
 theorem Formula.interp_neg :
   ⟦ ~ p ⟧ₚ 𝓜, ρ ↔ ¬ ⟦ p ⟧ₚ 𝓜, ρ := by simp
@@ -103,7 +103,7 @@ theorem Formula.interp_or :
   ⟦ p ⋁ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ∨ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
 
 theorem Formula.interp_iff :
-  ⟦ p ⟷ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
+  ⟦ p ⇔ q ⟧ₚ 𝓜, ρ ↔ (⟦ p ⟧ₚ 𝓜, ρ ↔ ⟦ q ⟧ₚ 𝓜, ρ) := by simp; tauto
 
 theorem Formula.interp_exists :
   ⟦ ∃' p ⟧ₚ 𝓜, ρ ↔ ∃ u, ⟦ p ⟧ₚ 𝓜, u ∷ₐ ρ := by simp [imp_false]
@@ -132,7 +132,7 @@ theorem Entails.axioms {p : Formula 𝓛} : p ∈ Axioms 𝓛 → Γ ⊨ p := by
     simp [Formula.shift, Formula.interp_subst, Assignment.subst_shift]
     exact h
 
-theorem Entails.mp : Γ ⊨.{u} p ⟶ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
+theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
   intros h₁ h₂ 𝓜 ρ h
   apply h₁ 𝓜 ρ h
   exact h₂ 𝓜 ρ h

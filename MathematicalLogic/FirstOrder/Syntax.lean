@@ -279,25 +279,25 @@ prefix:59 "∀' " => Formula.all
 prefix:59 "∃' " => Formula.exists
 
 @[simp] theorem Formula.fal_eq : Formula.fal = (⊥ : Formula 𝓛) := rfl
-@[simp] theorem Formula.imp_eq : Formula.imp p q = p ⟶ q := rfl
+@[simp] theorem Formula.imp_eq : Formula.imp p q = p ⇒ q := rfl
 
 def Formula.free : Formula 𝓛 → Set ℕ
 | _ ⬝ₚ ts => ts.vars
 | ⊥ => {}
-| p ⟶ q => p.free ∪ q.free
+| p ⇒ q => p.free ∪ q.free
 | ∀' p => { x | x + 1 ∈ p.free }
 
 def Formula.subst : Formula 𝓛 → Subst 𝓛 → Formula 𝓛
 | p ⬝ₚ ts, σ => p ⬝ₚ ts[σ]ₜₛ
 | ⊥, _ => ⊥
-| p ⟶ q, σ => p.subst σ ⟶ q.subst σ
+| p ⇒ q, σ => p.subst σ ⇒ q.subst σ
 | ∀' p, σ => ∀' (p.subst ⇑ₛσ)
 
 notation:80 p "[" σ "]ₚ" => Formula.subst p σ
 
 @[simp] theorem Formula.subst_atom : (p ⬝ₚ ts)[σ]ₚ = p ⬝ₚ ts[σ]ₜₛ := rfl
 @[simp] theorem Formula.subst_fal : ⊥[σ]ₚ = ⊥ := rfl
-@[simp] theorem Formula.subst_imp : (p ⟶ q)[σ]ₚ = p[σ]ₚ ⟶ q[σ]ₚ := rfl
+@[simp] theorem Formula.subst_imp : (p ⇒ q)[σ]ₚ = p[σ]ₚ ⇒ q[σ]ₚ := rfl
 @[simp] theorem Formula.subst_neg : (~ p)[σ]ₚ = ~ p[σ]ₚ := rfl
 @[simp] theorem Formula.subst_all : (∀' p)[σ]ₚ = ∀' p[⇑ₛσ]ₚ := rfl
 

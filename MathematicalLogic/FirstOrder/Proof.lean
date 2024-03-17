@@ -12,18 +12,18 @@ prefix:max "↑ₚₛ" => Context.lift
 theorem Context.lift_add : ↑ₚₛ(Γ,' p) = ↑ₚₛΓ,' ↑ₚp := Set.image_insert_eq
 
 inductive Axioms (𝓛) : Context 𝓛 where
-| a1 : Axioms 𝓛 (p ⟶ (q ⟶ p))
-| a2 : Axioms 𝓛 ((p ⟶ q ⟶ r) ⟶ (p ⟶ q) ⟶ p ⟶ r)
-| a3 : Axioms 𝓛 ((~ p ⟶ ~ q) ⟶ q ⟶ p)
-| a4 : Axioms 𝓛 (∀' p ⟶ p[↦ₛ t]ₚ)
-| a5 : Axioms 𝓛 (p ⟶ ∀' ↑ₚp)
-| a6 : Axioms 𝓛 (∀' (p ⟶ q) ⟶ ∀' p ⟶ ∀' q)
+| a1 : Axioms 𝓛 (p ⇒ (q ⇒ p))
+| a2 : Axioms 𝓛 ((p ⇒ q ⇒ r) ⇒ (p ⇒ q) ⇒ p ⇒ r)
+| a3 : Axioms 𝓛 ((~ p ⇒ ~ q) ⇒ q ⇒ p)
+| a4 : Axioms 𝓛 (∀' p ⇒ p[↦ₛ t]ₚ)
+| a5 : Axioms 𝓛 (p ⇒ ∀' ↑ₚp)
+| a6 : Axioms 𝓛 (∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q)
 | a7 : Axioms 𝓛 p → Axioms 𝓛 (∀' p)
 
 inductive Proof (Γ : Context 𝓛) : Formula 𝓛 → Prop where
 | assumption : p ∈ Γ → Proof Γ p
 | axioms : p ∈ Axioms 𝓛 → Proof Γ p
-| mp : Proof Γ (p ⟶ q) → Proof Γ p → Proof Γ q
+| mp : Proof Γ (p ⇒ q) → Proof Γ p → Proof Γ q
 
 infix:50 " ⊢ " => Proof
 
@@ -40,13 +40,13 @@ theorem weaken_add : Γ ⊢ p → Γ,' q ⊢ p := by
   apply weaken
   apply Set.subset_insert
 
-theorem mp2 : Γ ⊢ p ⟶ q ⟶ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
+theorem mp2 : Γ ⊢ p ⇒ q ⇒ r → Γ ⊢ p → Γ ⊢ q → Γ ⊢ r :=
   λ h₁ h₂ h₃ => mp (mp h₁ h₂) h₃
 
-theorem identity : Γ ⊢ p ⟶ p :=
+theorem identity : Γ ⊢ p ⇒ p :=
   mp2 (axioms Axioms.a2) (axioms Axioms.a1) (axioms (Axioms.a1 (q := p)))
 
-theorem deduction : Γ ⊢ p ⟶ q ↔ Γ,' p ⊢ q := by
+theorem deduction : Γ ⊢ p ⇒ q ↔ Γ,' p ⊢ q := by
   constructor
   · intro h
     apply mp
@@ -131,62 +131,62 @@ theorem phave (h₁ : Γ ⊢ p) (h₂ : Γ,' p ⊢ q) : Γ ⊢ q :=
 macro "psuffices" t:term : tactic => `(tactic| apply psuffices (p := $t))
 macro "phave" t:term : tactic => `(tactic| apply phave (p := $t) )
 
-theorem composition : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ r) ⟶ p ⟶ r := by
+theorem composition : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ r) ⇒ p ⇒ r := by
   pintros
   papply_assumption 1
   papply 2
   passumption
 
-theorem contraposition : Γ ⊢ (p ⟶ q) ⟶ ~ q ⟶ ~ p := composition
-theorem contraposition2 : Γ ⊢ (p ⟶ ~ q) ⟶ q ⟶ ~ p := by
+theorem contraposition : Γ ⊢ (p ⇒ q) ⇒ ~ q ⇒ ~ p := composition
+theorem contraposition2 : Γ ⊢ (p ⇒ ~ q) ⇒ q ⇒ ~ p := by
   pintros
   papply 2 <;> passumption
 
 theorem true_intro : Γ ⊢ ⊤ := identity
 
-theorem false_elim : Γ ⊢ ⊥ ⟶ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) true_intro)
+theorem false_elim : Γ ⊢ ⊥ ⇒ p := mp (axioms Axioms.a3) (mp (axioms Axioms.a1) true_intro)
 
-theorem contradiction : Γ ⊢ ~ p ⟶ p ⟶ q := by
+theorem contradiction : Γ ⊢ ~ p ⇒ p ⇒ q := by
   pintros
   papply false_elim
   papply 1
   passumption
 
-theorem double_neg1 : Γ ⊢ p ⟶ ~ ~ p := by
+theorem double_neg1 : Γ ⊢ p ⇒ ~ ~ p := by
   pintros
   papply 0
   passumption
 
-theorem double_neg2 : Γ ⊢ ~ ~ p ⟶ p := by
+theorem double_neg2 : Γ ⊢ ~ ~ p ⇒ p := by
   pintro
   papply axioms Axioms.a3
   · pintros
     apply mp <;> passumption
   · passumption
 
-theorem contraposition3 : Γ ⊢ (~ p ⟶ q) ⟶ ~ q ⟶ p := by
+theorem contraposition3 : Γ ⊢ (~ p ⇒ q) ⇒ ~ q ⇒ p := by
   papply composition
   · exact contraposition
   · papply (axioms Axioms.a2)
     pintro
     exact double_neg2
 
-theorem not_imp_left : Γ ⊢ ~ (p ⟶ q) ⟶ p := by
+theorem not_imp_left : Γ ⊢ ~ (p ⇒ q) ⇒ p := by
   pintro
   papply double_neg2
   papply contraposition
   · exact contradiction (q := q)
   · passumption
 
-theorem not_imp_right : Γ ⊢ ~ (p ⟶ q) ⟶ ~ q := by
+theorem not_imp_right : Γ ⊢ ~ (p ⇒ q) ⇒ ~ q := by
   papply contraposition
   exact Proof.axioms Axioms.a1
 
-theorem and_intro : Γ ⊢ p ⟶ q ⟶ p ⋀ q := by
+theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⋀ q := by
   pintros
   apply mp2 <;> passumption
 
-theorem and_left : Γ ⊢ p ⋀ q ⟶ p := by
+theorem and_left : Γ ⊢ p ⋀ q ⇒ p := by
   pintro
   papply double_neg2
   pintro
@@ -194,7 +194,7 @@ theorem and_left : Γ ⊢ p ⋀ q ⟶ p := by
   pintros
   apply mp <;> passumption
 
-theorem and_right : Γ ⊢ p ⋀ q ⟶ q := by
+theorem and_right : Γ ⊢ p ⋀ q ⇒ q := by
   pintro
   apply mp double_neg2
   pintro
@@ -202,16 +202,16 @@ theorem and_right : Γ ⊢ p ⋀ q ⟶ q := by
   pintro
   passumption
 
-theorem or_inl : Γ ⊢ p ⟶ p ⋁ q := by
+theorem or_inl : Γ ⊢ p ⇒ p ⋁ q := by
   pintros
   papply false_elim
   apply mp <;> passumption
 
-theorem or_inr : Γ ⊢ q ⟶ p ⋁ q := by
+theorem or_inr : Γ ⊢ q ⇒ p ⋁ q := by
   pintros
   passumption
 
-theorem or_elim : Γ ⊢ p ⋁ q ⟶ (p ⟶ r) ⟶ (q ⟶ r) ⟶ r := by
+theorem or_elim : Γ ⊢ p ⋁ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
   pintros
   papply double_neg2
   pintro
@@ -226,25 +226,25 @@ theorem or_elim : Γ ⊢ p ⋁ q ⟶ (p ⟶ r) ⟶ (q ⟶ r) ⟶ r := by
   · passumption
 
 theorem excluded_middle : Γ ⊢ ~ p ⋁ p := double_neg2
+-- #check (· ⇔ ·)
+theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
+theorem iff_left : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
+theorem iff_right : Γ ⊢ (p ⇔ q) ⇒ (q ⇒ p) := and_right
 
-theorem iff_intro : Γ ⊢ (p ⟶ q) ⟶ (q ⟶ p) ⟶ (p ⟷ q) := and_intro
-theorem iff_left : Γ ⊢ (p ⟷ q) ⟶ (p ⟶ q) := and_left
-theorem iff_right : Γ ⊢ (p ⟷ q) ⟶ (q ⟶ p) := and_right
-
-theorem iff_refl : Γ ⊢ p ⟷ p := mp2 iff_intro identity identity
-theorem iff_symm : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ p) := by
+theorem iff_refl : Γ ⊢ p ⇔ p := mp2 iff_intro identity identity
+theorem iff_symm : Γ ⊢ (p ⇔ q) ⇒ (q ⇔ p) := by
   pintro
   papply iff_intro
   · papply iff_right; passumption
   · papply iff_left; passumption
-theorem iff_trans : Γ ⊢ (p ⟷ q) ⟶ (q ⟷ r) ⟶ (p ⟷ r) := by
+theorem iff_trans : Γ ⊢ (p ⇔ q) ⇒ (q ⇔ r) ⇒ (p ⇔ r) := by
   pintros 2
   papply iff_intro <;> apply mp2 composition
   · papply iff_left; passumption
   · papply iff_left; passumption
   · papply iff_right; passumption
   · papply iff_right; passumption
-theorem iff_congr_imp : Γ ⊢ (p₁ ⟷ p₂) ⟶ (q₁ ⟷ q₂) ⟶ ((p₁ ⟶ q₁) ⟷ (p₂ ⟶ q₂)) := by
+theorem iff_congr_imp : Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ ⇒ q₁) ⇔ (p₂ ⇒ q₂)) := by
   pintros 2
   papply iff_intro <;> pintros
   · papply iff_left; passumption
@@ -266,7 +266,7 @@ theorem generalization : ↑ₚₛΓ ⊢ p → Γ ⊢ ∀' p := by
   | axioms h => exact axioms (Axioms.a7 h)
   | mp _ _ ih₁ ih₂ => exact mp2 (axioms Axioms.a6) ih₁ ih₂
 
-theorem not_forall : Γ ⊢ ~ ∀' p ⟶ ∃' (~ p) := by
+theorem not_forall : Γ ⊢ ~ ∀' p ⇒ ∃' (~ p) := by
   papply contraposition
   papply (axioms Axioms.a6)
   apply generalization
@@ -274,11 +274,11 @@ theorem not_forall : Γ ⊢ ~ ∀' p ⟶ ∃' (~ p) := by
   · apply Set.empty_subset
   · apply double_neg2
 
-theorem not_exists : Γ ⊢ ~ ∃' p ⟶ ∀' (~ p) := double_neg2
+theorem not_exists : Γ ⊢ ~ ∃' p ⇒ ∀' (~ p) := double_neg2
 
-theorem forall_elim : Γ ⊢ ∀' p ⟶ p[↦ₛ t]ₚ := axioms Axioms.a4
+theorem forall_elim : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := axioms Axioms.a4
 
-theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⟶ ∃' p := by
+theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
   pintros
   suffices h : _ ⊢ (~ p)[↦ₛ t]ₚ by
     papply h
@@ -286,12 +286,12 @@ theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⟶ ∃' p := by
   papply (axioms Axioms.a4)
   passumption
 
-theorem exists_elim : Γ ⊢ ∃' p ⟶ (∀' (p ⟶ ↑ₚq)) ⟶ q := by
+theorem exists_elim : Γ ⊢ ∃' p ⇒ (∀' (p ⇒ ↑ₚq)) ⇒ q := by
   pintros
   papply double_neg2
   pintros
   papply 2
-  suffices h : _ ⊢ ∀' (↑ₚ(~ q) ⟶ ~ p) by
+  suffices h : _ ⊢ ∀' (↑ₚ(~ q) ⇒ ~ p) by
     apply mp2 (axioms Axioms.a6) h
     papply (axioms Axioms.a5)
     passumption
@@ -300,7 +300,7 @@ theorem exists_elim : Γ ⊢ ∃' p ⟶ (∀' (p ⟶ ↑ₚq)) ⟶ q := by
     exact contraposition
   · passumption
 
-theorem exists_self : Γ ⊢ ∃' ↑ₚp ⟶ p := by
+theorem exists_self : Γ ⊢ ∃' ↑ₚp ⇒ p := by
   papply contraposition3
   apply axioms Axioms.a5
 

@@ -16,21 +16,21 @@ variable [FormulaSymbol α] (p q : α)
 
 instance : Bot α := ⟨fal⟩
 
-infixr:55 " ⟶ " => imp
+infixr:55 (priority := high) " ⇒ " => imp
 attribute [match_pattern] imp
 
-def neg := p ⟶ ⊥
+def neg := p ⇒ ⊥
 prefix:58 "~ " => neg
 
 instance : Top α := ⟨~ ⊥⟩
 
-def or := ~ p ⟶ q
+def or := ~ p ⇒ q
 infix:56 " ⋁ " => or
 
-def and := ~ (p ⟶ ~ q)
+def and := ~ (p ⇒ ~ q)
 infix:57 " ⋀ " => and
 
-def iff := (p ⟶ q) ⋀ (q ⟶ p)
-infix:55 " ⟷ " => iff
+def iff := (p ⇒ q) ⋀ (q ⇒ p)
+infix:55 (priority := high) " ⇔ " => iff
 
 end FormulaSymbol

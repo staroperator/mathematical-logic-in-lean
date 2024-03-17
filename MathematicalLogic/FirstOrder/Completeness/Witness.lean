@@ -29,7 +29,7 @@ notation "⌈" ts "⌉ₜₛ" => Terms.injConsts ts
 def Formula.injConsts : Formula 𝓛 → Formula (𝓛 ⊎ 𝓒)
 | p ⬝ₚ ts => p ⬝ₚ ts.injConsts
 | ⊥ => ⊥
-| p ⟶ q => p.injConsts ⟶ q.injConsts
+| p ⇒ q => p.injConsts ⇒ q.injConsts
 | ∀' p => ∀' p.injConsts
 
 notation "⌈" p "⌉ₚ" => Formula.injConsts p
@@ -56,7 +56,7 @@ local notation "⌊" ts "⌋ₜₛ" => Terms.eraseConsts ts
 def Formula.eraseConsts : Formula (𝓛 ⊎ 𝓒) → ℕ → Formula 𝓛
 | p ⬝ₚ ts, x => p ⬝ₚ (⌊ts⌋ₜₛ x)
 | ⊥, _ => ⊥
-| p ⟶ q, x => p.eraseConsts x ⟶ q.eraseConsts x
+| p ⇒ q, x => p.eraseConsts x ⇒ q.eraseConsts x
 | ∀' p, x => ∀' (p.eraseConsts (x + 1))
 
 local notation "⌊" p "⌋ₚ" => Formula.eraseConsts p
@@ -233,7 +233,7 @@ end
 def Formula.consts : Formula 𝓛 → Set (Const 𝓛)
 | _ ⬝ₚ ts => ts.consts
 | ⊥ => {}
-| p ⟶ q => p.consts ∪ q.consts
+| p ⇒ q => p.consts ∪ q.consts
 | ∀' p => p.consts
 
 mutual
@@ -303,7 +303,7 @@ local notation ts "[" c " ↦ᶜ " x "]ₜₛ" => Terms.substConst ts c x
 def Formula.substConst [DecidableEq (Const 𝓛)] : Formula 𝓛 → Const 𝓛 → ℕ → Formula 𝓛
 | p ⬝ₚ ts, c, x => p ⬝ₚ ts[c ↦ᶜ x]ₜₛ
 | ⊥, _, _ => ⊥
-| p ⟶ q, c, x => p.substConst c x ⟶ q.substConst c x
+| p ⇒ q, c, x => p.substConst c x ⇒ q.substConst c x
 | ∀' p, c, x => ∀' (p.substConst c (x + 1))
 
 local notation p "[" c " ↦ᶜ " x "]ₚ" => Formula.substConst p c x
@@ -515,7 +515,7 @@ end
 def Formula.injOmega {n : ℕ} : Formula (𝓛^n) → Formula 𝓛*
 | p ⬝ₚ ts => p ⬝ₚ ts.injOmega
 | ⊥ => ⊥
-| p ⟶ q => p.injOmega ⟶ q.injOmega
+| p ⇒ q => p.injOmega ⇒ q.injOmega
 | ∀' p => ∀' (p.injOmega)
 
 mutual
@@ -532,7 +532,7 @@ end
 def Formula.level : Formula 𝓛* → ℕ
 | _ ⬝ₚ ts => ts.level
 | ⊥ => 0
-| p ⟶ q => max p.level q.level
+| p ⇒ q => max p.level q.level
 | ∀' p => p.level
 
 mutual
@@ -805,7 +805,7 @@ lemma Formula.exists_inj_omega :
     rcases h with ⟨h₁, h₂⟩
     rcases ih₁ h₁ with ⟨p', h₁⟩
     rcases ih₂ h₂ with ⟨q', h₂⟩
-    exists p' ⟶ q'
+    exists p' ⇒ q'
     simp [h₁, h₂, Formula.injOmega]
   case all p ih =>
     rcases ih h with ⟨p', h⟩
@@ -817,7 +817,7 @@ lemma Formula.exists_inj_omega :
 def WitnessFormulas : Context 𝓛*
   := { p | ∃ (p' : Formula 𝓛*) (c : Const 𝓛*)
              (n : ℕ) (p'' : Formula (𝓛^n)),
-             p = ∃' p' ⟶ p' [↦ₛ c]ₚ
+             p = ∃' p' ⇒ p' [↦ₛ c]ₚ
              ∧ p' = p''.injOmega
              ∧ c = Sum.inr ⟨n, p''⟩
              ∧ 0 ∈ p'.free }
@@ -826,7 +826,7 @@ notation "𝓦" => WitnessFormulas
 
 lemma level_of_W_formula
   {p p' : Formula 𝓛*} {c : Const 𝓛*} {p'' : Formula (𝓛^n)} :
-  p = ∃' p' ⟶ p' [↦ₛ c]ₚ →
+  p = ∃' p' ⇒ p' [↦ₛ c]ₚ →
   p' = p''.injOmega →
   c = Sum.inr ⟨n, p''⟩ →
   0 ∈ p'.free →
@@ -861,7 +861,7 @@ lemma level_of_W_formula
 
 lemma level_less_than_W_formula
   {p p' q : Formula 𝓛*} {c : Const 𝓛*} {p'' : Formula (𝓛^n)} :
-  p = ∃' p' ⟶ p' [↦ₛ c]ₚ →
+  p = ∃' p' ⇒ p' [↦ₛ c]ₚ →
   p' = p''.injOmega →
   c = Sum.inr ⟨n, p''⟩ →
   0 ∈ p'.free →

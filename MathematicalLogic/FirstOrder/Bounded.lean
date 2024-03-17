@@ -176,7 +176,7 @@ prefix:59 "∀ᵇ " => BFormula.all
 prefix:59 "∃ᵇ " => BFormula.exists
 
 @[simp] theorem BFormula.fal_eq : BFormula.fal = (⊥ : BFormula 𝓛 m) := rfl
-@[simp] theorem BFormula.imp_eq : BFormula.imp p q = p ⟶ q := rfl
+@[simp] theorem BFormula.imp_eq : BFormula.imp p q = p ⇒ q := rfl
 
 @[reducible] def Sentence (𝓛) := BFormula 𝓛 0
 
@@ -189,12 +189,12 @@ prefix:59 "∀* " => BFormula.alls
 def BFormula.unbounded : BFormula 𝓛 m → Formula 𝓛
 | p ⬝ₚᵇ ts => p ⬝ₚ ts.unbounded
 | ⊥ => ⊥
-| p ⟶ q => p.unbounded ⟶ q.unbounded
+| p ⇒ q => p.unbounded ⇒ q.unbounded
 | ∀ᵇ p => ∀' p.unbounded
 
 @[simp] theorem BFormula.unbounded_atom : (p ⬝ₚᵇ ts : BFormula 𝓛 m).unbounded = p ⬝ₚ ts.unbounded := rfl
 @[simp] theorem BFormula.unbounded_fal : (⊥ : BFormula 𝓛 m).unbounded = ⊥ := rfl
-@[simp] theorem BFormula.unbounded_imp : (p ⟶ q : BFormula 𝓛 m).unbounded = p.unbounded ⟶ q.unbounded := rfl
+@[simp] theorem BFormula.unbounded_imp : (p ⇒ q : BFormula 𝓛 m).unbounded = p.unbounded ⇒ q.unbounded := rfl
 @[simp] theorem BFormula.unbounded_neg : (~ p : BFormula 𝓛 m).unbounded = ~ p.unbounded := rfl
 @[simp] theorem BFormula.unbounded_all : (∀ᵇ p).unbounded = ∀' p.unbounded := rfl
 
@@ -204,13 +204,13 @@ instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.
 @[simp] def Formula.bound : Formula 𝓛 → ℕ
 | _ ⬝ₚ ts => ts.bound
 | ⊥ => 0
-| p ⟶ q => max p.bound q.bound
+| p ⇒ q => max p.bound q.bound
 | ∀' p => p.bound - 1
 
 def Formula.bounded : (p : Formula 𝓛) → m ≥ p.bound → BFormula 𝓛 m
 | p ⬝ₚ ts, h => p ⬝ₚᵇ ts.bounded h
 | ⊥, _ => ⊥
-| p ⟶ q, h => p.bounded (by simp at h; exact h.left) ⟶ q.bounded (by simp at h; exact h.right)
+| p ⇒ q, h => p.bounded (by simp at h; exact h.left) ⇒ q.bounded (by simp at h; exact h.right)
 | ∀' p, h => ∀ᵇ p.bounded (by simp at h; exact h)
 
 theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
@@ -223,14 +223,14 @@ theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
 def BFormula.subst : BFormula 𝓛 m → BSubst 𝓛 m k → BFormula 𝓛 k
 | p ⬝ₚᵇ ts, σ => p ⬝ₚᵇ ts[σ]ₜₛᵇ
 | ⊥, _ => ⊥
-| p ⟶ q, σ => p.subst σ ⟶ q.subst σ
+| p ⇒ q, σ => p.subst σ ⇒ q.subst σ
 | ∀ᵇ p, σ => ∀ᵇ (p.subst ⇑ᵇσ)
 
 notation:80 p "[" σ "]ₚᵇ" => BFormula.subst p σ
 
 @[simp] theorem BFormula.subst_atom : (p ⬝ₚᵇ ts)[σ]ₚᵇ = p ⬝ₚᵇ ts[σ]ₜₛᵇ := rfl
 @[simp] theorem BFormula.subst_fal : ⊥[σ]ₚᵇ = ⊥ := rfl
-@[simp] theorem BFormula.subst_imp : (p ⟶ q)[σ]ₚᵇ = p[σ]ₚᵇ ⟶ q[σ]ₚᵇ := rfl
+@[simp] theorem BFormula.subst_imp : (p ⇒ q)[σ]ₚᵇ = p[σ]ₚᵇ ⇒ q[σ]ₚᵇ := rfl
 @[simp] theorem BFormula.subst_neg : (~ p)[σ]ₚᵇ = ~ p[σ]ₚᵇ := rfl
 @[simp] theorem BFormula.subst_all : (∀ᵇ p)[σ]ₚᵇ = ∀ᵇ p[⇑ᵇσ]ₚᵇ := rfl
 
@@ -286,7 +286,7 @@ theorem Sentence.shift_eq {p : Sentence 𝓛} :
   Sentence.unbounded_subst_eq
 
 theorem Sentence.foralls_elim {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
-  Γ ⊢ ∀* p ⟶ p[σ]ₚ := by
+  Γ ⊢ ∀* p ⇒ p[σ]ₚ := by
   induction' m with m ih generalizing σ
   · rw [Sentence.unbounded_subst_eq]
     exact Proof.identity
@@ -302,7 +302,7 @@ theorem Sentence.foralls_elim {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
     apply Proof.forall_elim
 
 theorem Sentence.foralls_elim_self {p : BFormula 𝓛 m} :
-  Γ ⊢ ∀* p ⟶ (p : Formula 𝓛) := by
+  Γ ⊢ ∀* p ⇒ (p : Formula 𝓛) := by
   have h := Sentence.foralls_elim (Γ := Γ) (p := p) (σ := Subst.id)
   simp [Formula.subst_id] at h
   exact h
@@ -335,7 +335,7 @@ notation:80 "⟦" ts "⟧ₜₛᵇ " 𝓜 ", " ρ:80 => BTerms.interp ts 𝓜 ρ
 @[simp] def BFormula.interp : BFormula 𝓛 m → (𝓜 : Structure 𝓛) → BAssignment 𝓜 m → Prop
 | p ⬝ₚᵇ ts, 𝓜, ρ => 𝓜.𝓟 p (⟦ ts ⟧ₜₛᵇ 𝓜, ρ)
 | ⊥, _, _ => False
-| p ⟶ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
+| p ⇒ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
 | ∀ᵇ p, 𝓜, ρ => ∀ u, p.interp 𝓜 (u ∷ₐᵇ ρ)
 
 notation:80 "⟦" p "⟧ₚᵇ" 𝓜 ", " ρ:80 => BFormula.interp p 𝓜 ρ
