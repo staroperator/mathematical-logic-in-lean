@@ -38,6 +38,7 @@ prefix:max "∃ᵇ! " => BFormula.exists_unique
 
 @[simp] theorem Term.subst_eq {t₁ t₂ : Term 𝓛} : (t₁ ≈ t₂)[σ]ₚ = t₁[σ]ₜ ≈ t₂[σ]ₜ := by simp [Term.eq]
 @[simp] theorem Term.subst_neq {t₁ t₂ : Term 𝓛} : (t₁ ≉ t₂)[σ]ₚ = t₁[σ]ₜ ≉ t₂[σ]ₜ := by simp [Term.neq]
+@[simp] theorem Term.shift_eq {t₁ t₂ : Term 𝓛} : ↑ₚ(t₁ ≈ t₂) = ↑ₜt₁ ≈ ↑ₜ t₂ := Term.subst_eq
 
 @[simp] theorem BTerm.unbounded_eq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≈ᵇ t₂ : Formula 𝓛) = t₁ ≈ t₂ := by simp [BTerm.eq, Term.eq]
 @[simp] theorem BTerm.unbounded_neq {t₁ t₂ : BTerm 𝓛 m} : (t₁ ≉ᵇ t₂ : Formula 𝓛) = t₁ ≉ t₂ := by simp [BTerm.neq, Term.neq]
@@ -62,8 +63,8 @@ namespace Proof
 variable {𝓣 : Theory 𝓛} [EqTheory 𝓣]
 
 theorem refl {t : Term 𝓛} : 𝓣 ⊢ t ≈ t := by
-  have h : 𝓣 ⊢ (∀ᵇ (#ᵇ0 ≈ᵇ #ᵇ0) : Sentence 𝓛)
-  · apply Theory.axioms
+  have h : 𝓣 ⊢ (∀ᵇ (#ᵇ0 ≈ᵇ #ᵇ0) : Sentence 𝓛) := by
+    apply Theory.axioms
     apply EqTheory.eqAxioms
     apply EQ.e1
   simp at h
@@ -84,15 +85,16 @@ theorem refl_terms {ts : Terms 𝓛 n} : 𝓣 ⊢ ts ≋ ts :=
 theorem subst {t₁ t₂ : Term 𝓛} {p : Formula 𝓛} :
   𝓣 ⊢ t₁ ≈ t₂ ⟶ p[↦ₛ t₁]ₚ ⟶ p[↦ₛ t₂]ₚ := by
   let m := max p.bound (max t₁.bound t₂.bound)
-  let t₁' := t₁.bounded (m := m) (by simp)
-  let t₂' := t₂.bounded (m := m) (by simp)
-  let p' := p.bounded (m := m + 1) (by simp [Nat.le_succ_of_le])
-  have h : 𝓣 ⊢ ∀* ((t₁' ≈ᵇ t₂') ⟶ p'[↦ᵇ t₁']ₚᵇ ⟶ p'[↦ᵇ t₂']ₚᵇ)
-  · apply Theory.axioms
+  let t₁' := t₁.bounded (m := m) (by simp [m])
+  let t₂' := t₂.bounded (m := m) (by simp [m])
+  let p' := p.bounded (m := m + 1) (by simp [m, Nat.le_succ_of_le])
+  have h : 𝓣 ⊢ ∀* ((t₁' ≈ᵇ t₂') ⟶ p'[↦ᵇ t₁']ₚᵇ ⟶ p'[↦ᵇ t₂']ₚᵇ) := by
+    apply Theory.axioms
     apply EqTheory.eqAxioms
     apply EQ.e2
   apply Proof.mp Sentence.foralls_elim_self at h
-  simp [Term.bounded_unbounded, Formula.bounded_subst_single_unbounded] at h
+  simp [Term.bounded_unbounded, Formula.bounded_subst_single_unbounded,
+    t₁', t₂', p'] at h
   exact h
 
 theorem symm {t₁ t₂ : Term 𝓛} :
@@ -172,8 +174,8 @@ lemma congr_func_aux
       apply Proof.mp (Proof.weaken_add h)
       apply Proof.mp Proof.and_left
       passumption
-    · have h : n + 1 + m = n + (0 + 1 + m)
-      · simp [Nat.zero_add, Nat.add_assoc]
+    · have h : n + 1 + m = n + (0 + 1 + m) := by
+        simp [Nat.zero_add, Nat.add_assoc]
       simp [cast_func h Terms.append_cons]
       apply Proof.mp (Proof.weaken_add congr_func_aux)
       apply Proof.mp Proof.and_right
@@ -203,8 +205,8 @@ lemma congr_atom_aux
       apply Proof.mp (Proof.weaken_add h)
       apply Proof.mp Proof.and_left
       passumption
-    · have h : n + 1 + m = n + (0 + 1 + m)
-      · simp [Nat.zero_add, Nat.add_assoc]
+    · have h : n + 1 + m = n + (0 + 1 + m) := by
+        simp [Nat.zero_add, Nat.add_assoc]
       simp [cast_atom h Terms.append_cons]
       apply Proof.mp (Proof.weaken_add congr_atom_aux)
       apply Proof.mp Proof.and_right

@@ -199,7 +199,7 @@ def BFormula.unbounded : BFormula 𝓛 m → Formula 𝓛
 @[simp] theorem BFormula.unbounded_all : (∀ᵇ p).unbounded = ∀' p.unbounded := rfl
 
 instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
-instance (prio := prioHigh) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
+instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
 
 @[simp] def Formula.bound : Formula 𝓛 → ℕ
 | _ ⬝ₚ ts => ts.bound

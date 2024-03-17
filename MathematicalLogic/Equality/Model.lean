@@ -80,7 +80,7 @@ theorem eq_congr_func : v₁ ≈ v₂ → 𝓜.𝓕 f v₁ ≈ 𝓜.𝓕 f v₂ 
       exact h₂⟩
     else default
   apply Theory.soundness (ρ := ρ) at h
-  simp [Terms.interp_of_vector] at h
+  simp [Terms.interp_of_vector, ρ] at h
   apply h
   rw [eqv_interp]
   simp [Terms.interp_of_vector]
@@ -101,7 +101,7 @@ theorem eq_congr_atom : v₁ ≈ v₂ → (𝓜.𝓟 p v₁ ↔ 𝓜.𝓟 p v₂
     else default
   apply Theory.soundness (ρ := ρ) at h
   simp only [Formula.interp_imp, Formula.interp_iff] at h
-  simp [Terms.interp_of_vector] at h
+  simp [Terms.interp_of_vector, ρ] at h
   apply h
   rw [eqv_interp]
   simp [Terms.interp_of_vector]
@@ -132,9 +132,6 @@ def quotientStructure (𝓜 : Model 𝓣) : Structure 𝓛 where
     Quotient.liftOn (𝓜.liftVec v)
       (λ v => 𝓜.𝓟 p v)
       (by intros _ _ h; simp [eq_congr_atom h])
-
--- @[simp] lemma quotient_structure_F :
---   𝓜.quotientStructure.𝓕 f v = Quotient.liftOn (𝓜.liftVec v) (λ v => ⟦𝓜.𝓕 f v⟧) (by intros _ _ h; simp [eq_congr_func h]) := rfl
 
 mutual
 lemma Term.interp_quotient_structure
@@ -172,8 +169,8 @@ lemma Formula.interp_quotient_structure
   case imp _ _ ih₁ ih₂ =>
     simp [ih₁, ih₂]
   case all _ ih =>
-    have h {u} : (λ x => ⟦(u ∷ₐ ρ) x⟧) = Assignment.cons (𝓜 := 𝓜.quotientStructure) ⟦u⟧ (λ (x : ℕ) => ⟦ρ x⟧)
-    · funext x; cases x <;> rfl
+    have h {u} : (λ x => ⟦(u ∷ₐ ρ) x⟧) = Assignment.cons (𝓜 := 𝓜.quotientStructure) ⟦u⟧ (λ (x : ℕ) => ⟦ρ x⟧) := by
+      funext x; cases x <;> rfl
     simp [←ih, h]
     constructor
     · intros h u
@@ -205,5 +202,6 @@ theorem quotient_model_interp_eq {u₁ u₂ : 𝓜.quotientModel.𝓤} :
     exact h
   · intro h
     rw [h]
+    apply eq_refl
 
 end Model
