@@ -3,13 +3,13 @@ import MathematicalLogic.FirstOrder.Syntax
 
 @[reducible] def Context (𝓛) := Set (Formula 𝓛)
 
-def Context.add (Γ : Context 𝓛) (p) := insert p Γ
-infixl:51 ",' " => Context.add
+def Context.append (Γ : Context 𝓛) (p) := insert p Γ
+infixl:51 ",' " => Context.append
 
 def Context.lift : Context 𝓛 → Context 𝓛 := λ Γ => {↑ₚp | p ∈ Γ}
 prefix:max "↑ₚₛ" => Context.lift
 
-theorem Context.lift_add : ↑ₚₛ(Γ,' p) = ↑ₚₛΓ,' ↑ₚp := Set.image_insert_eq
+theorem Context.lift_append : ↑ₚₛ(Γ,' p) = ↑ₚₛΓ,' ↑ₚp := Set.image_insert_eq
 
 inductive Axioms (𝓛) : Context 𝓛 where
 | a1 : Axioms 𝓛 (p ⇒ (q ⇒ p))
@@ -86,9 +86,12 @@ macro "passumption" n:num : tactic =>
   ))
 
 macro "pweaken_ctx" : tactic =>
-  `(tactic| (intro _ h; (repeat apply Set.subset_insert); exact h))
-
--- macro "papply_by" t:tactic : tactic
+  `(tactic| (
+    intro _ h
+    try exact h
+    repeat
+      apply Set.subset_insert; try exact h
+  ))
 
 macro "papply" t:term : tactic =>
   `(tactic| (
@@ -226,7 +229,6 @@ theorem or_elim : Γ ⊢ p ⋁ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
   · passumption
 
 theorem excluded_middle : Γ ⊢ ~ p ⋁ p := double_neg2
--- #check (· ⇔ ·)
 theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
 theorem iff_left : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
 theorem iff_right : Γ ⊢ (p ⇔ q) ⇒ (q ⇒ p) := and_right

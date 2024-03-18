@@ -31,21 +31,21 @@ instance (priority := high) : SizeOf (BTerms 𝓛 m n) := ⟨BTerms.size⟩
 @[simp] theorem BTerms.sizeOf_eq {ts : BTerms 𝓛 m n} : sizeOf ts = ts.size := rfl
 
 mutual
-def BTerm.unbounded : BTerm 𝓛 m → Term 𝓛
+def BTerm.ub : BTerm 𝓛 m → Term 𝓛
 | #ᵇx => #x
-| f ⬝ₜᵇ ts => f ⬝ₜ ts.unbounded
-def BTerms.unbounded : BTerms 𝓛 m n → Terms 𝓛 n
+| f ⬝ₜᵇ ts => f ⬝ₜ ts.ub
+def BTerms.ub : BTerms 𝓛 m n → Terms 𝓛 n
 | []ₜᵇ => []ₜ
-| t ∷ₜᵇ ts => t.unbounded ∷ₜ ts.unbounded
+| t ∷ₜᵇ ts => t.ub ∷ₜ ts.ub
 end
 
-@[simp] theorem BTerm.unbounded_var : (#ᵇx : BTerm 𝓛 m).unbounded = #x := by simp [BTerm.unbounded]
-@[simp] theorem BTerm.unbounded_func : (f ⬝ₜᵇ ts : BTerm 𝓛 m).unbounded = f ⬝ₜ ts.unbounded := by simp [BTerm.unbounded]
-@[simp] theorem BTerms.unbounded_nil : ([]ₜᵇ : BTerms 𝓛 m 0).unbounded = ([]ₜ : Terms 𝓛 0) := rfl
-@[simp] theorem BTerms.unbounded_cons : (t ∷ₜᵇ ts : BTerms 𝓛 m _).unbounded = t.unbounded ∷ₜ ts.unbounded := by simp [BTerms.unbounded]
+@[simp] theorem BTerm.ub_var : (#ᵇx : BTerm 𝓛 m).ub = #x := by simp [BTerm.ub]
+@[simp] theorem BTerm.ub_func : (f ⬝ₜᵇ ts : BTerm 𝓛 m).ub = f ⬝ₜ ts.ub := by simp [BTerm.ub]
+@[simp] theorem BTerms.ub_nil : ([]ₜᵇ : BTerms 𝓛 m 0).ub = ([]ₜ : Terms 𝓛 0) := rfl
+@[simp] theorem BTerms.ub_cons : (t ∷ₜᵇ ts : BTerms 𝓛 m _).ub = t.ub ∷ₜ ts.ub := by simp [BTerms.ub]
 
-instance : CoeOut (BTerm 𝓛 m) (Term 𝓛) := ⟨BTerm.unbounded⟩
-instance : CoeOut (BTerms 𝓛 m n) (Terms 𝓛 n) := ⟨BTerms.unbounded⟩
+-- instance : CoeOut (BTerm 𝓛 m) (Term 𝓛) := ⟨BTerm.ub⟩
+-- instance : CoeOut (BTerms 𝓛 m n) (Terms 𝓛 n) := ⟨BTerms.ub⟩
 
 mutual
 @[simp] def Term.bound : Term 𝓛 → ℕ
@@ -57,28 +57,28 @@ mutual
 end
 
 mutual
-@[simp] def Term.bounded :
+@[simp] def Term.bd :
   (t : Term 𝓛) → m ≥ t.bound → BTerm 𝓛 m
 | #x, h => #ᵇ⟨x, by simp at h; exact h⟩
-| f ⬝ₜ ts, h => f ⬝ₜᵇ ts.bounded (by simp at h; exact h)
-@[simp] def Terms.bounded :
+| f ⬝ₜ ts, h => f ⬝ₜᵇ ts.bd (by simp at h; exact h)
+@[simp] def Terms.bd :
   (ts : Terms 𝓛 n) → m ≥ ts.bound → BTerms 𝓛 m n
 | []ₜ, _ => []ₜᵇ
-| t ∷ₜ ts, h => t.bounded (by simp at h; exact h.left) ∷ₜᵇ ts.bounded (by simp at h; exact h.right)
+| t ∷ₜ ts, h => t.bd (by simp at h; exact h.left) ∷ₜᵇ ts.bd (by simp at h; exact h.right)
 end
 
 mutual
-theorem Term.bounded_unbounded {t : Term 𝓛} {h : m ≥ t.bound} :
-  (t.bounded h).unbounded = t :=
+theorem Term.bd_ub {t : Term 𝓛} {h : m ≥ t.bound} :
+  (t.bd h).ub = t :=
   match t with
   | #x => by simp
-  | f ⬝ₜ ts => by simp; apply Terms.bounded_unbounded
-theorem Terms.bounded_unbounded {n : ℕ} {ts : Terms 𝓛 n} {h : m ≥ ts.bound} :
-  (ts.bounded h).unbounded = ts :=
+  | f ⬝ₜ ts => by simp; apply Terms.bd_ub
+theorem Terms.bd_ub {n : ℕ} {ts : Terms 𝓛 n} {h : m ≥ ts.bound} :
+  (ts.bd h).ub = ts :=
   match n, ts with
   | 0, []ₜ => rfl
   | n + 1, t ∷ₜ ts => by
-    simp; rw [Term.bounded_unbounded, Terms.bounded_unbounded]; trivial
+    simp; rw [Term.bd_ub, Terms.bd_ub]; trivial
 end
 
 
@@ -136,28 +136,28 @@ def BSubst.lift (σ : BSubst 𝓛 m k) : BSubst 𝓛 (m + 1) (k + 1) :=
 prefix:max "⇑ᵇ" => BSubst.lift
 
 mutual
-theorem BTerm.unbounded_subst_eq
+theorem BTerm.ub_subst_eq
   {t : BTerm 𝓛 m} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → t[σ]ₜᵇ = t[σ']ₜ :=
+  (∀ x, (σ x).ub = σ' x) → t[σ]ₜᵇ.ub = t.ub[σ']ₜ :=
   match t with
   | #ᵇx => by intro h; simp [h]
-  | f ⬝ₜᵇ ts => by intro h; simp; exact BTerms.unbounded_subst_eq h
-theorem BTerms.unbounded_subst_eq
+  | f ⬝ₜᵇ ts => by intro h; simp; exact BTerms.ub_subst_eq h
+theorem BTerms.ub_subst_eq
   {ts : BTerms 𝓛 m n} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → (ts[σ]ₜₛᵇ : Terms 𝓛 n) = ts[σ']ₜₛ :=
+  (∀ x, (σ x).ub = σ' x) → ts[σ]ₜₛᵇ.ub = ts.ub[σ']ₜₛ :=
   match ts with
   | []ₜᵇ => by intro; rfl
   | t ∷ₜᵇ ts => by
     intro h
     simp
-    rw [BTerm.unbounded_subst_eq h, BTerms.unbounded_subst_eq h]
+    rw [BTerm.ub_subst_eq h, BTerms.ub_subst_eq h]
     trivial
 end
 
-theorem BTerm.unbounded_shift_eq {t : BTerm 𝓛 m} :
-  ↑ₜᵇt = ↑ₜ(t : Term 𝓛) := by
+theorem BTerm.ub_shift_eq {t : BTerm 𝓛 m} :
+  (↑ₜᵇt).ub = ↑ₜt.ub := by
   simp [BTerm.shift, Term.shift]
-  apply BTerm.unbounded_subst_eq
+  apply BTerm.ub_subst_eq
   intro x
   rfl
 
@@ -172,34 +172,33 @@ inductive BFormula (𝓛 : Language) : ℕ → Type where
 infix:70 " ⬝ₚᵇ " => BFormula.atom
 instance : FormulaSymbol (BFormula 𝓛 m) := ⟨BFormula.fal, BFormula.imp⟩
 prefix:59 "∀ᵇ " => BFormula.all
-@[reducible] def BFormula.exists (p : BFormula 𝓛 (m + 1)) := ~ ∀ᵇ (~ p)
+abbrev BFormula.exists (p : BFormula 𝓛 (m + 1)) := ~ ∀ᵇ (~ p)
 prefix:59 "∃ᵇ " => BFormula.exists
 
 @[simp] theorem BFormula.fal_eq : BFormula.fal = (⊥ : BFormula 𝓛 m) := rfl
 @[simp] theorem BFormula.imp_eq : BFormula.imp p q = p ⇒ q := rfl
 
-@[reducible] def Sentence (𝓛) := BFormula 𝓛 0
+abbrev Sentence (𝓛) := BFormula 𝓛 0
 
 def BFormula.alls : ∀ {m}, BFormula 𝓛 m → Sentence 𝓛
 | 0, p => p
 | _ + 1, p => (∀ᵇ p).alls
-
 prefix:59 "∀* " => BFormula.alls
 
-def BFormula.unbounded : BFormula 𝓛 m → Formula 𝓛
-| p ⬝ₚᵇ ts => p ⬝ₚ ts.unbounded
+def BFormula.ub : BFormula 𝓛 m → Formula 𝓛
+| p ⬝ₚᵇ ts => p ⬝ₚ ts.ub
 | ⊥ => ⊥
-| p ⇒ q => p.unbounded ⇒ q.unbounded
-| ∀ᵇ p => ∀' p.unbounded
+| p ⇒ q => p.ub ⇒ q.ub
+| ∀ᵇ p => ∀' p.ub
 
-@[simp] theorem BFormula.unbounded_atom : (p ⬝ₚᵇ ts : BFormula 𝓛 m).unbounded = p ⬝ₚ ts.unbounded := rfl
-@[simp] theorem BFormula.unbounded_fal : (⊥ : BFormula 𝓛 m).unbounded = ⊥ := rfl
-@[simp] theorem BFormula.unbounded_imp : (p ⇒ q : BFormula 𝓛 m).unbounded = p.unbounded ⇒ q.unbounded := rfl
-@[simp] theorem BFormula.unbounded_neg : (~ p : BFormula 𝓛 m).unbounded = ~ p.unbounded := rfl
-@[simp] theorem BFormula.unbounded_all : (∀ᵇ p).unbounded = ∀' p.unbounded := rfl
+@[simp] theorem BFormula.ub_atom : (p ⬝ₚᵇ ts : BFormula 𝓛 m).ub = p ⬝ₚ ts.ub := rfl
+@[simp] theorem BFormula.ub_fal : (⊥ : BFormula 𝓛 m).ub = ⊥ := rfl
+@[simp] theorem BFormula.ub_imp : (p ⇒ q : BFormula 𝓛 m).ub = p.ub ⇒ q.ub := rfl
+@[simp] theorem BFormula.ub_neg : (~ p : BFormula 𝓛 m).ub = ~ p.ub := rfl
+@[simp] theorem BFormula.ub_all : (∀ᵇ p).ub = ∀' p.ub := rfl
 
-instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.unbounded⟩
-instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.unbounded⟩
+-- instance : CoeOut (BFormula 𝓛 m) (Formula 𝓛) := ⟨BFormula.ub⟩
+-- instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.ub⟩
 
 @[simp] def Formula.bound : Formula 𝓛 → ℕ
 | _ ⬝ₚ ts => ts.bound
@@ -207,16 +206,17 @@ instance (priority := high) : Coe (Sentence 𝓛) (Formula 𝓛) := ⟨BFormula.
 | p ⇒ q => max p.bound q.bound
 | ∀' p => p.bound - 1
 
-def Formula.bounded : (p : Formula 𝓛) → m ≥ p.bound → BFormula 𝓛 m
-| p ⬝ₚ ts, h => p ⬝ₚᵇ ts.bounded h
+def Formula.bd : (p : Formula 𝓛) → m ≥ p.bound → BFormula 𝓛 m
+| p ⬝ₚ ts, h => p ⬝ₚᵇ ts.bd h
 | ⊥, _ => ⊥
-| p ⇒ q, h => p.bounded (by simp at h; exact h.left) ⇒ q.bounded (by simp at h; exact h.right)
-| ∀' p, h => ∀ᵇ p.bounded (by simp at h; exact h)
+| p ⇒ q, h =>
+  p.bd (by simp at h; exact h.left) ⇒ q.bd (by simp at h; exact h.right)
+| ∀' p, h => ∀ᵇ p.bd (by simp at h; exact h)
 
-theorem Formula.bounded_unbounded {p : Formula 𝓛} {h : m ≥ p.bound} :
-  (p.bounded h).unbounded = p := by
-  induction p generalizing m <;> simp [Formula.bounded]
-  case atom => simp [Terms.bounded_unbounded]
+theorem Formula.bd_ub {p : Formula 𝓛} {h : m ≥ p.bound} :
+  (p.bd h).ub = p := by
+  induction p generalizing m <;> simp [Formula.bd]
+  case atom => simp [Terms.bd_ub]
   case imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   case all _ ih => simp [ih]
 
@@ -249,46 +249,46 @@ theorem BFormula.subst_id : p[idᵇ]ₚᵇ = p := by
     · rfl
     · simp [BSubst.lift, BSubst.cons, BSubst.id, BTerm.shift, BSubst.shift]
 
-theorem BFormula.unbounded_subst_eq
+theorem BFormula.ub_subst_eq
   {p : BFormula 𝓛 m} {σ : BSubst 𝓛 m k} {σ' : Subst 𝓛} :
-  (∀ x, σ x = σ' x) → p[σ]ₚᵇ = p[σ']ₚ := by
+  (∀ x, (σ x).ub = σ' x) → p[σ]ₚᵇ.ub = p.ub[σ']ₚ := by
   intro h
   induction p generalizing k σ' <;> try simp
-  case atom p ts => simp [BTerms.unbounded_subst_eq h]
+  case atom p ts => simp [BTerms.ub_subst_eq h]
   case imp p q ih₁ ih₂ => simp [ih₁ h, ih₂ h]
   case all p ih =>
     apply ih
     intro x
     cases x using Fin.cases
     · rfl
-    · simp [BSubst.lift, BSubst.cons, Subst.lift, BTerm.unbounded_shift_eq, h]
+    · simp [BSubst.lift, BSubst.cons, Subst.lift, BTerm.ub_shift_eq, h]
 
-theorem Formula.bounded_subst_single_unbounded
+theorem Formula.bd_subst_single_ub
   {p : Formula 𝓛} {h₁ : m + 1 ≥ p.bound}
   {t : Term 𝓛} {h₂ : m ≥ t.bound} :
-  (p.bounded h₁)[↦ᵇ (t.bounded h₂)]ₚᵇ = p[↦ₛ t]ₚ := by
-  conv => rhs; rw [←Formula.bounded_unbounded (h := h₁)]
-  apply BFormula.unbounded_subst_eq
+  (p.bd h₁)[↦ᵇ (t.bd h₂)]ₚᵇ.ub = p[↦ₛ t]ₚ := by
+  conv => rhs; rw [←Formula.bd_ub (h := h₁)]
+  apply BFormula.ub_subst_eq
   intro x
   cases x using Fin.cases
-  · simp [BSubst.single, BSubst.cons, Subst.single, Term.bounded_unbounded]
-  · simp [BSubst.single, BSubst.cons, BSubst.id, Subst.single, Term.bounded_unbounded]
+  · simp [BSubst.single, BSubst.cons, Subst.single, Term.bd_ub]
+  · simp [BSubst.single, BSubst.cons, BSubst.id, Subst.single, Term.bd_ub]
 
-theorem Sentence.unbounded_subst_eq {p : Sentence 𝓛} {σ : Subst 𝓛} :
-  p[σ]ₚ = p := by
+theorem Sentence.ub_subst_eq {p : Sentence 𝓛} {σ : Subst 𝓛} :
+  p.ub[σ]ₚ = p.ub := by
   conv => rhs; rw [←BFormula.subst_id (p := p)]
   symm
-  apply BFormula.unbounded_subst_eq
+  apply BFormula.ub_subst_eq
   apply finZeroElim
 
 theorem Sentence.shift_eq {p : Sentence 𝓛} :
-  ↑ₚp = (p : Formula 𝓛) :=
-  Sentence.unbounded_subst_eq
+  ↑ₚp.ub = p.ub :=
+  Sentence.ub_subst_eq
 
 theorem Sentence.foralls_elim {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
-  Γ ⊢ ∀* p ⇒ p[σ]ₚ := by
+  Γ ⊢ (∀* p).ub ⇒ p.ub[σ]ₚ := by
   induction' m with m ih generalizing σ
-  · rw [Sentence.unbounded_subst_eq]
+  · rw [Sentence.ub_subst_eq]
     exact Proof.identity
   · let σ' := λ x => σ (x + 1)
     apply Proof.mp2 Proof.composition (ih (σ := σ'))
@@ -302,7 +302,7 @@ theorem Sentence.foralls_elim {p : BFormula 𝓛 m} {σ : Subst 𝓛} :
     apply Proof.forall_elim
 
 theorem Sentence.foralls_elim_self {p : BFormula 𝓛 m} :
-  Γ ⊢ ∀* p ⇒ (p : Formula 𝓛) := by
+  Γ ⊢ (∀* p).ub ⇒ p.ub := by
   have h := Sentence.foralls_elim (Γ := Γ) (p := p) (σ := Subst.id)
   simp [Formula.subst_id] at h
   exact h
@@ -317,7 +317,7 @@ notation "[]ₐᵇ" => BAssignment.nil
 def BAssignment.cons (u : 𝓜.𝓤) (ρ : BAssignment 𝓜 m) : BAssignment 𝓜 (m + 1) := Fin.cons u ρ
 infixr:80 " ∷ₐᵇ " => BAssignment.cons
 
-def BAssignment.unbounded (ρ : BAssignment 𝓜 m) : Assignment 𝓜 :=
+def BAssignment.ub (ρ : BAssignment 𝓜 m) : Assignment 𝓜 :=
   λ x => if h : x < m then ρ ⟨x, h⟩ else default
 
 mutual
@@ -342,26 +342,26 @@ notation:80 "⟦" p "⟧ₚᵇ" 𝓜 ", " ρ:80 => BFormula.interp p 𝓜 ρ
 notation:80 "⟦" p "⟧ₛᵇ" 𝓜:80 => BFormula.interp p 𝓜 []ₐᵇ
 
 mutual
-theorem BTerm.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ t ⟧ₜᵇ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ' :=
+theorem BTerm.ub_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+  (∀ x, ρ x = ρ' x) → ⟦ t ⟧ₜᵇ 𝓜, ρ = ⟦ t.ub ⟧ₜ 𝓜, ρ' :=
   match t with
   | #ᵇx => by intro h; simp [h]
-  | f ⬝ₜᵇ ts => by intro h; simp; rw [BTerms.unbounded_interp_eq h]
-theorem BTerms.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ ts ⟧ₜₛᵇ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ' :=
+  | f ⬝ₜᵇ ts => by intro h; simp; rw [BTerms.ub_interp_eq h]
+theorem BTerms.ub_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+  (∀ x, ρ x = ρ' x) → ⟦ ts ⟧ₜₛᵇ 𝓜, ρ = ⟦ ts.ub ⟧ₜₛ 𝓜, ρ' :=
   match ts with
   | []ₜᵇ => by intro; rfl
   | t ∷ₜᵇ ts => by
     intro h
     simp
-    rw [BTerm.unbounded_interp_eq h, BTerms.unbounded_interp_eq h]
+    rw [BTerm.ub_interp_eq h, BTerms.ub_interp_eq h]
 end
 
-theorem BFormula.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
-  (∀ x, ρ x = ρ' x) → ⟦ p ⟧ₚᵇ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ' := by
+theorem BFormula.ub_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment 𝓜} :
+  (∀ x, ρ x = ρ' x) → ⟦ p ⟧ₚᵇ 𝓜, ρ = ⟦ p.ub ⟧ₚ 𝓜, ρ' := by
   intro h
   induction p generalizing ρ' <;> simp
-  case atom => simp [BTerms.unbounded_interp_eq h]
+  case atom => simp [BTerms.ub_interp_eq h]
   case imp _ _ ih₁ ih₂ => simp [ih₁ h, ih₂ h]
   case all _ ih =>
     apply forall_congr'
@@ -372,22 +372,22 @@ theorem BFormula.unbounded_interp_eq {ρ : BAssignment 𝓜 m} {ρ' : Assignment
     · rfl
     · simp [BAssignment.cons, Assignment.cons]; apply h
 
-theorem Sentence.unbounded_interp_eq
-  {p : Sentence 𝓛} {ρ : Assignment 𝓜} : ⟦ p ⟧ₛᵇ 𝓜 = ⟦ p ⟧ₚ 𝓜, ρ := by
-  apply BFormula.unbounded_interp_eq
+theorem Sentence.ub_interp_eq
+  {p : Sentence 𝓛} {ρ : Assignment 𝓜} : ⟦ p ⟧ₛᵇ 𝓜 = ⟦ p.ub ⟧ₚ 𝓜, ρ := by
+  apply BFormula.ub_interp_eq
   apply finZeroElim
 
-theorem BTerm.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ t ⟧ₜᵇ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ.unbounded := by
-  apply BTerm.unbounded_interp_eq
-  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
+theorem BTerm.ub_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ t ⟧ₜᵇ 𝓜, ρ = ⟦ t.ub ⟧ₜ 𝓜, ρ.ub := by
+  apply BTerm.ub_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.ub, h]
 
-theorem BTerms.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ ts ⟧ₜₛᵇ 𝓜, ρ = ⟦ ts ⟧ₜₛ 𝓜, ρ.unbounded := by
-  apply BTerms.unbounded_interp_eq
-  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
+theorem BTerms.ub_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ ts ⟧ₜₛᵇ 𝓜, ρ = ⟦ ts.ub ⟧ₜₛ 𝓜, ρ.ub := by
+  apply BTerms.ub_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.ub, h]
 
-theorem BFormula.unbounded_interp {ρ : BAssignment 𝓜 m} :
-  ⟦ p ⟧ₚᵇ 𝓜, ρ = ⟦ p ⟧ₚ 𝓜, ρ.unbounded := by
-  apply BFormula.unbounded_interp_eq
-  intro ⟨x, h⟩; simp [BAssignment.unbounded, h]
+theorem BFormula.ub_interp {ρ : BAssignment 𝓜 m} :
+  ⟦ p ⟧ₚᵇ 𝓜, ρ = ⟦ p.ub ⟧ₚ 𝓜, ρ.ub := by
+  apply BFormula.ub_interp_eq
+  intro ⟨x, h⟩; simp [BAssignment.ub, h]

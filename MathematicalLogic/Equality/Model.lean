@@ -185,9 +185,9 @@ def quotientModel (𝓜 : Model 𝓣) : Model 𝓣 where
   property := by
    intros p h
    let ρ : Assignment 𝓜.val := default
-   rw [Sentence.unbounded_interp_eq (𝓜 := 𝓜.quotientStructure) (ρ := λ x => ⟦ρ x⟧)]
+   rw [Sentence.ub_interp_eq (𝓜 := 𝓜.quotientStructure) (ρ := λ x => ⟦ρ x⟧)]
    rw [Formula.interp_quotient_structure]
-   rw [←Sentence.unbounded_interp_eq]
+   rw [←Sentence.ub_interp_eq]
    apply 𝓜.property
    exact h
 

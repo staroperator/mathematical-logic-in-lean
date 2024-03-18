@@ -275,7 +275,7 @@ inductive Formula (𝓛 : Language) : Type where
 infix:70 " ⬝ₚ " => Formula.atom
 instance : FormulaSymbol (Formula 𝓛) := ⟨Formula.fal, Formula.imp⟩
 prefix:59 "∀' " => Formula.all
-@[reducible] def Formula.exists (p : Formula 𝓛) := ~ ∀' (~ p)
+abbrev Formula.exists (p : Formula 𝓛) := ~ ∀' (~ p)
 prefix:59 "∃' " => Formula.exists
 
 @[simp] theorem Formula.fal_eq : Formula.fal = (⊥ : Formula 𝓛) := rfl

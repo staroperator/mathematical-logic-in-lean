@@ -20,16 +20,16 @@ inductive Formula.Rewritable (Γ : Context 𝓛) : Formula 𝓛 → Formula 𝓛
 | refl : Formula.Rewritable Γ p p
 
 mutual
-theorem Term.Rewritable.soundness (h : 𝓣.toContext ⊆ Γ) : Term.Rewritable Γ t₁ t₂ → Γ ⊢ t₁ ≈ t₂
+theorem Term.Rewritable.soundness (h : 𝓣.ctx ⊆ Γ) : Term.Rewritable Γ t₁ t₂ → Γ ⊢ t₁ ≈ t₂
 | Term.Rewritable.matched h₁ => h₁
 | Term.Rewritable.refl => Proof.weaken h Proof.refl
 | Term.Rewritable.func h₁ => Proof.mp (Proof.weaken h Proof.congr_func) (Terms.Rewritable.soundness h h₁)
-theorem Terms.Rewritable.soundness (h : 𝓣.toContext ⊆ Γ) : Terms.Rewritable Γ ts₁ ts₂ → Γ ⊢ ts₁ ≋ ts₂
+theorem Terms.Rewritable.soundness (h : 𝓣.ctx ⊆ Γ) : Terms.Rewritable Γ ts₁ ts₂ → Γ ⊢ ts₁ ≋ ts₂
 | Terms.Rewritable.nil => Proof.true_intro
 | Terms.Rewritable.cons h₁ h₂ => Proof.mp2 Proof.and_intro (Term.Rewritable.soundness h h₁) (Terms.Rewritable.soundness h h₂)
 end
 
-theorem Formula.Rewritable.soundness (h : 𝓣.toContext ⊆ Γ) :
+theorem Formula.Rewritable.soundness (h : 𝓣.ctx ⊆ Γ) :
   Formula.Rewritable Γ p q → Γ ⊢ p ⇔ q
 | Formula.Rewritable.atom h₁ => Proof.mp (Proof.weaken h Proof.congr_atom_iff) (Terms.Rewritable.soundness h h₁)
 | Formula.Rewritable.imp h₁ h₂ => Proof.mp2 Proof.iff_congr_imp (Formula.Rewritable.soundness h h₁) (Formula.Rewritable.soundness h h₂)

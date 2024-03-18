@@ -61,7 +61,7 @@ theorem lindenbaum :
       rcases h with ⟨h, h'⟩
       rw [←Consistent.add] at h'
       replace h' := h₃ _ h' (Set.subset_insert _ _)
-      simp [Context.add, Set.insert_eq_self] at h'
+      simp [Context.append, Set.insert_eq_self] at h'
       apply h
       apply Proof.assumption
       exact h'
