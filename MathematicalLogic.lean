@@ -1,9 +1,7 @@
+import MathematicalLogic.Notation
+import MathematicalLogic.Vector
 import MathematicalLogic.FirstOrder.Syntax
 import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Semantics
-import MathematicalLogic.FirstOrder.Completeness
-import MathematicalLogic.FirstOrder.Bounded
 import MathematicalLogic.FirstOrder.Theory
-import MathematicalLogic.Equality.Theory
-import MathematicalLogic.Equality.Model
-import MathematicalLogic.Equality.Rewrite
+import MathematicalLogic.FirstOrder.Completeness.Completeness

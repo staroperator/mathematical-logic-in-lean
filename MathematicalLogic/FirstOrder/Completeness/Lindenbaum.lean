@@ -1,14 +1,18 @@
 import Mathlib.Data.Set.Basic
 import Mathlib.Order.Zorn
 import MathematicalLogic.FirstOrder.Proof
-import MathematicalLogic.FirstOrder.Completeness.Basic
+import MathematicalLogic.FirstOrder.Completeness.Defs
+
+namespace FirstOrder.Language
+
+variable {𝓛 : Language}
 
 lemma consistent_chain_upper_bound
-  (S : Set (Set (Formula 𝓛))) :
-  (∀ Γ ∈ S, Consistent Γ) →
+  (S : Set (𝓛.Context)) :
+  (∀ Γ ∈ S, Γ.Consistent) →
   IsChain Set.Subset S →
   Set.Nonempty S →
-  ∃ Γ, Consistent Γ ∧ ∀ Δ ∈ S, Δ ⊆ Γ := by
+  ∃ Γ, Γ.Consistent ∧ ∀ Δ ∈ S, Δ ⊆ Γ := by
   intros h₁ h₂ h₃
   exists ⋃₀ S
   constructor
@@ -39,29 +43,23 @@ lemma consistent_chain_upper_bound
             · exact Set.Subset.trans h₃'' h
     rcases h with ⟨Δ, h, h'⟩
     apply h₁ at h
-    apply Consistent.weaken h' at h
+    apply Context.Consistent.weaken h' at h
     contradiction
   · intro Δ h
     apply Set.subset_sUnion_of_mem
     exact h
 
-theorem lindenbaum :
-  Consistent Γ → ∃ Δ, Γ ⊆ Δ ∧ MaximalConsistent Δ := by
+theorem lindenbaum {Γ : 𝓛.Context} :
+  Γ.Consistent → ∃ Δ, Γ ⊆ Δ ∧ Δ.Consistent ∧ Δ.Complete := by
   intro h
   apply zorn_subset_nonempty _ consistent_chain_upper_bound at h
   rcases h with ⟨Δ, h₁, h₂, h₃⟩
-  exists Δ
-  constructor
-  · exact h₂
-  · constructor
-    · exact h₁
-    · intro p
-      by_contra h
-      simp [not_or] at h
-      rcases h with ⟨h, h'⟩
-      rw [←Consistent.add] at h'
-      replace h' := h₃ _ h' (Set.subset_insert _ _)
-      simp [Context.append, Set.insert_eq_self] at h'
-      apply h
-      apply Proof.assumption
-      exact h'
+  refine ⟨Δ, h₂, h₁, ?_⟩
+  intro p
+  by_contra h; simp [not_or] at h
+  rcases h with ⟨h, h'⟩
+  rw [←Context.Consistent.append] at h'
+  replace h' := h₃ _ h' (Set.subset_insert _ _)
+  simp [Context.append, Set.insert_eq_self] at h'
+  apply h
+  exact Proof.hyp h'

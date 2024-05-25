@@ -1,36 +1,24 @@
 import Mathlib.Order.BoundedOrder
-import Mathlib.Data.Vector
 
-universe u v
-
-notation "[]ᵥ" => Vector.nil
-infixr:67 "∷ᵥ" => Vector.cons
-
-class FormulaSymbol (α : Type u) where
-  fal : α
+class PropNotation (α : Type u) where
+  false : α
   imp : α → α → α
 
-namespace FormulaSymbol
+namespace PropNotation
 
-variable [FormulaSymbol α] (p q : α)
-
-instance : Bot α := ⟨fal⟩
-
-infixr:55 (priority := high) " ⇒ " => imp
+variable [PropNotation α] (p q : α)
 attribute [match_pattern] imp
 
-def neg := p ⇒ ⊥
+instance : Bot α := ⟨false⟩
+infixr:55 (priority := high) " ⇒ " => imp
+abbrev neg (p : α) := p ⇒ ⊥
 prefix:58 "~ " => neg
-
 instance : Top α := ⟨~ ⊥⟩
-
-def or := ~ p ⇒ q
-infix:56 " ⋁ " => or
-
-def and := ~ (p ⇒ ~ q)
-infix:57 " ⋀ " => and
-
-def iff := (p ⇒ q) ⋀ (q ⇒ p)
+abbrev or (p q : α) := ~ p ⇒ q
+infix:56 " ⩒ " => or
+abbrev and (p q : α) := ~ (p ⇒ ~ q)
+infix:57 " ⩑ " => and
+abbrev iff (p q : α) := (p ⇒ q) ⩑ (q ⇒ p)
 infix:55 (priority := high) " ⇔ " => iff
 
-end FormulaSymbol
+end PropNotation

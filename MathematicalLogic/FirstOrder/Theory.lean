@@ -1,54 +1,73 @@
 import MathematicalLogic.FirstOrder.Semantics
-import MathematicalLogic.FirstOrder.Bounded
 
-@[reducible] def Theory (𝓛) := Set (Sentence 𝓛)
+namespace FirstOrder.Language
 
-def Theory.ctx (𝓣 : Theory 𝓛) : Context 𝓛 :=
-  { BFormula.ub p | p ∈ 𝓣 }
+@[reducible] def Theory (𝓛 : Language) := Set 𝓛.Sentence
 
-def Theory.Proof (𝓣 : Theory 𝓛) (p : Formula 𝓛) := 𝓣.ctx ⊢ p
+namespace Theory
 
-infix:50 " ⊢ᵀ " => Theory.Proof
+universe u v
 
-theorem Theory.axioms {p : Sentence 𝓛} {𝓣 : Theory 𝓛} :
-  p ∈ 𝓣 → 𝓣 ⊢ᵀ p.ub := by
-  intro h
-  apply Proof.assumption
-  exists p
+def ctx (𝓣 : 𝓛.Theory) : Context 𝓛 := { BFormula.val p | p ∈ 𝓣 }
 
-lemma Theory.shift_eq {𝓣 : Theory 𝓛} : ↑ₚₛ𝓣.ctx = 𝓣.ctx := by
+variable {𝓛 : Language} {𝓣 : 𝓛.Theory}
+
+instance : Coe 𝓛.Theory 𝓛.Context := ⟨Theory.ctx⟩
+
+theorem ax : p ∈ 𝓣 → 𝓣 ⊢ p.val := (Proof.hyp ⟨p, ·, rfl⟩)
+
+lemma shift_eq : ↑ᶜ𝓣.ctx = 𝓣.ctx := by
   simp [ctx, Context.lift, Sentence.shift_eq]
 
-theorem Theory.generalization {𝓣 : Theory 𝓛} {p : Formula 𝓛} :
-  𝓣 ⊢ᵀ p → 𝓣 ⊢ᵀ ∀' p := by
+theorem generalization_iff {p : 𝓛.Formula} :
+  𝓣 ⊢ p ↔ 𝓣 ⊢ ∀' p := by
+  nth_rw 1 [←Theory.shift_eq]
+  apply Proof.generalization_iff
+
+theorem generalization {p : 𝓛.Formula} :
+  𝓣 ⊢ p → 𝓣 ⊢ ∀' p := generalization_iff.mp
+
+theorem alls_iff {p : 𝓛.BFormula m} :
+  𝓣 ⊢ p.val ↔ 𝓣 ⊢ (∀* p).val := by
+  induction m with simp [BFormula.alls]
+  | succ m ih => rw [generalization_iff]; apply @ih (∀ᵇ p)
+
+abbrev Consistent (𝓣 : 𝓛.Theory) := 𝓣.ctx.Consistent
+
+def Complete (𝓣 : 𝓛.Theory) :=
+  ∀ (p : 𝓛.Sentence), 𝓣 ⊢ p.val ∨ 𝓣 ⊢ ~ p.val
+
+def Decidable (𝓣 : 𝓛.Theory) :=
+  ∀ (p : 𝓛.Formula), _root_.Decidable (𝓣 ⊢ p)
+
+
+
+structure Model (𝓣 : 𝓛.Theory) extends Structure.{u} 𝓛 where
+  satisfy𝓣 : ∀ p ∈ 𝓣, toStructure ⊨ₛ p
+
+instance {𝓣 : 𝓛.Theory} : CoeOut 𝓣.Model 𝓛.Structure := ⟨Model.toStructure⟩
+
+theorem soundness {p : 𝓛.Formula} {𝓜 : 𝓣.Model} {ρ : 𝓜.Assignment} :
+  𝓣 ⊢ p → 𝓜 ⊨[ρ] p := by
   intro h
-  apply Proof.generalization
-  rw [Theory.shift_eq]
+  apply Language.soundness
+  · exact h
+  · intro q ⟨p, h₁, h₂⟩; subst h₂
+    simp [←Sentence.val_interp_eq]
+    exact 𝓜.satisfy𝓣 p h₁
+
+theorem soundness' {p : 𝓛.Sentence} {𝓜 : 𝓣.Model} :
+  𝓣 ⊢ p.val → 𝓜 ⊨ₛ p := by
+  intro h
+  rw [Sentence.val_interp_eq (ρ := default)]
+  apply soundness
   exact h
 
-def Model (𝓣 : Theory 𝓛) : Type (u + 1) :=
-  { 𝓜 : Structure 𝓛 | ∀ p ∈ 𝓣, ⟦ p ⟧ₛᵇ 𝓜 }
+def Satisfiable (𝓣 : 𝓛.Theory) := Nonempty (Model.{u} 𝓣)
 
-namespace Model
+theorem Consistent.of_satisfiable : 𝓣.Satisfiable → 𝓣.Consistent := by
+  intro ⟨𝓜⟩ h
+  apply soundness' (𝓜 := 𝓜) (p := ⊥) at h
+  exact h
 
-variable {𝓣 : Theory 𝓛} (𝓜 : Model 𝓣)
-
-@[reducible] def 𝓤 := 𝓜.val.𝓤
-@[reducible] def 𝓕 {n} := 𝓜.val.𝓕 (n := n)
-@[reducible] def 𝓟 {n} := 𝓜.val.𝓟 (n := n)
-
-instance : CoeOut (Model 𝓣) (Structure 𝓛) where
-  coe := Subtype.val
-
-end Model
-
-theorem Theory.soundness {𝓣 : Theory 𝓛} {p : Formula 𝓛} {𝓜 : Model 𝓣} {ρ : Assignment 𝓜} :
-  𝓣 ⊢ᵀ p → ⟦ p ⟧ₚ 𝓜, ρ := by
-  intro h
-  apply _root_.soundness
-  · exact h
-  · intro q ⟨p, h₁, h₂⟩
-    subst h₂
-    simp [←Sentence.ub_interp_eq]
-    apply 𝓜.property
-    exact h₁
+end FirstOrder.Language.Theory
