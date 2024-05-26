@@ -68,14 +68,14 @@ theorem eq_nil (v : Vec α 0) : v = []ᵥ := by
   ext x; exact x.elim0
 theorem eq_cons (v : Vec α (n + 1)) : v = v.head ∷ᵥ v.tail := by
   ext x; cases x using Fin.cases <;> simp [cons, head, tail]
-theorem eq_1 (v : Vec α 1) : v = [v 0]ᵥ := by
+theorem eq_one (v : Vec α 1) : v = [v 0]ᵥ := by
   rw [eq_cons v, eq_nil v.tail]; rfl
-theorem eq_2 (v : Vec α 2) : v = [v 0, v 1]ᵥ := by
-  rw [eq_cons v, eq_1 v.tail]; rfl
-theorem eq_3 (v : Vec α 3) : v = [v 0, v 1, v 2]ᵥ := by
-  rw [eq_cons v, eq_2 v.tail]; rfl
-theorem eq_4 (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
-  rw [eq_cons v, eq_3 v.tail]; rfl
+theorem eq_two (v : Vec α 2) : v = [v 0, v 1]ᵥ := by
+  rw [eq_cons v, eq_one v.tail]; rfl
+theorem eq_three (v : Vec α 3) : v = [v 0, v 1, v 2]ᵥ := by
+  rw [eq_cons v, eq_two v.tail]; rfl
+theorem eq_four (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
+  rw [eq_cons v, eq_three v.tail]; rfl
 
 section
 

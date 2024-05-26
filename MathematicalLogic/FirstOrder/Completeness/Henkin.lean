@@ -61,7 +61,7 @@ def addConsts (𝓛 : Language) (𝓒 : Type) [DecidableEq 𝓒] : Language wher
        | n + 1 => 𝓛.𝓕 (n + 1)
   decEq𝓕 :=
     @λ
-    | 0, f, g => Sum.instDecidableEqSum f g
+    | 0, f, g => Sum.instDecidableEq f g
     | _ + 1, _, _ => inferInstance
   𝓡 := 𝓛.𝓡
 local infix:70 " ⊎ " => Language.addConsts
@@ -721,10 +721,7 @@ lemma level_of_henkin_formula : p.level = n + 1 := by
       rcases h' with h' | ⟨x, h', h''⟩
       · apply Nat.not_le_of_lt h'
         exact Nat.le_succ_of_le h
-      · cases' x with x
-        · simp [Subst.single, h₃, Term.level] at h''
-          exact Nat.not_succ_le_self _ h''
-        · simp [Subst.single, Term.level] at h''
+      · cases x <;> simp [h₃, Term.level] at h''
   · simp [Formula.level]
     right
     apply Nat.le_of_not_lt

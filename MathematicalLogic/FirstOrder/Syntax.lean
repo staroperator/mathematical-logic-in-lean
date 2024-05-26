@@ -220,6 +220,7 @@ theorem Formula.subst_comp : p[σ₁ ∘ₛ σ₂]ₚ = p[σ₁]ₚ[σ₂]ₚ :=
 theorem Formula.shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
   rw [shift, ←subst_comp]
   conv => rhs; rw [←subst_id (p := p)]
+  rfl
 
 theorem Formula.shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
   simp_rw [shift, ←subst_comp]; congr
