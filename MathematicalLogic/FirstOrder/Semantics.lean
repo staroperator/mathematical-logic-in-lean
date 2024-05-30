@@ -162,6 +162,12 @@ def Sentence.interp (p : 𝓛.Sentence) (𝓢 : 𝓛.Structure) :=
   𝓢 ⊨[[]ᵥ]ᵇ p
 notation:50 𝓢 " ⊨ₛ " p:50 => Sentence.interp p 𝓢
 
+theorem BFormula.interp_neg :
+  𝓢 ⊨[ρ]ᵇ ~ p ↔ ¬ 𝓢 ⊨[ρ]ᵇ p := by simp [interp]
+
+theorem Sentence.interp_neg :
+  𝓢 ⊨ₛ ~ p ↔ ¬ 𝓢 ⊨ₛ p := BFormula.interp_neg
+
 theorem BFormula.val_interp_eq {ρ : 𝓢.BAssignment m} :
   (∀ x, ρ x = ρ' x) → (𝓢 ⊨[ρ]ᵇ p ↔ 𝓢 ⊨[ρ'] p.val) := by
   intro h
@@ -258,5 +264,91 @@ theorem Context.Satisfiable.up :
   exists (Structure.ulift.{u₁,u₂} 𝓢), ρ.ulift
   simp [Formula.interp_ulift]
   exact h
+
+
+
+namespace Structure
+
+variable {𝓜 𝓝 𝓢 : 𝓛.Structure}
+
+def ElementaryEquivalent (𝓜 𝓝 : 𝓛.Structure) :=
+  ∀ (p : 𝓛.Sentence), 𝓜 ⊨ₛ p ↔ 𝓝 ⊨ₛ p
+infixr:25 " ≃ᴱ " => ElementaryEquivalent
+
+structure Embedding (𝓜 𝓝 : 𝓛.Structure) extends 𝓜.𝓤 ↪ 𝓝.𝓤 where
+  to_func : ∀ (f : 𝓛.𝓕 n) (v : Vec 𝓜.𝓤 n), toEmbedding (𝓜.interp𝓕 f v) = 𝓝.interp𝓕 f (toEmbedding ∘ v)
+  to_rel : ∀ (r : 𝓛.𝓡 n) (v : Vec 𝓜.𝓤 n), 𝓜.interp𝓡 r v ↔ 𝓝.interp𝓡 r (toEmbedding ∘ v)
+infixr:25 " ↪ᴹ " => Embedding
+
+namespace Embedding
+
+instance : CoeFun (𝓜 ↪ᴹ 𝓝) (λ _ => 𝓜.𝓤 → 𝓝.𝓤) := ⟨(·.toEmbedding)⟩
+
+def refl : 𝓜 ↪ᴹ 𝓜 where
+  toEmbedding := .refl 𝓜.𝓤
+  to_func f v := rfl
+  to_rel r v := by rfl
+
+def trans (e₁ : 𝓜 ↪ᴹ 𝓝) (e₂ : 𝓝 ↪ᴹ 𝓢) : 𝓜 ↪ᴹ 𝓢 where
+  toEmbedding := .trans e₁.toEmbedding e₂.toEmbedding
+  to_func f v := by simp [Function.comp, e₁.to_func, e₂.to_func]
+  to_rel r v := by simp [Function.comp]; rw [e₁.to_rel, e₂.to_rel]; rfl
+
+theorem to_term (e : 𝓜 ↪ᴹ 𝓝) (t : 𝓛.Term) (ρ : 𝓜.Assignment) : e (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, e ∘ ρ := by
+  induction t with simp [Term.interp]
+  | func f v ih => rw [e.to_func]; congr; ext; simp [ih]
+
+end Embedding
+
+structure Isomorphism (𝓜 𝓝 : 𝓛.Structure) extends 𝓜.𝓤 ≃ 𝓝.𝓤 where
+  to_func : ∀ (f : 𝓛.𝓕 n) (v : Vec 𝓜.𝓤 n), toEquiv (𝓜.interp𝓕 f v) = 𝓝.interp𝓕 f (toEquiv ∘ v)
+  to_rel : ∀ (r : 𝓛.𝓡 n) (v : Vec 𝓜.𝓤 n), 𝓜.interp𝓡 r v ↔ 𝓝.interp𝓡 r (toEquiv ∘ v)
+infixr:25 " ≃ᴹ " => Isomorphism
+
+namespace Isomorphism
+
+instance : CoeFun (𝓜 ≃ᴹ 𝓝) (λ _ => 𝓜.𝓤 → 𝓝.𝓤) := ⟨(·.toEquiv)⟩
+
+def toEmbedding (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ↪ᴹ 𝓝 where
+  toEmbedding := i.toEquiv.toEmbedding
+  to_func := i.to_func
+  to_rel := i.to_rel
+
+def refl : 𝓜 ≃ᴹ 𝓜 where
+  toEquiv := .refl 𝓜.𝓤
+  to_func f v := rfl
+  to_rel r v := by rfl
+
+def symm (i : 𝓜 ≃ᴹ 𝓝) : 𝓝 ≃ᴹ 𝓜 where
+  toEquiv := .symm i.toEquiv
+  to_func f v := by apply i.toEquiv.injective; simp [Function.comp, i.to_func]
+  to_rel r v := by rw [i.to_rel]; simp [Function.comp]
+
+def trans (i₁ : 𝓜 ≃ᴹ 𝓝) (i₂ : 𝓝 ≃ᴹ 𝓢) : 𝓜 ≃ᴹ 𝓢 where
+  toEquiv := .trans i₁.toEquiv i₂.toEquiv
+  to_func f v := by simp [Function.comp, i₁.to_func, i₂.to_func]
+  to_rel r v := by rw [i₁.to_rel, i₂.to_rel]; simp [Function.comp]
+
+theorem to_term (i : 𝓜 ≃ᴹ 𝓝) (t : 𝓛.Term) (ρ : 𝓜.Assignment) : i (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, i ∘ ρ := by
+  induction t with simp [Term.interp]
+  | func f v ih => rw [i.to_func]; congr; ext; simp [ih]
+
+theorem to_formula (e : 𝓜 ≃ᴹ 𝓝) (p : 𝓛.Formula) (ρ : 𝓜.Assignment) : 𝓜 ⊨[ρ] p ↔ 𝓝 ⊨[e ∘ ρ] p := by
+  induction p generalizing ρ with simp [Formula.interp]
+  | rel r v => rw [e.to_rel]; congr!; simp [e.to_term]
+  | eq t₁ t₂ => simp [←e.to_term]
+  | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
+  | all p ih =>
+    simp [ih]
+    rw [e.toEquiv.forall_congr]
+    congr!
+    funext x; cases x <;> simp [Function.comp, Assignment.cons]
+
+theorem elementary_equivalent : (𝓜 ≃ᴹ 𝓝) → 𝓜 ≃ᴱ 𝓝 := by
+  intro i p; rw [Sentence.val_interp_eq (ρ := default), Sentence.val_interp_eq]; apply i.to_formula
+
+end Isomorphism
+
+end Structure
 
 end FirstOrder.Language

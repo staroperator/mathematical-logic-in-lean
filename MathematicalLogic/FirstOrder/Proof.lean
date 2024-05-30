@@ -700,4 +700,17 @@ theorem Consistent.append : Consistent (Γ,, p) ↔ Γ ⊬ ~ p := by
     pintro
     exact h₂
 
+theorem Consistent.append' : Consistent (Γ,, ~ p) ↔ Γ ⊬ p := by
+  constructor
+  · intro h₁ h₂
+    apply h₁
+    rw [←Proof.deduction]
+    papply Proof.double_neg1
+    exact h₂
+  · intro h₁ h₂
+    apply h₁
+    papply Proof.double_neg2
+    pintro
+    exact h₂
+
 end Language.Context

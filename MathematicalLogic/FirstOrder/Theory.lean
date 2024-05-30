@@ -17,7 +17,7 @@ instance : Coe 𝓛.Theory 𝓛.Context := ⟨Theory.ctx⟩
 theorem ax : p ∈ 𝓣 → 𝓣 ⊢ p.val := (Proof.hyp ⟨p, ·, rfl⟩)
 
 lemma shift_eq : ↑ᶜ𝓣.ctx = 𝓣.ctx := by
-  simp [ctx, Context.lift, Sentence.shift_eq]
+  simp [ctx, Context.lift, Sentence.val_shift_eq]
 
 theorem generalization_iff {p : 𝓛.Formula} :
   𝓣 ⊢ p ↔ 𝓣 ⊢ ∀' p := by
@@ -35,7 +35,7 @@ theorem alls_iff {p : 𝓛.BFormula m} :
 abbrev Consistent (𝓣 : 𝓛.Theory) := 𝓣.ctx.Consistent
 
 def Complete (𝓣 : 𝓛.Theory) :=
-  ∀ (p : 𝓛.Sentence), 𝓣 ⊢ p.val ∨ 𝓣 ⊢ ~ p.val
+  ∀ (p : 𝓛.Sentence), 𝓣 ⊢ p.val ∨ 𝓣 ⊢ (~ p).val
 
 def Decidable (𝓣 : 𝓛.Theory) :=
   ∀ (p : 𝓛.Formula), _root_.Decidable (𝓣 ⊢ p)
@@ -69,5 +69,8 @@ theorem Consistent.of_satisfiable : 𝓣.Satisfiable → 𝓣.Consistent := by
   intro ⟨𝓜⟩ h
   apply soundness' (𝓜 := 𝓜) (p := ⊥) at h
   exact h
+
+def Categorical (𝓣 : 𝓛.Theory) :=
+  ∀ (𝓜 𝓝 : 𝓣.Model), 𝓜 ≃ᴹ (𝓝 : 𝓛.Structure)
 
 end FirstOrder.Language.Theory

@@ -14,9 +14,13 @@ namespace Language
 
 variable {𝓛 : Language}
 
-abbrev Const := 𝓛.𝓕 0
+abbrev Const (𝓛 : Language) := 𝓛.𝓕 0
 instance : DecidableEq (𝓛.𝓕 n) := 𝓛.decEq𝓕
 instance : DecidableEq (𝓛.𝓡 n) := 𝓛.decEq𝓡
+
+def Symbol (𝓛 : Language) := (Σ n, 𝓛.𝓕 n) ⊕ (Σ n, 𝓛.𝓡 n)
+instance : CoeOut (𝓛.𝓕 n) 𝓛.Symbol := ⟨λ f => Sum.inl ⟨n, f⟩⟩
+instance : CoeOut (𝓛.𝓡 n) 𝓛.Symbol := ⟨λ r => Sum.inr ⟨n, r⟩⟩
 
 inductive Term (𝓛 : Language) : Type where
 | var : ℕ → 𝓛.Term
@@ -324,7 +328,14 @@ def BTerm.mk :
 theorem BTerm.val_mk {t : 𝓛.Term} {h : m ≥ t.bound} :
   (mk t h).val = t := by
   induction t with simp [mk]
-  | func f ts ih => ext; simp [ih]
+  | func f v ih => ext; simp [ih]
+
+theorem BTerm.mk_val {t : 𝓛.BTerm m} {h} : mk t.val h = t := by
+  induction t with simp [mk]
+  | func f v ih => ext; simp [ih]
+
+theorem BTerm.ext {t₁ t₂ : 𝓛.BTerm m} (h : t₁.val = t₂.val) : t₁ = t₂ := by
+  rw [←mk_val (t := t₁) (h := property), ←mk_val (t := t₂) (h := property)]; congr
 
 def BSubst (𝓛 : Language) (n m) := Vec (𝓛.BTerm m) n
 
@@ -373,7 +384,13 @@ theorem BTerm.val_subst_eq {σ : 𝓛.BSubst m k} :
   | func f v ih => ext; apply ih _ h
 
 theorem BTerm.val_shift_eq : (↑ₜᵇt).val = ↑ₜt.val := by
-  apply BTerm.val_subst_eq; intro; rfl
+  apply val_subst_eq; intro; rfl
+
+theorem BTerm.val_subst_single_eq : (t₁[↦ᵇ t₂]ₜᵇ).val = t₁.val[↦ₛ t₂.val]ₜ := by
+  apply val_subst_eq; intro x; cases x using Fin.cases <;> simp
+  
+theorem BTerm.val_subst_assign_eq : (t₁[≔ᵇ t₂]ₜᵇ).val = t₁.val[≔ₛ t₂.val]ₜ := by
+  apply val_subst_eq; intro x; cases x using Fin.cases <;> simp
 
 
 
@@ -444,6 +461,16 @@ theorem BFormula.val_mk {p : 𝓛.Formula} {h : m ≥ p.bound} :
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih => simp [ih]
 
+theorem BFormula.mk_val {p : 𝓛.BFormula m} {h} : mk p.val h = p := by
+  induction p with simp [mk]
+  | rel => ext; simp [BTerm.mk_val]
+  | eq => simp [BTerm.mk_val]
+  | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
+  | all _ ih => simp [ih]
+
+theorem BFormula.ext {p q : 𝓛.BFormula m} (h : p.val = q.val) : p = q := by
+  rw [←mk_val (p := p) (h := property), ←mk_val (p := q) (h := property)]; congr
+
 def BFormula.subst : 𝓛.BFormula m → 𝓛.BSubst m k → 𝓛.BFormula k
 | r ⬝ᵣᵇ v, σ => r ⬝ᵣᵇ (λ i => (v i).subst σ)
 | t₁ ≐ᵇ t₂, σ => t₁.subst σ ≐ᵇ t₂.subst σ
@@ -487,11 +514,20 @@ theorem BFormula.val_subst_eq {σ : 𝓛.BSubst m k} :
     · rfl
     · simp [BTerm.val_shift_eq, h]
 
+theorem BFormula.val_shift_eq : (↑ₚᵇp).val = ↑ₚp.val := by
+  apply val_subst_eq; intro x; simp
+
+theorem BFormula.val_subst_single_eq : (p[↦ᵇ t]ₚᵇ).val = p.val[↦ₛ t.val]ₚ := by
+  apply val_subst_eq; intro x; cases x using Fin.cases <;> simp
+  
+theorem BFormula.val_subst_assign_eq : (p[≔ᵇ t]ₚᵇ).val = p.val[≔ₛ t.val]ₚ := by
+  apply val_subst_eq; intro x; cases x using Fin.cases <;> simp
+
 theorem Sentence.val_subst_eq {p : 𝓛.Sentence} :
   p.val[σ]ₚ = p.val := by
   rw [←BFormula.val_subst_eq (σ := BSubst.id) (·.elim0), BFormula.subst_id]
 
-theorem Sentence.shift_eq {p : Sentence 𝓛} :
+theorem Sentence.val_shift_eq {p : Sentence 𝓛} :
   ↑ₚp.val = p.val := Sentence.val_subst_eq
 
 end FirstOrder.Language
