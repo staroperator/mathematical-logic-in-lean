@@ -6,3 +6,6 @@ import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Theory
 import MathematicalLogic.FirstOrder.Completeness.Completeness
+
+import MathematicalLogic.SecondOrder.Syntax
+import MathematicalLogic.SecondOrder.Semantics
