@@ -9,3 +9,4 @@ import MathematicalLogic.FirstOrder.Completeness.Completeness
 
 import MathematicalLogic.SecondOrder.Syntax
 import MathematicalLogic.SecondOrder.Semantics
+import MathematicalLogic.SecondOrder.Peano
