@@ -55,13 +55,13 @@ namespace Model
 
 variable {𝓜 : PA.Model}
 
-instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
+instance instZeroPA : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
 def succ (u : 𝓜) := 𝓜.interpFunc .succ [u]ᵥ
 def ofNat : ℕ → 𝓜
 | 0 => 0
 | n + 1 => 𝓜.succ (ofNat n)
-instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
-instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
+instance instAddPA : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
+instance instMulPA : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
 
 theorem ofNat_injective : Function.Injective 𝓜.ofNat := by
   intro n m h₁
