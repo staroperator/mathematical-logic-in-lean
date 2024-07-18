@@ -21,6 +21,7 @@ instance : OfNat (x ∈ᶜ x :: l) 0 := ⟨.fz⟩
 instance : OfNat (y ∈ᶜ x :: y :: l) 1 := ⟨.fs .fz⟩
 instance : OfNat (z ∈ᶜ x :: y :: z :: l) 2 := ⟨.fs (.fs .fz)⟩
 instance : OfNat (a ∈ᶜ x :: y :: z :: a :: l) 3 := ⟨.fs (.fs (.fs .fz))⟩
+instance : OfNat (b ∈ᶜ x :: y :: z :: a :: b :: l) 4 := ⟨.fs (.fs (.fs (.fs .fz)))⟩
 
 namespace Language
 
