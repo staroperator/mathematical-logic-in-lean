@@ -32,6 +32,8 @@ macro_rules
 @[simp] theorem cons_1 {v : Vec α (n + 1)} : (a ∷ᵥ v) 1 = v 0 := rfl
 @[simp] theorem cons_2 {v : Vec α (n + 2)} : (a ∷ᵥ v) 2 = v 1 := rfl
 @[simp] theorem cons_3 {v : Vec α (n + 3)} : (a ∷ᵥ v) 3 = v 2 := rfl
+@[simp] theorem cons_4 {v : Vec α (n + 4)} : (a ∷ᵥ v) 4 = v 3 := rfl
+@[simp] theorem cons_5 {v : Vec α (n + 5)} : (a ∷ᵥ v) 5 = v 4 := rfl
 
 @[app_unexpander nil] def unexpandNil : Lean.PrettyPrinter.Unexpander
 | `($(_)) => `([]ᵥ)
@@ -102,9 +104,6 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
   ext i; cases i using Fin.cases1; simp
 @[simp] theorem rcons_cons : rcons (x ∷ᵥ v) y = x ∷ᵥ rcons v y := by
   simp [rcons, Vec.cons, Fin.cons_snoc_eq_snoc_cons]
-
-def ofVector (v : Vector α n) : Vec α n := v.get
-def toVector (v : Vec α n) : Vector α n := .ofFn v
 
 instance decEq [DecidableEq α] : DecidableEq (Vec α n) := by
   intro v₁ v₂
