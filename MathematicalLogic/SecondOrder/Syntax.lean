@@ -12,11 +12,11 @@ inductive Ty where
 | func : ℕ → Ty
 | rel : ℕ → Ty
 
-def Con := List Ty
-inductive Con.Mem : Ty → Con → Type where
+def Context := List Ty
+inductive Context.Mem : Ty → Context → Type where
 | fz : Mem T (T :: Γ)
 | fs : Mem T Γ → Mem T (T' :: Γ)
-infix:55 " ∈ᶜ " => Con.Mem
+infix:55 " ∈ᶜ " => Context.Mem
 instance : OfNat (x ∈ᶜ x :: l) 0 := ⟨.fz⟩
 instance : OfNat (y ∈ᶜ x :: y :: l) 1 := ⟨.fs .fz⟩
 instance : OfNat (z ∈ᶜ x :: y :: z :: l) 2 := ⟨.fs (.fs .fz)⟩
@@ -25,7 +25,7 @@ instance : OfNat (b ∈ᶜ x :: y :: z :: a :: b :: l) 4 := ⟨.fs (.fs (.fs (.f
 
 namespace Language
 
-inductive Term (𝓛 : Language) : Con → Type where
+inductive Term (𝓛 : Language) : Context → Type where
 | var {Γ} : Ty.var ∈ᶜ Γ → 𝓛.Term Γ
 | fconst {Γ n} : 𝓛.Func n → (Fin n → 𝓛.Term Γ) → 𝓛.Term Γ
 | fvar {Γ n} : Ty.func n ∈ᶜ Γ → (Fin n → 𝓛.Term Γ) → 𝓛.Term Γ
@@ -33,7 +33,7 @@ prefix:max "#" => Term.var
 infix:70 " ⬝ᶠ " => Term.fconst
 infix:70 " ⬝ᶠᵛ " => Term.fvar
 
-inductive Formula (𝓛 : Language) : Con → Type where
+inductive Formula (𝓛 : Language) : Context → Type where
 | rconst {Γ n} : 𝓛.Rel n → (Fin n → 𝓛.Term Γ) → 𝓛.Formula Γ
 | rvar {Γ n} : Ty.rel n ∈ᶜ Γ → (Fin n → 𝓛.Term Γ) → 𝓛.Formula Γ
 | eq : 𝓛.Term Γ → 𝓛.Term Γ → 𝓛.Formula Γ

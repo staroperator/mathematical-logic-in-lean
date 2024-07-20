@@ -58,7 +58,6 @@ attribute [local simp] Structure.satisfy Structure.interpFormula Structure.inter
 
 noncomputable def Real.𝓡 : Real.Model where
   Dom := ℝ
-  inhabited := inferInstance
   interpFunc
   | .zero, _ => 0
   | .one, _ => 1
@@ -89,12 +88,14 @@ namespace Model
 
 variable {𝓜 : Real.Model} (a b c : 𝓜)
 
-instance instRealZero : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
-instance instRealOne : One 𝓜 := ⟨𝓜.interpFunc .one []ᵥ⟩
-instance instRealAdd : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
-instance instRealNeg : Neg 𝓜 := ⟨(𝓜.interpFunc .neg [·]ᵥ)⟩
-instance instRealMul : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
-instance instRealInv : Inv 𝓜 := ⟨(𝓜.interpFunc .inv [·]ᵥ)⟩
+namespace Real
+instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
+instance : One 𝓜 := ⟨𝓜.interpFunc .one []ᵥ⟩
+instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
+instance : Neg 𝓜 := ⟨(𝓜.interpFunc .neg [·]ᵥ)⟩
+instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
+instance : Inv 𝓜 := ⟨(𝓜.interpFunc .inv [·]ᵥ)⟩
+end Real
 
 theorem add_assoc : a + b + c = a + (b + c) := by
   have := 𝓜.satisfy_theory _ .add_assoc a b c
@@ -600,7 +601,7 @@ noncomputable def model_iso_𝓡 (𝓜 : Real.Model) : 𝓡 ≃ᴹ 𝓜.toStruct
   on_rel
   | .le, v => by rw [Vec.eq_two (_ ∘ _)]; symm; apply 𝓜.ofReal_le
 
-noncomputable def categoricity : Real.Categorical
+noncomputable def categorical : Real.Categorical
 | 𝓜₁, 𝓜₂ => .trans (.symm (model_iso_𝓡 𝓜₁)) (model_iso_𝓡 𝓜₂)
 
 end SecondOrder.Language.Theory.Real

@@ -4,7 +4,6 @@ namespace SecondOrder.Language
 
 structure Structure (𝓛 : Language) where
   Dom : Type u
-  inhabited : Inhabited Dom
   interpFunc : 𝓛.Func n → Vec Dom n → Dom
   interpRel : 𝓛.Rel n → Vec Dom n → Prop
 
@@ -15,14 +14,13 @@ namespace Structure
 variable {𝓜 : 𝓛.Structure}
 
 instance : CoeSort 𝓛.Structure (Type u) := ⟨(·.Dom)⟩
-instance : Inhabited 𝓜 := 𝓜.inhabited
 
 def interpTy (𝓜 : 𝓛.Structure) : Ty → Type*
 | Ty.var => 𝓜
 | Ty.func n => Vec 𝓜 n → 𝓜
 | Ty.rel n => Vec 𝓜 n → Prop
 
-def Assignment (𝓜: 𝓛.Structure) (Γ : Con) := ∀ {T : Ty}, T ∈ᶜ Γ → 𝓜.interpTy T
+def Assignment (𝓜: 𝓛.Structure) (Γ : Context) := ∀ {T : Ty}, T ∈ᶜ Γ → 𝓜.interpTy T
 
 def Assignment.nil : 𝓜.Assignment [] := by intro _ x; cases x
 notation "[]ₐ" => Assignment.nil
