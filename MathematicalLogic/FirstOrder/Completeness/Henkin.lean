@@ -7,15 +7,15 @@ lemma Set.decompose_subset_union {s₁ s₂ s₃ : Set α} :
   exists s₁ ∩ s₃
   aesop
 
-def Fin.embedk : (k : ℕ) → Fin (n + k + 1)
+def Fin.embedAt : (k : ℕ) → Fin (n + k + 1)
 | 0 => 0
-| k + 1 => (embedk k).succ
+| k + 1 => (embedAt k).succ
 
-def Fin.insertk : {k : ℕ} → Fin (n + k) → Fin (n + k + 1)
+def Fin.insertAt : (k : ℕ) → Fin (n + k) → Fin (n + k + 1)
 | 0, x => x.succ
-| _ + 1, x => x.cases 0 λ x => (insertk x).succ
+| k + 1, x => x.cases 0 λ x => (insertAt k x).succ
 
-theorem Fin.embedk_or_insertk (x : Fin (n + k + 1)) : x = embedk k ∨ ∃ y, x = insertk y := by
+theorem Fin.embedAt_or_insertAt (x : Fin (n + k + 1)) : x = embedAt k ∨ ∃ y, x = insertAt k y := by
   induction k with
   | zero =>
     cases x using Fin.cases with
@@ -26,8 +26,8 @@ theorem Fin.embedk_or_insertk (x : Fin (n + k + 1)) : x = embedk k ∨ ∃ y, x 
     | zero => right; exists Fin.ofNat 0
     | succ x =>
       rcases ih x with h | ⟨y, h⟩
-      · left; simp [h, embedk]
-      · right; exists y.succ; simp [h, insertk]
+      · left; simp [h, embedAt]
+      · right; exists y.succ; simp [h, insertAt]
 
 namespace FirstOrder.Language
 
@@ -78,87 +78,87 @@ lemma Formula.consts_of_subst {σ : 𝓛.Subst n m} :
       · simp [Term.shift, Term.consts_of_subst]
         left; exact h₂
 
-def Subst.singlek : (k : ℕ) → (t : 𝓛.Term n) → 𝓛.Subst (n + k + 1) (n + k)
+def Subst.singleAt : (k : ℕ) → (t : 𝓛.Term n) → 𝓛.Subst (n + k + 1) (n + k)
 | 0, t => ↦ₛ t
-| k + 1, t => ⇑ₛ (singlek k t)
-local infix:55 " ↦ₛ " => Subst.singlek
+| k + 1, t => ⇑ₛ (singleAt k t)
+local infix:55 " ↦ₛ " => Subst.singleAt
 
-theorem Subst.singlek_const_app_embedk {c : 𝓛.Const} : (k ↦ₛ (c : 𝓛.Term n)) (Fin.embedk k) = (c : 𝓛.Term _) := by
-  induction k with simp [singlek, Fin.embedk]
+theorem Subst.singleAt_const_app_embedAt {c : 𝓛.Const} : (k ↦ₛ (c : 𝓛.Term n)) (Fin.embedAt k) = (c : 𝓛.Term _) := by
+  induction k with simp [singleAt, Fin.embedAt]
   | succ k ih => simp [ih, Term.shift, Vec.eq_nil]
 
-theorem Subst.singlek_app_insertk : (k ↦ₛ t) (Fin.insertk x) = #x := by
-  induction k with simp [singlek, Fin.insertk]
+theorem Subst.singleAt_app_insertAt : (k ↦ₛ t) (Fin.insertAt k x) = #x := by
+  induction k with simp [singleAt, Fin.insertAt]
   | succ k ih => cases x using Fin.cases <;> simp [ih]
 
-def Subst.shiftk : (k : ℕ) → 𝓛.Subst (n + k) (n + k + 1)
+def Subst.shiftAt : (k : ℕ) → 𝓛.Subst (n + k) (n + k + 1)
 | 0 => shift
-| k + 1 => ⇑ₛ (shiftk k)
+| k + 1 => ⇑ₛ (shiftAt k)
 
-theorem Subst.shiftk_app : shiftk (𝓛 := 𝓛) k x = #(Fin.insertk x) := by
-  induction k with simp [shiftk, Fin.insertk]
+theorem Subst.shiftAt_app : shiftAt (𝓛 := 𝓛) k x = #(Fin.insertAt k x) := by
+  induction k with simp [shiftAt, Fin.insertAt]
   | succ k ih => cases x using Fin.cases <;> simp [ih]
 
-theorem Subst.shiftk_comp_singlek : shiftk k ∘ₛ (k ↦ₛ t) = id := by
+theorem Subst.shiftAt_comp_singleAt : shiftAt k ∘ₛ (k ↦ₛ t) = id := by
   funext x; simp
-  induction k with simp [singlek, shiftk]
+  induction k with simp [singleAt, shiftAt]
   | succ k ih => cases x using Fin.cases <;> simp [Term.shift_subst_lift, ih]
 
-def Subst.insertk : (k : ℕ) → 𝓛.Subst (n + k) m → (t : 𝓛.Term m) → 𝓛.Subst (n + k + 1) m
+def Subst.insertAt : (k : ℕ) → 𝓛.Subst (n + k) m → (t : 𝓛.Term m) → 𝓛.Subst (n + k + 1) m
 | 0, σ, t => t ∷ᵥ σ
-| k + 1, σ, t => σ.head ∷ᵥ insertk k σ.tail t
+| k + 1, σ, t => σ.head ∷ᵥ insertAt k σ.tail t
 
-theorem Subst.insertk_app_embedk : insertk k σ t (Fin.embedk k) = t := by
-  induction k with simp [insertk, Fin.embedk]
+theorem Subst.insertAt_app_embedAt : insertAt k σ t (Fin.embedAt k) = t := by
+  induction k with simp [insertAt, Fin.embedAt]
   | succ k ih => simp [ih]
 
-theorem Subst.insertk_app_insertk : insertk k σ t (Fin.insertk x) = σ x := by
-  induction k with simp [insertk, Fin.insertk]
+theorem Subst.insertAt_app_insertAt : insertAt k σ t (Fin.insertAt k x) = σ x := by
+  induction k with simp [insertAt, Fin.insertAt]
   | succ k ih => cases x using Fin.cases <;> simp [Vec.head, ih]
 
 open Classical in
 noncomputable def Term.invConst (k : ℕ) : 𝓛.Term (n + k) → 𝓛.Const → 𝓛.Term (n + k + 1)
-| #x, _ => #(Fin.insertk x)
-| func (m := 0) f _, c => if f = c then #(Fin.embedk k) else f ⬝ₜ []ᵥ
+| #x, _ => #(Fin.insertAt k x)
+| func (m := 0) f _, c => if f = c then #(Fin.embedAt k) else f ⬝ₜ []ᵥ
 | func (m := _ + 1) f v, c => f ⬝ₜ λ i => (v i).invConst k c
 
-theorem Term.subst_singlek_invConst {t : 𝓛.Term (n + k + 1)} (h : c ∉ t.consts) :
+theorem Term.subst_singleAt_invConst {t : 𝓛.Term (n + k + 1)} (h : c ∉ t.consts) :
   (t[k ↦ₛ c]ₜ).invConst k c = t := by
   induction t with simp
   | var x =>
-    rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-    · simp [h, Subst.singlek_const_app_embedk, Term.invConst]
-    · simp [h, Subst.singlek_app_insertk, Term.invConst]
+    rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+    · simp [h, Subst.singleAt_const_app_embedAt, Term.invConst]
+    · simp [h, Subst.singleAt_app_insertAt, Term.invConst]
   | @func m f v ih =>
     cases m <;> simp [invConst] <;> simp [Term.consts] at h
     · simp [Ne.symm h, Vec.eq_nil]
     · ext i; simp [ih i (h i)]
 
-theorem Term.invConst_eq_shiftk {t : 𝓛.Term (n + k)} (h : c ∉ t.consts) :
-  t.invConst k c = t[Subst.shiftk k]ₜ := by
+theorem Term.invConst_eq_shiftAt {t : 𝓛.Term (n + k)} (h : c ∉ t.consts) :
+  t.invConst k c = t[Subst.shiftAt k]ₜ := by
   induction t with
-  | var x => simp [invConst, Subst.shiftk_app]
+  | var x => simp [invConst, Subst.shiftAt_app]
   | @func m f v ih =>
     cases m <;> simp [invConst] <;> simp [consts] at h
     · simp [Ne.symm h, Vec.eq_nil]
     · ext i; simp [ih i (h i)]
 
 theorem Term.invConst_subst {t : 𝓛.Term (n + k)} {σ : 𝓛.Subst (n + k) (n' + k')} :
-  (t[σ]ₜ).invConst k' c = (t.invConst k c)[Subst.insertk k ((·.invConst k' c) ∘ σ) #(Fin.embedk k')]ₜ := by
+  (t[σ]ₜ).invConst k' c = (t.invConst k c)[Subst.insertAt k ((·.invConst k' c) ∘ σ) #(Fin.embedAt k')]ₜ := by
   induction t with
-  | var x => simp [invConst, Function.comp, Subst.insertk_app_insertk]
+  | var x => simp [invConst, Function.comp, Subst.insertAt_app_insertAt]
   | @func m f v ih =>
     cases m <;> simp [invConst]
-    · by_cases h : f = c <;> simp [h, Vec.eq_nil, Subst.insertk_app_embedk]
+    · by_cases h : f = c <;> simp [h, Vec.eq_nil, Subst.insertAt_app_embedAt]
     · simp [ih]
 
 theorem Term.invConst_shift {t : 𝓛.Term (n + k)} :
   (↑ₜt).invConst (k + 1) c = ↑ₜ(t.invConst k c) := by
   rw [shift, invConst_subst]
-  congr; funext x; simp [Function.comp, invConst, Fin.embedk]
-  rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-  · simp [h, Subst.insertk_app_embedk]
-  · simp [h, Subst.insertk_app_insertk]
+  congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
+  rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+  · simp [h, Subst.insertAt_app_embedAt]
+  · simp [h, Subst.insertAt_app_insertAt]
     induction k <;> aesop
 
 noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Const → 𝓛.Formula (n + k + 1)
@@ -172,24 +172,24 @@ noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Con
 @[simp] theorem Formula.invConst_imp : (p ⇒ q : 𝓛.Formula (n + k)).invConst k c = p.invConst k c ⇒ q.invConst k c := by
   rw [←imp_eq]; simp only [invConst]
 
-theorem Formula.subst_singlek_invConst {p : 𝓛.Formula (n + k + 1)} (h : c ∉ p.consts) :
+theorem Formula.subst_singleAt_invConst {p : 𝓛.Formula (n + k + 1)} (h : c ∉ p.consts) :
   (p[k ↦ₛ c]ₚ).invConst k c = p := by
   cases p with (simp [invConst] <;> simp [consts] at h)
-  | rel r v => ext i; simp [Term.subst_singlek_invConst (h i)]
-  | eq t₁ t₂ => simp [Term.subst_singlek_invConst h.left, Term.subst_singlek_invConst h.right]
-  | imp p q => simp [subst_singlek_invConst h.left, subst_singlek_invConst h.right]
-  | all p => rw [←Subst.singlek, subst_singlek_invConst (k := k + 1) h]
+  | rel r v => ext i; simp [Term.subst_singleAt_invConst (h i)]
+  | eq t₁ t₂ => simp [Term.subst_singleAt_invConst h.left, Term.subst_singleAt_invConst h.right]
+  | imp p q => simp [subst_singleAt_invConst h.left, subst_singleAt_invConst h.right]
+  | all p => rw [←Subst.singleAt, subst_singleAt_invConst (k := k + 1) h]
 
-theorem Formula.invConst_eq_shiftk {p : 𝓛.Formula (n + k)} (h : c ∉ p.consts) :
-  p.invConst k c = p[Subst.shiftk k]ₚ := by
+theorem Formula.invConst_eq_shiftAt {p : 𝓛.Formula (n + k)} (h : c ∉ p.consts) :
+  p.invConst k c = p[Subst.shiftAt k]ₚ := by
   cases p with (simp [invConst] <;> simp [consts] at h)
-  | rel r v => ext i; simp [Term.invConst_eq_shiftk (h i)]
-  | eq t₁ t₂ => simp [Term.invConst_eq_shiftk h.left, Term.invConst_eq_shiftk h.right]
-  | imp p q => simp [invConst_eq_shiftk h.left, invConst_eq_shiftk h.right]
-  | all p => simp [invConst_eq_shiftk (k := k + 1) h, Subst.shiftk]
+  | rel r v => ext i; simp [Term.invConst_eq_shiftAt (h i)]
+  | eq t₁ t₂ => simp [Term.invConst_eq_shiftAt h.left, Term.invConst_eq_shiftAt h.right]
+  | imp p q => simp [invConst_eq_shiftAt h.left, invConst_eq_shiftAt h.right]
+  | all p => simp [invConst_eq_shiftAt (k := k + 1) h, Subst.shiftAt]
 
 theorem Formula.invConst_subst {p : 𝓛.Formula (n + k)} {σ : 𝓛.Subst (n + k) (n' + k')} :
-  (p[σ]ₚ).invConst k' c = (p.invConst k c)[Subst.insertk k ((·.invConst k' c) ∘ σ) #(Fin.embedk k')]ₚ := by
+  (p[σ]ₚ).invConst k' c = (p.invConst k c)[Subst.insertAt k ((·.invConst k' c) ∘ σ) #(Fin.embedAt k')]ₚ := by
   cases p with simp [invConst]
   | rel => ext; simp [Term.invConst_subst]
   | eq => simp [Term.invConst_subst]
@@ -198,19 +198,19 @@ theorem Formula.invConst_subst {p : 𝓛.Formula (n + k)} {σ : 𝓛.Subst (n + 
     rw [invConst_subst (k := k + 1) (p := p)]
     congr; funext x
     cases' x using Fin.cases with x
-    · simp [Subst.insertk, Vec.head, Term.invConst, Fin.insertk]
-    · simp [Subst.insertk, Vec.tail, Function.comp, Fin.embedk, Term.invConst]
-      rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-      · simp [h, Subst.insertk_app_embedk]
-      · simp [h, Subst.insertk_app_insertk, Term.invConst_shift]
+    · simp [Subst.insertAt, Vec.head, Term.invConst, Fin.insertAt]
+    · simp [Subst.insertAt, Vec.tail, Function.comp, Fin.embedAt, Term.invConst]
+      rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+      · simp [h, Subst.insertAt_app_embedAt]
+      · simp [h, Subst.insertAt_app_insertAt, Term.invConst_shift]
 
 theorem Formula.invConst_shift {p : 𝓛.Formula (n + k)} :
   (↑ₚp).invConst (k + 1) c = ↑ₚ(p.invConst k c) := by
   rw [shift, invConst_subst]
-  congr; funext x; simp [Function.comp, invConst, Fin.embedk]
-  rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-  · simp [h, Subst.insertk_app_embedk]
-  · simp [h, Subst.insertk_app_insertk]
+  congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
+  rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+  · simp [h, Subst.insertAt_app_embedAt]
+  · simp [h, Subst.insertAt_app_insertAt]
     induction k <;> aesop
 
 theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.Term (n + k)} :
@@ -218,12 +218,12 @@ theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.T
   rw [invConst_subst (k := k + 1)]
   congr; clear p; funext x
   cases x using Fin.cases with
-  | zero => simp [Subst.insertk, Vec.head]
+  | zero => simp [Subst.insertAt, Vec.head]
   | succ x =>
-    simp [Subst.insertk, Vec.tail, Function.comp, Term.invConst]
-    rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-    · simp [h, Subst.insertk_app_embedk]
-    · simp [h, Subst.insertk_app_insertk]
+    simp [Subst.insertAt, Vec.tail, Function.comp, Term.invConst]
+    rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+    · simp [h, Subst.insertAt_app_embedAt]
+    · simp [h, Subst.insertAt_app_insertAt]
 
 lemma Axioms.inv_const {p : 𝓛.Formula (n + k)} :
   p ∈ 𝓛.Axioms → p.invConst k c ∈ 𝓛.Axioms := by
@@ -233,10 +233,10 @@ lemma Axioms.inv_const {p : 𝓛.Formula (n + k)} :
   | _ => constructor
 
 lemma Proof.inv_const {p : 𝓛.Formula (n + k)} (h₁ : ∀ p ∈ Γ, c ∉ p.consts) :
-  Γ ⊢ p → (·[Subst.shiftk k]ₚ) '' Γ ⊢ p.invConst k c := by
+  Γ ⊢ p → (·[Subst.shiftAt k]ₚ) '' Γ ⊢ p.invConst k c := by
   intro h
   induction h with
-  | @hyp p h => apply hyp; exists p, h; rw [Formula.invConst_eq_shiftk (h₁ p h)]
+  | @hyp p h => apply hyp; exists p, h; rw [Formula.invConst_eq_shiftAt (h₁ p h)]
   | ax h => exact ax (.inv_const h)
   | mp _ _ ih₁ ih₂ => simp at ih₁; exact mp ih₁ ih₂
 
@@ -245,7 +245,7 @@ theorem Proof.const_generalization {Γ : 𝓛.FormulaSet n}
   Γ ⊢ p[↦ₛ c]ₚ → Γ ⊢ ∀' p := by
   intro h
   apply inv_const (k := 0) (c := c) h₁ at h
-  rw [←Subst.singlek, Formula.subst_singlek_invConst (k := 0) h₂] at h
+  rw [←Subst.singleAt, Formula.subst_singleAt_invConst (k := 0) h₂] at h
   exact generalization h
 
 
@@ -282,30 +282,30 @@ theorem wit_not_in_homFormula : wit p ∉ (hom.onFormula q).consts := by
   | all _ ih => simp [ih]
 
 def invTerm : (k : ℕ) → (𝓛.henkinStep n).Term (m + k) → 𝓛.Term (m + k + 1)
-| _, #x => #(Fin.insertk x)
+| k, #x => #(Fin.insertAt k x)
 | k, (.inj f) ⬝ₜ v => f ⬝ₜ λ i => invTerm k (v i)
-| k, (.wit _) ⬝ₜ _ => #(Fin.embedk k)
+| k, (.wit _) ⬝ₜ _ => #(Fin.embedAt k)
 
-theorem invTerm_homTerm : invTerm k (hom.onTerm t : (𝓛.henkinStep n).Term _) = t[Subst.shiftk k]ₜ := by
+theorem invTerm_homTerm : invTerm k (hom.onTerm t : (𝓛.henkinStep n).Term _) = t[Subst.shiftAt k]ₜ := by
   induction t with simp [Hom.onTerm, invTerm]
-  | var x => simp [Subst.shiftk_app]
+  | var x => simp [Subst.shiftAt_app]
   | func f v ih => ext; simp [ih]
 
 theorem invTerm_subst {σ : (𝓛.henkinStep n).Subst (m + k) (m' + k')} :
-  invTerm k' (t[σ]ₜ) = (invTerm k t)[Subst.insertk k ((invTerm k' ·) ∘ σ) #(Fin.embedk k')]ₜ := by
+  invTerm k' (t[σ]ₜ) = (invTerm k t)[Subst.insertAt k ((invTerm k' ·) ∘ σ) #(Fin.embedAt k')]ₜ := by
   induction t with
-  | var x => simp [invTerm, Function.comp, Subst.insertk_app_insertk]
+  | var x => simp [invTerm, Function.comp, Subst.insertAt_app_insertAt]
   | func f v ih =>
     cases f <;> simp [invTerm]
     · ext; simp [ih]
-    · simp [Subst.insertk_app_embedk]
+    · simp [Subst.insertAt_app_embedAt]
 
 theorem invTerm_shift : invTerm (k + 1) (↑ₜt) = ↑ₜ(invTerm k t) := by
   rw [Term.shift, invTerm_subst]
-  congr; funext x; simp [Function.comp, invTerm, Fin.embedk]
-  rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-  · simp [h, Subst.insertk_app_embedk]
-  · simp [h, Subst.insertk_app_insertk]
+  congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
+  rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+  · simp [h, Subst.insertAt_app_embedAt]
+  · simp [h, Subst.insertAt_app_insertAt]
     induction k <;> aesop
 
 def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Formula (m + k + 1)
@@ -320,14 +320,14 @@ def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Form
   invFormula k (p ⇒ q) = invFormula k p ⇒ invFormula k q := by
   rw [←Formula.imp_eq]; simp only [invFormula]
 
-theorem invFormula_homFormula : invFormula k (hom.onFormula p : (𝓛.henkinStep n).Formula _) = p[Subst.shiftk k]ₚ := by
+theorem invFormula_homFormula : invFormula k (hom.onFormula p : (𝓛.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
   | rel | eq => simp [invTerm_homTerm]
   | imp p q => simp [invFormula_homFormula (p := p), invFormula_homFormula (p := q)]
-  | all p => simp [invFormula_homFormula (k := k + 1) (p := p), Subst.shiftk]
+  | all p => simp [invFormula_homFormula (k := k + 1) (p := p), Subst.shiftAt]
 
 theorem invFormula_subst {σ : (𝓛.henkinStep n).Subst (m + k) (m' + k')} :
-  invFormula k' (p[σ]ₚ) = (invFormula k p)[Subst.insertk k ((invTerm k' ·) ∘ σ) #(Fin.embedk k')]ₚ := by
+  invFormula k' (p[σ]ₚ) = (invFormula k p)[Subst.insertAt k ((invTerm k' ·) ∘ σ) #(Fin.embedAt k')]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
   | rel | eq => simp [invTerm_subst]
   | imp p q => simp [invFormula_subst (p := p), invFormula_subst (p := q)]
@@ -335,30 +335,30 @@ theorem invFormula_subst {σ : (𝓛.henkinStep n).Subst (m + k) (m' + k')} :
     rw [invFormula_subst (k := k + 1) (p := p)]
     congr; funext x
     cases' x using Fin.cases with x
-    · simp [Subst.insertk, Vec.head, invTerm, Fin.insertk]
-    · simp [Subst.insertk, Vec.tail, Function.comp, Fin.embedk, Term.invConst]
-      rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-      · simp [h, Subst.insertk_app_embedk]
-      · simp [h, Subst.insertk_app_insertk, invTerm_shift]
+    · simp [Subst.insertAt, Vec.head, invTerm, Fin.insertAt]
+    · simp [Subst.insertAt, Vec.tail, Function.comp, Fin.embedAt, Term.invConst]
+      rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+      · simp [h, Subst.insertAt_app_embedAt]
+      · simp [h, Subst.insertAt_app_insertAt, invTerm_shift]
 
 theorem invFormula_shift : invFormula (k + 1) (↑ₚp) = ↑ₚ(invFormula k p) := by
   rw [Formula.shift, invFormula_subst]
-  congr; funext x; simp [Function.comp, invTerm, Fin.embedk]
-  rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-  · simp [h, Subst.insertk_app_embedk]
-  · simp [h, Subst.insertk_app_insertk]
+  congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
+  rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+  · simp [h, Subst.insertAt_app_embedAt]
+  · simp [h, Subst.insertAt_app_insertAt]
     induction k <;> aesop
 
 theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k + 1) p)[↦ₛ (invTerm k t)]ₚ := by
   rw [invFormula_subst (k := k + 1)]
   congr; clear p; funext x
   cases x using Fin.cases with
-  | zero => simp [Subst.insertk, Vec.head]
+  | zero => simp [Subst.insertAt, Vec.head]
   | succ x =>
-    simp [Subst.insertk, Vec.tail, Function.comp, invTerm]
-    rcases Fin.embedk_or_insertk x with h | ⟨y, h⟩
-    · simp [h, Subst.insertk_app_embedk]
-    · simp [h, Subst.insertk_app_insertk]
+    simp [Subst.insertAt, Vec.tail, Function.comp, invTerm]
+    rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
+    · simp [h, Subst.insertAt_app_embedAt]
+    · simp [h, Subst.insertAt_app_insertAt]
 
 theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axioms → invFormula k p ∈ 𝓛.Axioms := by
   intro h
