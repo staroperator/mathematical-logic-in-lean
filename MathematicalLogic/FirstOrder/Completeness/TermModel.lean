@@ -1,127 +1,86 @@
-import MathematicalLogic.FirstOrder.Semantics
-import MathematicalLogic.FirstOrder.Completeness.Defs
+import Mathlib.Data.Fintype.Quotient
+import MathematicalLogic.FirstOrder.Proof
 
-def Vec.setoid (s : Setoid α) (n : ℕ) : Setoid (Vec α n) where
-  r v₁ v₂ := ∀ i, s.r (v₁ i) (v₂ i)
-  iseqv.refl _ _ := s.iseqv.refl _
-  iseqv.symm h i := s.iseqv.symm (h i)
-  iseqv.trans h₁ h₂ i := s.iseqv.trans (h₁ i) (h₂ i)
+def Quotient.liftOnVec {s : Setoid α} (v : Vec (Quotient s) n) (f : Vec α n → β)
+  (h : (v₁ v₂ : Vec α n) → (∀ i, v₁ i ≈ v₂ i) → f v₁ = f v₂) : β :=
+  Quotient.liftOn (Quotient.finChoice v) f h
 
-instance [s : Setoid α] : Setoid (Vec α n) := Vec.setoid s n
+theorem Quotient.liftOnVec_mk {s : Setoid α} {f : Vec α n → β} {h} :
+  liftOnVec (s := s) (λ i => ⟦v i⟧) f h = f v := by
+  simp [liftOnVec, Quotient.finChoice_eq, Quotient.liftOn_mk]
 
-def Vec.quotient {s : Setoid α} (v : Vec (Quotient s) n) : Quotient (Vec.setoid s n) :=
-  v.rec ⟦[]ᵥ⟧
-    (λ a _ v => Quotient.liftOn₂ a v (⟦· ∷ᵥ ·⟧)
-      (by
-        intros; simp; intro i
-        cases i using Fin.cases with
-        | zero => assumption
-        | succ => apply_assumption))
-
-theorem Vec.quotient_mk :
-  quotient (s := s) (λ i => ⟦v i⟧) = ⟦v⟧ := by
-  induction v using Vec.rec with
-  | nil => simp [Vec.eq_nil, quotient]
-  | cons a v ih =>
-    rw [Vec.eq_cons λ _ => _]
-    simp [head, tail, Function.comp, quotient]
-    rw [←quotient]
-    simp [ih]
-
-def Quotient.liftOnVec
-  {s : Setoid α}
-  (v : Vec (Quotient s) n)
-  (f : Vec α n → β)
-  (c : (v₁ v₂ : Vec α n) → v₁ ≈ v₂ → f v₁ = f v₂) : β :=
-  Quotient.liftOn v.quotient f c
-
-theorem Quotient.liftOnVec_mk
-  {s : Setoid α} {f : Vec α n → β} {c : (v₁ v₂ : Vec α n) → v₁ ≈ v₂ → f v₁ = f v₂} :
-  liftOnVec (λ i => ⟦v i⟧) f c = f v := by
-  simp [liftOnVec, Vec.quotient_mk, Quotient.liftOn_mk]
-
-
-
-namespace FirstOrder.Language
+namespace FirstOrder.Language.FormulaSet
 
 variable {𝓛 : Language}
 
-namespace Context
+def TermSetoid (Γ : 𝓛.FormulaSet n) : Setoid (𝓛.Term n) where
+  r t₁ t₂ := Γ ⊢ t₁ ≐ t₂
+  iseqv.refl _ := Proof.eq_refl
+  iseqv.symm := Proof.eq_symm.mp
+  iseqv.trans := Proof.eq_trans.mp₂
 
-variable (Γ : 𝓛.Context)
-
-def TermSetoid : Setoid 𝓛.Term where
-  r p q := Γ ⊢ p ≐ q
-  iseqv.refl _ := Proof.refl
-  iseqv.symm := Proof.symm.mp
-  iseqv.trans := Proof.trans.mp2
-
-@[simps] def TermModel (Γ : 𝓛.Context) : 𝓛.Structure where
-  𝓤 := Quotient Γ.TermSetoid
-  inhabited𝓤 := ⟨⟦#0⟧⟩
-  interp𝓕 f v :=
+@[simps] def TermModel (Γ : 𝓛.FormulaSet n) : 𝓛.Structure where
+  Dom := Quotient (TermSetoid Γ)
+  interpFunc f v :=
     Quotient.liftOnVec v (⟦f ⬝ₜ ·⟧)
-      (by intros v₁ v₂ h; simp; papply Proof.congr_func; exact Proof.andN_intro h)
-  interp𝓡 r v :=
+      (by intros v₁ v₂ h; simp; papply Proof.eq_congr_func; exact Proof.andN_intro h)
+  interpRel r v :=
     Quotient.liftOnVec v (Γ ⊢ r ⬝ᵣ ·)
-      (by intros v₁ v₂ h; simp; apply Proof.iff_iff; papply Proof.congr_rel_iff; exact Proof.andN_intro h)
+      (by intros v₁ v₂ h; simp; apply Proof.iff_iff; papply Proof.eq_congr_rel_iff; exact Proof.andN_intro h)
 
-end Context
+namespace TermModel
 
-variable {Γ : 𝓛.Context} {ρ : 𝓛.Subst}
+variable {Γ : 𝓛.FormulaSet n} {σ : 𝓛.Subst m n}
 
-theorem Term.interp_term_model : ⟦ t ⟧ₜ Γ.TermModel, (⟦ρ ·⟧) = ⟦t[ρ]ₜ⟧ := by
-  induction t with simp [Term.interp]
+theorem interp_term : ⟦ t ⟧ₜ Γ.TermModel, (⟦σ ·⟧) = ⟦t[σ]ₜ⟧ := by
+  induction t with simp [Structure.interpTerm]
   | func f v ih => simp [ih, Quotient.liftOnVec_mk]
 
-lemma subst_const {c : 𝓛.Const} : (c : 𝓛.Term)[σ]ₜ = c := by simp; apply Vec.eq_nil
+variable (h₁ : Consistent Γ) (h₂ : Complete Γ) (h₃ : Henkin Γ)
 
-variable  (h₁ : Γ.Consistent) (h₂ : Γ.Complete) (h₃ : Γ.Saturated)
-
-theorem Formula.interp_term_model :
-  (Γ.TermModel ⊨[(⟦ρ ·⟧)] p ↔ Γ ⊢ p[ρ]ₚ) := by
-  induction p generalizing ρ with simp [Formula.interp]
-  | rel r v => simp [Term.interp_term_model, Quotient.liftOnVec_mk]
-  | eq t₁ t₂ => simp [Term.interp_term_model]; rfl
+theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ := by
+  induction p generalizing n with simp [Structure.interpFormula]
+  | rel r v => simp [interp_term, Quotient.liftOnVec_mk]
+  | eq t₁ t₂ => simp [interp_term]; rfl
   | false => exact h₁
   | imp p q ih₁ ih₂ =>
-    rw [ih₁, ih₂]
+    rw [ih₁ h₁ h₂ h₃, ih₂ h₁ h₂ h₃]
     constructor
     · intro h
-      rcases h₂ (p[ρ]ₚ) with h' | h'
-      · pintro; pexact (h h')
+      rcases h₂ (p[σ]ₚ) with h' | h'
+      · pintro; pexact h h'
       · papply Proof.contradiction; exact h'
     · exact Proof.mp
   | all p ih =>
     constructor
     · intro h₁'
-      rcases h₂ (∀' p[⇑ₛρ]ₚ) with h₂' | h₂'
+      rcases h₂ (∀' p[⇑ₛσ]ₚ) with h₂' | h₂'
       · exact h₂'
       · exfalso
-        apply Proof.mp Proof.not_forall at h₂'
+        apply Proof.not_forall.mp at h₂'
         apply h₃ at h₂'
         rcases h₂' with ⟨c, h₂'⟩
-        simp at h₂'; rw [←subst_const (σ := ρ), ←Formula.subst_swap, ←Formula.subst_comp] at h₂'
+        simp at h₂'; rw [←Term.subst_const (σ := σ), ←Formula.subst_swap_single, ←Formula.subst_comp] at h₂'
         apply h₁
         apply h₂'.mp
-        simp [←ih]
-        have : (λ x => ⟦(↦ₛ c x)[ρ]ₜ⟧) = Structure.Assignment.cons (𝓢 := Γ.TermModel) ⟦c⟧ (⟦ρ ·⟧) := by
-          funext x; cases x <;> simp [Structure.Assignment.cons, Vec.eq_nil]
+        rw [←ih h₁ h₂ h₃]
+        have : (λ x => ⟦(↦ₛ c ∘ₛ σ) x⟧) = (⟦c⟧ : Quotient (TermSetoid Γ)) ∷ᵥ (⟦σ ·⟧) := by
+          funext x; cases x using Fin.cases <;> simp [Vec.eq_nil]
         rw [this]
         apply h₁'
     · rintro h ⟨t⟩
-      apply Proof.mp (Proof.ax (.a4 (t := t))) at h
-      rw [←Formula.subst_comp, ←ih] at h
-      have : (λ x => ⟦(⇑ₛρ ∘ₛ ↦ₛ t) x⟧) = Structure.Assignment.cons (𝓢 := Γ.TermModel) ⟦t⟧ (⟦ρ ·⟧) := by
-        funext x; cases x <;> simp [Structure.Assignment.cons, Term.shift_subst_single]
+      apply (Proof.forall_elim (t := t)).mp at h
+      rw [←Formula.subst_comp, ←ih h₁ h₂ h₃] at h
+      have : (λ x => ⟦(⇑ₛσ ∘ₛ ↦ₛ t) x⟧) = (⟦t⟧ : Quotient (TermSetoid Γ)) ∷ᵥ (⟦σ ·⟧) := by
+        funext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]
       rw [this] at h
       exact h
 
-theorem satisfiable_by_term_model : Γ.Satisfiable := by
-  apply Context.Satisfiable.up.{0}
-  exists Γ.TermModel, (⟦Subst.id ·⟧)
+theorem satisfiable : Satisfiable Γ := by
+  apply Satisfiable.up.{0}
+  exists TermModel Γ, (⟦Subst.id ·⟧)
   intros p h
-  rw [Formula.interp_term_model h₁ h₂ h₃, Formula.subst_id]
+  rw [interp_formula h₁ h₂ h₃, Formula.subst_id]
   exact Proof.hyp h
 
-end FirstOrder.Language
+end FirstOrder.Language.FormulaSet.TermModel

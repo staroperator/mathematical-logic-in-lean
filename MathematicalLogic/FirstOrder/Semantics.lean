@@ -1,104 +1,90 @@
-import MathematicalLogic.FirstOrder.Proof
+import MathematicalLogic.FirstOrder.Syntax
 
 universe u v
 
 namespace FirstOrder.Language
 
 structure Structure (𝓛 : Language) where
-  𝓤 : Type u
-  inhabited𝓤 : Inhabited 𝓤
-  interp𝓕 : 𝓛.𝓕 n → Vec 𝓤 n → 𝓤
-  interp𝓡 : 𝓛.𝓡 n → Vec 𝓤 n → Prop
+  Dom : Type u
+  interpFunc : 𝓛.Func n → Vec Dom n → Dom
+  interpRel : 𝓛.Rel n → Vec Dom n → Prop
 
-variable {𝓛 : Language} {𝓢 : 𝓛.Structure}
-
-namespace Structure
-
-instance : Inhabited 𝓢.𝓤 := 𝓢.inhabited𝓤
-
-def Assignment (𝓢: 𝓛.Structure) := ℕ → 𝓢.𝓤
-
-instance : Inhabited (𝓢.Assignment) := ⟨λ _ => default⟩
-
-def Assignment.cons (u : 𝓢.𝓤) (ρ : 𝓢.Assignment) : 𝓢.Assignment
-| 0 => u
-| x + 1 => ρ x
-infixr:80 " ∷ₐ " => Assignment.cons
-
-end Structure
-
-open Structure
-
-def Term.interp : 𝓛.Term → (𝓢 : 𝓛.Structure) → 𝓢.Assignment → 𝓢.𝓤
-| #x, _, ρ => ρ x
-| f ⬝ₜ v, 𝓢, ρ => 𝓢.interp𝓕 f (λ i => (v i).interp 𝓢 ρ)
-notation:80 "⟦" t "⟧ₜ " 𝓢 ", " ρ:80 => Term.interp t 𝓢 ρ
+variable {𝓛 : Language} {𝓜 : 𝓛.Structure}
 
 namespace Structure
 
-def Assignment.subst (ρ : 𝓢.Assignment) (σ : 𝓛.Subst) : 𝓢.Assignment :=
-  λ x => ⟦ σ x ⟧ₜ 𝓢, ρ
+instance : CoeSort 𝓛.Structure (Type u) := ⟨(·.Dom)⟩
+
+def Assignment (𝓜 : 𝓛.Structure) (n : ℕ) := Vec 𝓜 n
+
+def interpTerm (𝓜 : 𝓛.Structure) : 𝓛.Term n → 𝓜.Assignment n → 𝓜
+| #x, ρ => ρ x
+| f ⬝ₜ v, ρ => 𝓜.interpFunc f λ i => 𝓜.interpTerm (v i) ρ
+notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => interpTerm 𝓜 t ρ
+
+def Assignment.subst (ρ : 𝓜.Assignment n) (σ : 𝓛.Subst m n) : 𝓜.Assignment m :=
+  λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
 notation:80 ρ "[" σ "]ₐ" => Structure.Assignment.subst ρ σ
 
-variable {ρ : 𝓢.Assignment}
+lemma Assignment.subst_shift : (u ∷ᵥ ρ)[Subst.shift]ₐ = ρ := by
+  funext x; simp [Assignment.subst, interpTerm]
 
-lemma Assignment.subst_shift : (u ∷ₐ ρ)[Subst.shift]ₐ = ρ := by
-  funext x
-  simp [Assignment.subst, Assignment.cons, Term.interp]
+lemma Assignment.subst_single : ρ[↦ₛ t]ₐ = ⟦ t ⟧ₜ 𝓜, ρ ∷ᵥ ρ := by
+  funext x; cases x using Fin.cases <;> simp [Assignment.subst, interpTerm]
 
-lemma Assignment.subst_single : ρ[↦ₛ t]ₐ = (⟦ t ⟧ₜ 𝓢, ρ) ∷ₐ ρ := by
-  funext x
-  cases x with
-  | zero => rfl
-  | succ => simp [Assignment.subst, Assignment.cons, Term.interp]
+theorem interpTerm_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ[σ]ₐ := by
+  induction t with simp [Structure.Assignment.subst, interpTerm]
+  | func f v ih => simp [ih]
 
-end Structure
+def interpFormula (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
+| _, r ⬝ᵣ v, ρ => 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
+| _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ
+| _, ⊥, _ => False
+| _, p ⇒ q, ρ => 𝓜.interpFormula p ρ → 𝓜.interpFormula q ρ
+| _, ∀' p, ρ => ∀ u, 𝓜.interpFormula p (u ∷ᵥ ρ)
+notation:50 𝓜 " ⊨[" ρ "] " p:50 => interpFormula 𝓜 p ρ
 
-theorem Term.interp_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓢, ρ = ⟦ t ⟧ₜ 𝓢, ρ[σ]ₐ := by
-  induction t with simp [Structure.Assignment.subst, interp]
-  | func f v ih => funext; simp [ih]
+theorem interp_neg : 𝓜 ⊨[ρ] ~ p ↔ ¬ 𝓜 ⊨[ρ] p := by rfl
+theorem interp_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [interpFormula]; tauto
+theorem interp_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [interpFormula]
+theorem interp_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [interpFormula]; tauto
+theorem interp_exists : 𝓜 ⊨[ρ] ∃' p ↔ ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by simp [interpFormula]
 
+theorem interp_andN {v : Vec (𝓛.Formula n) m} :
+  𝓜 ⊨[ρ] (⋀i, v i) ↔ ∀ i, 𝓜 ⊨[ρ] v i := by
+  induction m with simp [Formula.andN]
+  | zero => simp [interpFormula]
+  | succ n ih => simp [interp_and, ih, Fin.forall_fin_succ, Vec.head]
 
-
-def Formula.interp : 𝓛.Formula → (𝓢 : 𝓛.Structure) → 𝓢.Assignment → Prop
-| r ⬝ᵣ v, 𝓢, ρ => 𝓢.interp𝓡 r (λ i => ⟦ v i ⟧ₜ 𝓢, ρ)
-| t₁ ≐ t₂, 𝓢, ρ => ⟦ t₁ ⟧ₜ 𝓢, ρ = ⟦ t₂ ⟧ₜ 𝓢, ρ
-| ⊥, _, _ => False
-| p ⇒ q, 𝓢, ρ => p.interp 𝓢 ρ → q.interp 𝓢 ρ
-| ∀' p, 𝓢, ρ => ∀ u, p.interp 𝓢 (u ∷ₐ ρ)
-notation:50 𝓢 " ⊨[" ρ "] " p:50 => Formula.interp p 𝓢 ρ
-
-theorem Formula.interp_subst : 𝓢 ⊨[ρ] p[σ]ₚ ↔ 𝓢 ⊨[ρ[σ]ₐ] p := by
-  induction p generalizing ρ σ with simp [Assignment.subst, interp]
-  | rel => simp [Term.interp_subst]
-  | eq t₁ t₂ => simp [Term.interp_subst]
+theorem interpFormula_subst {σ : 𝓛.Subst m n} : 𝓜 ⊨[ρ] p[σ]ₚ ↔ 𝓜 ⊨[ρ[σ]ₐ] p := by
+  induction p generalizing n with simp [Assignment.subst, interpFormula]
+  | rel | eq => simp [interpTerm_subst]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
       apply forall_congr'
       intro u; simp [ih]; congr!
-      funext x; cases x
-      · rfl
-      · simp [Assignment.cons, Assignment.subst, Term.interp, Term.shift, Term.interp_subst]
-        rfl
+      funext x; cases x using Fin.cases <;> simp [Assignment.subst, Assignment.subst_shift, interpTerm, Term.shift, interpTerm_subst]
 
-theorem Formula.interp_neg :
-  𝓢 ⊨[ρ] ~ p ↔ ¬ 𝓢 ⊨[ρ] p := by simp [interp]
+abbrev satisfy (𝓜 : 𝓛.Structure) (p : 𝓛.Sentence) := 𝓜 ⊨[[]ᵥ] p
+infix:50 " ⊨ₛ " => satisfy
 
-theorem Formula.interp_or :
-  𝓢 ⊨[ρ] p ⩒ q ↔ 𝓢 ⊨[ρ] p ∨ 𝓢 ⊨[ρ] q := by simp [interp]; tauto
+theorem interp_alls {p : 𝓛.Formula n} : 𝓜 ⊨ₛ ∀* p ↔ ∀ ρ, 𝓜 ⊨[ρ] p := by
+  induction n with simp [Formula.alls]
+  | zero =>
+    constructor
+    · intros h _; simp [Vec.eq_nil]; exact h
+    · intro h; exact h []ᵥ
+  | succ n ih =>
+    simp [ih, interpFormula]
+    constructor
+    · intro h ρ; rw [Vec.eq_cons ρ]; apply h
+    · intro h ρ u; exact h (u ∷ᵥ ρ)
 
-theorem Formula.interp_and :
-  𝓢 ⊨[ρ] p ⩑ q ↔ 𝓢 ⊨[ρ] p ∧ 𝓢 ⊨[ρ] q := by simp [interp]
-
-theorem Formula.interp_iff :
-  𝓢 ⊨[ρ] p ⇔ q ↔ (𝓢 ⊨[ρ] p ↔ 𝓢 ⊨[ρ] q) := by simp [interp]; tauto
-
-theorem Formula.interp_exists :
-  𝓢 ⊨[ρ] ∃' p ↔ ∃ u, 𝓢 ⊨[u ∷ₐ ρ] p := by simp [interp]
-
+end Structure
 
 
-def Entails (Γ : 𝓛.Context) (p) :=
+
+def Entails (Γ : 𝓛.FormulaSet n) (p) :=
   ∀ (𝓢 : Structure.{u} 𝓛) (ρ), (∀ q ∈ Γ, 𝓢 ⊨[ρ] q) → 𝓢 ⊨[ρ] p
 
 infix:50 " ⊨ " => Entails
@@ -106,91 +92,7 @@ syntax:50 term " ⊨.{" level "} " term:50 : term
 macro_rules
 | `($Γ ⊨.{$u} $p) => `(Entails.{$u} $Γ $p)
 
-theorem Entails.axioms {p : Formula 𝓛} : p ∈ Axioms 𝓛 → Γ ⊨ p := by
-  intros h 𝓢 ρ h₁
-  clear h₁
-  induction h generalizing ρ <;> simp [Formula.interp] <;> tauto
-  case a4 p t =>
-    intro h
-    rw [Formula.interp_subst, Assignment.subst_single]
-    apply h
-  case a5 =>
-    intros h u
-    simp [Formula.shift, Formula.interp_subst, Assignment.subst_shift]
-    exact h
-  case e2 =>
-    intros h
-    simp [Formula.interp_subst, Assignment.subst_single, h]
-
-theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
-  intros h₁ h₂ 𝓢 ρ h
-  apply h₁ 𝓢 ρ h
-  exact h₂ 𝓢 ρ h
-
-theorem soundness : Γ ⊢ p → Γ ⊨ p := by
-  intro h
-  induction h with
-  | hyp h => intros _ _ h₁; apply h₁; exact h
-  | ax h => exact Entails.axioms h
-  | mp _ _ ih₁ ih₂ => exact Entails.mp ih₁ ih₂
-
-
-
-def Structure.BAssignment (𝓢 : 𝓛.Structure) (n : ℕ) := Vec 𝓢.𝓤 n
-
-def BTerm.interp : 𝓛.BTerm m → (𝓢 : 𝓛.Structure) → 𝓢.BAssignment m → 𝓢.𝓤
-| #ᵇx, _, ρ => ρ x
-| f ⬝ₜᵇ v, 𝓢, ρ => 𝓢.interp𝓕 f (λ i => (v i).interp 𝓢 ρ)
-notation:80 "⟦" t "⟧ᵇ " 𝓢 ", " ρ:80 => BTerm.interp t 𝓢 ρ
-
-theorem BTerm.val_interp_eq {ρ : 𝓢.BAssignment m} :
-  (∀ x, ρ x = ρ' x) → ⟦ t ⟧ᵇ 𝓢, ρ = ⟦ t.val ⟧ₜ 𝓢, ρ' := by
-  intro h
-  induction t with simp [interp, Term.interp]
-  | var x => apply h
-  | func f v ih => funext; simp [ih _ h]
-
-def BFormula.interp : 𝓛.BFormula m → (𝓢 : 𝓛.Structure) → 𝓢.BAssignment m → Prop
-| r ⬝ᵣᵇ v, 𝓢, ρ => 𝓢.interp𝓡 r (λ i => ⟦ v i ⟧ᵇ 𝓢, ρ)
-| t₁ ≐ᵇ t₂, 𝓢, ρ => ⟦ t₁ ⟧ᵇ 𝓢, ρ = ⟦ t₂ ⟧ᵇ 𝓢, ρ
-| ⊥, _, _ => False
-| p ⇒ q, 𝓜, ρ => p.interp 𝓜 ρ → q.interp 𝓜 ρ
-| ∀ᵇ p, 𝓜, ρ => ∀ u, p.interp 𝓜 (u ∷ᵥ ρ)
-notation:50 𝓢 " ⊨[" ρ "]ᵇ " p:50 => BFormula.interp p 𝓢 ρ
-
-def Sentence.interp (p : 𝓛.Sentence) (𝓢 : 𝓛.Structure) :=
-  𝓢 ⊨[[]ᵥ]ᵇ p
-notation:50 𝓢 " ⊨ₛ " p:50 => Sentence.interp p 𝓢
-
-theorem BFormula.interp_neg :
-  𝓢 ⊨[ρ]ᵇ ~ p ↔ ¬ 𝓢 ⊨[ρ]ᵇ p := by simp [interp]
-
-theorem Sentence.interp_neg :
-  𝓢 ⊨ₛ ~ p ↔ ¬ 𝓢 ⊨ₛ p := BFormula.interp_neg
-
-theorem BFormula.val_interp_eq {ρ : 𝓢.BAssignment m} :
-  (∀ x, ρ x = ρ' x) → (𝓢 ⊨[ρ]ᵇ p ↔ 𝓢 ⊨[ρ'] p.val) := by
-  intro h
-  induction p generalizing ρ' with simp [interp, Formula.interp]
-  | rel r v => simp [BTerm.val_interp_eq h]
-  | eq t₁ t₂ => simp [BTerm.val_interp_eq h]
-  | imp p q ih₁ ih₂ => simp [ih₁ h, ih₂ h]
-  | all p ih =>
-    apply forall_congr'
-    intro u; rw [ih]
-    · intro x
-      cases x using Fin.cases
-      · rfl
-      · simp [Assignment.cons]; apply h
-
-theorem Sentence.val_interp_eq : 𝓢 ⊨ₛ p ↔ 𝓢 ⊨[ρ] p.val :=
-  BFormula.val_interp_eq (·.elim0)
-
-
-
-namespace Context
-
-def Satisfiable (Γ : 𝓛.Context) :=
+def Satisfiable (Γ : 𝓛.FormulaSet n) :=
   ∃ (𝓢 : Structure.{u} 𝓛), ∃ ρ, ∀ p ∈ Γ, 𝓢 ⊨[ρ] p
 
 theorem Satisfiable.weaken :
@@ -202,150 +104,182 @@ theorem Satisfiable.weaken :
   apply h₁
   exact h₃
 
-theorem Consistent.of_satisfiable {Γ : 𝓛.Context} :
-  Γ.Satisfiable → Γ.Consistent := by
-  intro ⟨𝓢, ρ, h₁⟩ h₂
-  apply soundness at h₂
-  apply h₂ at h₁
-  exact h₁
+namespace Theory
 
-end Context
+structure Model (𝓣 : 𝓛.Theory) extends 𝓛.Structure where
+  satisfy_theory : ∀ p ∈ 𝓣, toStructure ⊨ₛ p
+
+variable {𝓣 : 𝓛.Theory}
+
+instance : CoeOut 𝓣.Model 𝓛.Structure := ⟨(·.toStructure)⟩
+instance : CoeSort 𝓣.Model (Type u) := ⟨(·.Dom)⟩
+
+theorem entails_iff {𝓣 : 𝓛.Theory} : 𝓣 ⊨.{u} p ↔ ∀ (𝓜 : Model.{u} 𝓣), 𝓜 ⊨ₛ p := by
+  constructor
+  · intro h 𝓜; apply h; exact 𝓜.satisfy_theory
+  · intro h 𝓜 ρ h₁; rw [Vec.eq_nil ρ] at *; exact h ⟨𝓜, h₁⟩
+
+theorem satisfiable_iff {𝓣 : 𝓛.Theory} : Satisfiable.{u} 𝓣 ↔ Nonempty (Model.{u} 𝓣) := by
+  constructor
+  · intro ⟨𝓜, ρ, h⟩; rw [Vec.eq_nil ρ] at h; exact ⟨⟨𝓜, h⟩⟩
+  · intro ⟨𝓜⟩; exists 𝓜, []ᵥ; apply 𝓜.satisfy_theory
+
+end Theory
+
+namespace Structure
+
+def theory (𝓜 : 𝓛.Structure) : 𝓛.Theory :=
+  { p | 𝓜 ⊨ₛ p }
+
+theorem theory.satisfiable {𝓜 : Structure.{u} 𝓛} : Satisfiable.{u} 𝓜.theory := by
+  rw [Theory.satisfiable_iff]; exact ⟨𝓜, λ _ h => h⟩
+
+end Structure
 
 
 
 namespace Structure
 
-def ulift (𝓢 : Structure.{u₁} 𝓛) : Structure.{max u₁ u₂} 𝓛 where
-  𝓤 := ULift.{u₂} 𝓢.𝓤
-  inhabited𝓤 := ⟨ULift.up default⟩
-  interp𝓕 := λ f v => ULift.up (𝓢.interp𝓕 f (ULift.down ∘ v))
-  interp𝓡 := λ p v => 𝓢.interp𝓡 p (ULift.down ∘ v)
+def ulift (𝓜 : Structure.{u} 𝓛) : Structure.{max u v} 𝓛 where
+  Dom := ULift 𝓜
+  interpFunc f v := ULift.up (𝓜.interpFunc f (ULift.down ∘ v))
+  interpRel r v := 𝓜.interpRel r (ULift.down ∘ v)
 
-def Assignment.ulift (ρ : Assignment 𝓢) : Assignment (𝓢.ulift) :=
-  λ x => ULift.up (ρ x)
-
-lemma Assignment.ulift_cons {𝓢 : 𝓛.Structure} {ρ : 𝓢.Assignment} {u : 𝓢.𝓤} :
-  (u ∷ₐ ρ).ulift = Assignment.cons (𝓢 := 𝓢.ulift) (ULift.up u) ρ.ulift := by
-  funext x; cases x <;> rfl
-
-end Structure
-
-lemma Term.interp_ulift {𝓢 : 𝓛.Structure} {ρ : 𝓢.Assignment} :
-  ⟦ t ⟧ₜ 𝓢.ulift, ρ.ulift = ULift.up (⟦ t ⟧ₜ 𝓢, ρ) := by
-  induction t with simp [interp]
-  | var => simp [Assignment.ulift]
+lemma interpTerm_ulift {𝓜 : 𝓛.Structure} {ρ : 𝓜.Assignment n} :
+  ⟦ t ⟧ₜ 𝓜.ulift, (ULift.up ∘ ρ) = ULift.up (⟦ t ⟧ₜ 𝓜, ρ) := by
+  induction t with simp [interpTerm]
   | func f v ih => simp [ih]; rfl
 
-lemma Formula.interp_ulift {𝓢 : Structure 𝓛} {ρ : Assignment 𝓢} :
-  𝓢.ulift ⊨[ρ.ulift] p ↔ 𝓢 ⊨[ρ] p := by
-  induction p generalizing ρ with simp [interp]
-  | rel r v => simp [Term.interp_ulift]; rfl
-  | eq t₁ t₂ => simp [Term.interp_ulift]; exact ULift.up_inj
+lemma interpFormula_ulift {𝓜 : 𝓛.Structure} {ρ : 𝓜.Assignment n} :
+  𝓜.ulift ⊨[ULift.up ∘ ρ] p ↔ 𝓜 ⊨[ρ] p := by
+  induction p with simp [interpFormula]
+  | rel r v => simp [interpTerm_ulift]; rfl
+  | eq t₁ t₂ => simp [interpTerm_ulift]; exact ULift.up_inj
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
     constructor
-    · intros h u
-      rw [←ih, Assignment.ulift_cons]
-      apply h
-    · intros h u
-      rw [←ULift.up_down u, ←Assignment.ulift_cons, ih]
-      apply h
+    · intros h u; rw [←ih, Vec.comp_cons]; apply h
+    · intros h u; rw [←ULift.up_down u, ←Vec.comp_cons, ih]; apply h
 
-theorem Entails.down : Γ ⊨.{max u₁ u₂} p → Γ ⊨.{u₁} p := by
-  intros h 𝓢 ρ h₁
-  have h₂ := h (Structure.ulift.{u₁,u₂} 𝓢) ρ.ulift
-  simp [Formula.interp_ulift] at h₂
-  exact h₂ h₁
+end Structure
 
-theorem Context.Satisfiable.up :
-  Satisfiable.{u₁} Γ → Satisfiable.{max u₁ u₂} Γ := by
-  intro h
-  rcases h with ⟨𝓢, ρ, h⟩
-  exists (Structure.ulift.{u₁,u₂} 𝓢), ρ.ulift
-  simp [Formula.interp_ulift]
+theorem Entails.down : Γ ⊨.{max u v} p → Γ ⊨.{u} p := by
+  intros h 𝓜 ρ h₁
+  have := h 𝓜.ulift (ULift.up ∘ ρ)
+  simp [Structure.interpFormula_ulift] at this
+  exact this h₁
+
+theorem Satisfiable.up : Satisfiable.{u} Γ → Satisfiable.{max u v} Γ := by
+  intro ⟨𝓜, ρ, h⟩
+  exists 𝓜.ulift, (ULift.up ∘ ρ)
+  simp [Structure.interpFormula_ulift]
   exact h
 
 
 
 namespace Structure
 
-variable {𝓜 𝓝 𝓢 : 𝓛.Structure}
-
-def ElementaryEquivalent (𝓜 𝓝 : 𝓛.Structure) :=
-  ∀ (p : 𝓛.Sentence), 𝓜 ⊨ₛ p ↔ 𝓝 ⊨ₛ p
+def ElementaryEquivalent (𝓜 : 𝓛.Structure) (𝓝 : 𝓛.Structure) :=
+  ∀ p, 𝓜 ⊨ₛ p ↔ 𝓝 ⊨ₛ p
 infixr:25 " ≃ᴱ " => ElementaryEquivalent
 
-structure Embedding (𝓜 𝓝 : 𝓛.Structure) extends 𝓜.𝓤 ↪ 𝓝.𝓤 where
-  to_func : ∀ (f : 𝓛.𝓕 n) (v : Vec 𝓜.𝓤 n), toEmbedding (𝓜.interp𝓕 f v) = 𝓝.interp𝓕 f (toEmbedding ∘ v)
-  to_rel : ∀ (r : 𝓛.𝓡 n) (v : Vec 𝓜.𝓤 n), 𝓜.interp𝓡 r v ↔ 𝓝.interp𝓡 r (toEmbedding ∘ v)
+theorem ElementaryEquivalent.iff_theory_eq : 𝓜 ≃ᴱ 𝓝 ↔ 𝓜.theory = 𝓝.theory := by
+  simp [ElementaryEquivalent, Set.ext_iff, theory]
+
+structure Embedding (𝓜 : 𝓛.Structure) (𝓝 : 𝓛.Structure) extends 𝓜 ↪ 𝓝 where
+  on_func : ∀ (f : 𝓛.Func n) (v : Vec 𝓜 n), toEmbedding (𝓜.interpFunc f v) = 𝓝.interpFunc f (toEmbedding ∘ v)
+  on_rel : ∀ (r : 𝓛.Rel n) (v : Vec 𝓜 n), 𝓜.interpRel r v ↔ 𝓝.interpRel r (toEmbedding ∘ v)
 infixr:25 " ↪ᴹ " => Embedding
 
 namespace Embedding
 
-instance : CoeFun (𝓜 ↪ᴹ 𝓝) (λ _ => 𝓜.𝓤 → 𝓝.𝓤) := ⟨(·.toEmbedding)⟩
+instance : CoeFun (𝓜 ↪ᴹ 𝓝) (λ _ => 𝓜 → 𝓝) := ⟨(·.toEmbedding)⟩
 
 def refl : 𝓜 ↪ᴹ 𝓜 where
-  toEmbedding := .refl 𝓜.𝓤
-  to_func f v := rfl
-  to_rel r v := by rfl
+  toEmbedding := .refl 𝓜
+  on_func f v := rfl
+  on_rel r v := by rfl
 
 def trans (e₁ : 𝓜 ↪ᴹ 𝓝) (e₂ : 𝓝 ↪ᴹ 𝓢) : 𝓜 ↪ᴹ 𝓢 where
   toEmbedding := .trans e₁.toEmbedding e₂.toEmbedding
-  to_func f v := by simp [Function.comp, e₁.to_func, e₂.to_func]
-  to_rel r v := by simp [Function.comp]; rw [e₁.to_rel, e₂.to_rel]; rfl
+  on_func f v := by simp [Function.comp, e₁.on_func, e₂.on_func]
+  on_rel r v := by rw [e₁.on_rel, e₂.on_rel]; simp [Function.comp]
 
-theorem to_term (e : 𝓜 ↪ᴹ 𝓝) (t : 𝓛.Term) (ρ : 𝓜.Assignment) : e (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, e ∘ ρ := by
-  induction t with simp [Term.interp]
-  | func f v ih => rw [e.to_func]; congr; ext; simp [ih]
+theorem on_term (e : 𝓜 ↪ᴹ 𝓝) (t : 𝓛.Term n) (ρ : 𝓜.Assignment n) : e (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, e ∘ ρ := by
+  induction t with simp [interpTerm]
+  | func f v ih => rw [e.on_func]; congr; ext; simp [ih]
+
+def IsElementary (e : 𝓜 ↪ᴹ 𝓝) :=
+  ∀ {n} (p : 𝓛.Formula n) (ρ : 𝓜.Assignment n), 𝓜 ⊨[ρ] p ↔ 𝓝 ⊨[e ∘ ρ] p
+
+/-- Tarski–Vaught test -/
+theorem is_elementary_iff (e : 𝓜 ↪ᴹ 𝓝) :
+  e.IsElementary ↔ ∀ {n} (p : 𝓛.Formula (n + 1)) (ρ : 𝓜.Assignment n), 𝓝 ⊨[e ∘ ρ] ∃' p → ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by
+  constructor
+  · intro h n p ρ h₁
+    rw [←h] at h₁
+    simp [interpFormula] at h₁
+    exact h₁
+  · intro h n p ρ
+    induction p with simp [interpFormula]
+    | rel r v => rw [e.on_rel]; congr!; simp [e.on_term]
+    | eq t₁ t₂ => simp [←e.on_term]
+    | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
+    | all p ih =>
+      constructor
+      · intro h₁ u
+        by_contra h₂
+        have : 𝓝 ⊨[e ∘ ρ] ∃' (~ p) := by simp [interpFormula]; exists u
+        apply h at this
+        exact not_forall_of_exists_not this h₁
+      · intro h₁ u
+        rw [ih, Vec.comp_cons]
+        apply h₁
 
 end Embedding
 
-structure Isomorphism (𝓜 𝓝 : 𝓛.Structure) extends 𝓜.𝓤 ≃ 𝓝.𝓤 where
-  to_func : ∀ (f : 𝓛.𝓕 n) (v : Vec 𝓜.𝓤 n), toEquiv (𝓜.interp𝓕 f v) = 𝓝.interp𝓕 f (toEquiv ∘ v)
-  to_rel : ∀ (r : 𝓛.𝓡 n) (v : Vec 𝓜.𝓤 n), 𝓜.interp𝓡 r v ↔ 𝓝.interp𝓡 r (toEquiv ∘ v)
-infixr:25 " ≃ᴹ " => Isomorphism
+structure Isomorphism (𝓜 : 𝓛.Structure) (𝓝 : 𝓛.Structure) extends 𝓜 ≃ 𝓝 where
+  on_func : ∀ (f : 𝓛.Func n) (v : Vec 𝓜 n), toEquiv (𝓜.interpFunc f v) = 𝓝.interpFunc f (toEquiv ∘ v)
+  on_rel : ∀ (r : 𝓛.Rel n) (v : Vec 𝓜 n), 𝓜.interpRel r v ↔ 𝓝.interpRel r (toEquiv ∘ v)
+infix:25 " ≃ᴹ " => Isomorphism
 
 namespace Isomorphism
 
-instance : CoeFun (𝓜 ≃ᴹ 𝓝) (λ _ => 𝓜.𝓤 → 𝓝.𝓤) := ⟨(·.toEquiv)⟩
-
-def toEmbedding (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ↪ᴹ 𝓝 where
-  toEmbedding := i.toEquiv.toEmbedding
-  to_func := i.to_func
-  to_rel := i.to_rel
+instance : CoeFun (𝓜 ≃ᴹ 𝓝) (λ _ => 𝓜 → 𝓝) := ⟨(·.toEquiv)⟩
 
 def refl : 𝓜 ≃ᴹ 𝓜 where
-  toEquiv := .refl 𝓜.𝓤
-  to_func f v := rfl
-  to_rel r v := by rfl
+  toEquiv := .refl 𝓜
+  on_func f v := rfl
+  on_rel r v := by rfl
 
 def symm (i : 𝓜 ≃ᴹ 𝓝) : 𝓝 ≃ᴹ 𝓜 where
   toEquiv := .symm i.toEquiv
-  to_func f v := by apply i.toEquiv.injective; simp [Function.comp, i.to_func]
-  to_rel r v := by rw [i.to_rel]; simp [Function.comp]
+  on_func f v := by apply i.toEquiv.injective; simp [Function.comp, i.on_func]
+  on_rel r v := by rw [i.on_rel]; simp [Function.comp]
 
 def trans (i₁ : 𝓜 ≃ᴹ 𝓝) (i₂ : 𝓝 ≃ᴹ 𝓢) : 𝓜 ≃ᴹ 𝓢 where
   toEquiv := .trans i₁.toEquiv i₂.toEquiv
-  to_func f v := by simp [Function.comp, i₁.to_func, i₂.to_func]
-  to_rel r v := by rw [i₁.to_rel, i₂.to_rel]; simp [Function.comp]
+  on_func f v := by simp [Function.comp, i₁.on_func, i₂.on_func]
+  on_rel r v := by rw [i₁.on_rel, i₂.on_rel]; simp [Function.comp]
 
-theorem to_term (i : 𝓜 ≃ᴹ 𝓝) (t : 𝓛.Term) (ρ : 𝓜.Assignment) : i (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, i ∘ ρ := by
-  induction t with simp [Term.interp]
-  | func f v ih => rw [i.to_func]; congr; ext; simp [ih]
+def toEmbedding (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ↪ᴹ 𝓝 where
+  toEmbedding := i.toEquiv
+  on_func := i.on_func
+  on_rel := i.on_rel
 
-theorem to_formula (e : 𝓜 ≃ᴹ 𝓝) (p : 𝓛.Formula) (ρ : 𝓜.Assignment) : 𝓜 ⊨[ρ] p ↔ 𝓝 ⊨[e ∘ ρ] p := by
-  induction p generalizing ρ with simp [Formula.interp]
-  | rel r v => rw [e.to_rel]; congr!; simp [e.to_term]
-  | eq t₁ t₂ => simp [←e.to_term]
+theorem on_term (i : 𝓜 ≃ᴹ 𝓝) (t : 𝓛.Term n) (ρ : 𝓜.Assignment n) : i (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, i ∘ ρ := by
+  induction t with simp [interpTerm]
+  | func f v ih => rw [i.on_func]; congr; ext; simp [ih]
+
+theorem on_formula (i : 𝓜 ≃ᴹ 𝓝) (p : 𝓛.Formula n) (ρ : 𝓜.Assignment n) : 𝓜 ⊨[ρ] p ↔ 𝓝 ⊨[i ∘ ρ] p := by
+  induction p with simp [interpFormula]
+  | rel r v => rw [i.on_rel]; congr!; simp [i.on_term]
+  | eq t₁ t₂ => simp [←i.on_term]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
-  | all p ih =>
-    simp [ih]
-    rw [e.toEquiv.forall_congr]
-    congr!
-    funext x; cases x <;> simp [Function.comp, Assignment.cons]
+  | all p ih => rw [i.toEquiv.forall_congr]; simp [ih]
 
-theorem elementary_equivalent : (𝓜 ≃ᴹ 𝓝) → 𝓜 ≃ᴱ 𝓝 := by
-  intro i p; rw [Sentence.val_interp_eq (ρ := default), Sentence.val_interp_eq]; apply i.to_formula
+theorem elementary_equivalent (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ≃ᴱ 𝓝 := by
+  intro; simp [i.on_formula]
 
 end Isomorphism
 

@@ -2,9 +2,8 @@ import MathematicalLogic.Notation
 import MathematicalLogic.Vector
 
 import MathematicalLogic.FirstOrder.Syntax
-import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Semantics
-import MathematicalLogic.FirstOrder.Theory
+import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Completeness.Completeness
 
 import MathematicalLogic.SecondOrder.Syntax
