@@ -5,6 +5,7 @@ import MathematicalLogic.FirstOrder.Syntax
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Completeness.Completeness
+import MathematicalLogic.FirstOrder.Encoding
 
 import MathematicalLogic.SecondOrder.Syntax
 import MathematicalLogic.SecondOrder.Semantics

@@ -1,16 +1,35 @@
-import Mathlib.Data.Vector.Basic
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Nat.Pairing
+import Mathlib.Logic.Encodable.Basic
 
-@[elab_as_elim] def Fin.cases1 {motive : Fin 1 → Sort _}
+namespace Nat
+lemma pair_le_pair_left (h : a₁ ≤ a₂) : pair a₁ b ≤ pair a₂ b := by
+  cases lt_or_eq_of_le h with
+  | inl h => apply le_of_lt; apply pair_lt_pair_left; exact h
+  | inr h => rw [h]
+lemma pair_le_pair_right (h : b₁ ≤ b₂) : pair a b₁ ≤ pair a b₂ := by
+  cases lt_or_eq_of_le h with
+  | inl h => apply le_of_lt; apply pair_lt_pair_right; exact h
+  | inr h => rw [h]
+lemma pair_lt_pair_left' (h₁ : a₁ < a₂) (h₂ : b₁ ≤ b₂) : pair a₁ b₁ < pair a₂ b₂ :=
+  lt_of_lt_of_le (pair_lt_pair_left _ h₁) (pair_le_pair_right h₂)
+lemma pair_lt_pair_right' (h₁ : a₁ ≤ a₂) (h₂ : b₁ < b₂) : pair a₁ b₁ < pair a₂ b₂ :=
+  lt_of_le_of_lt (pair_le_pair_left h₁) (pair_lt_pair_right _ h₂)
+lemma pair_le_pair (h₁ : a₁ ≤ a₂) (h₂ : b₁ ≤ b₂) : pair a₁ b₁ ≤ pair a₂ b₂ :=
+  le_trans (pair_le_pair_left h₁) (pair_le_pair_right h₂)
+end Nat
+
+namespace Fin
+@[elab_as_elim] def cases1 {motive : Fin 1 → Sort _}
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
-@[elab_as_elim] def Fin.cases2 {motive : Fin 2 → Sort _}
+@[elab_as_elim] def cases2 {motive : Fin 2 → Sort _}
   (zero : motive 0) (one : motive 1) (i : Fin 2) : motive i :=
   i.cases zero (λ i => i.cases one (·.elim0))
-@[elab_as_elim] def Fin.cases3 {motive : Fin 3 → Sort _}
+@[elab_as_elim] def cases3 {motive : Fin 3 → Sort _}
   (zero : motive 0) (one : motive 1) (two : motive 2)
   (i : Fin 3) : motive i :=
   i.cases zero (λ i => i.cases one (λ j => j.cases two (·.elim0)))
+end Fin
 
 def Vec (α : Type u) (n : ℕ) := Fin n → α
 
@@ -160,9 +179,68 @@ theorem le_max_iff {v : Vec ℕ (n + 1)} : m ≤ v.max ↔ ∃ i, m ≤ v i := b
   · intro h; rcases v.max_eq_nth with ⟨i, h'⟩; exists i; rw [←h']; exact h
   · intro ⟨i, h⟩; apply le_trans h; exact le_max
 
+theorem max_pos_iff {v : Vec ℕ n} : v.max > 0 ↔ ∃ i, v i > 0 := by
+  induction n with simp [max]
+  | succ n ih => simp [ih, head, Fin.exists_fin_succ]
+
+theorem max_zero_iff {v : Vec ℕ n} : v.max = 0 ↔ ∀ i, v i = 0 := by
+  induction n with simp [max]
+  | succ n ih => simp [ih, head, Fin.forall_fin_succ]
+
 def paired : {n : ℕ} → Vec ℕ n → ℕ
 | 0, _ => 0
 | _ + 1, v => v.head.pair v.tail.paired
+
+theorem le_paired {v : Vec ℕ n} : v i ≤ v.paired := by
+  induction n with
+  | zero => exact i.elim0
+  | succ n ih =>
+    simp [paired]
+    cases i using Fin.cases with
+    | zero => apply Nat.left_le_pair
+    | succ i => exact le_trans (ih (v := v.tail)) (Nat.right_le_pair _ _)
+
+theorem paired_le_paired {v₁ v₂ : Vec ℕ n} : (∀ i, v₁ i ≤ v₂ i) → v₁.paired ≤ v₂.paired := by
+  intro h
+  induction n with simp [paired]
+  | succ n ih =>
+    apply Nat.pair_le_pair
+    · apply h
+    · apply ih; intro; apply h
+
+@[simp] theorem unpair_paired {v : Vec ℕ (n + 1)} : v.paired.unpair = (v.head, v.tail.paired) := by simp [paired]
+
+section
+variable [Encodable α]
+
+def encode (v : Vec α n) := paired λ i => Encodable.encode (v i)
+
+def decode : (n k : ℕ) → Option (Vec α n)
+| 0, k => if k = 0 then some []ᵥ else none
+| n + 1, k => do
+  let a ← Encodable.decode k.unpair.1
+  let v ← decode n k.unpair.2
+  some (a ∷ᵥ v)
+
+theorem encode_decode {v : Vec α n} : decode n v.encode = some v := by
+  induction n with simp [encode, decode, paired]
+  | zero => simp [eq_nil]
+  | succ n ih =>
+    simp [head, tail, Function.comp]
+    rw [←encode, ih, eq_cons v]; rfl
+
+instance encodable : Encodable (Vec α n) where
+  encode v := v.encode
+  decode k := decode n k
+  encodek _ := encode_decode
+
+@[simp] theorem encode_nil {v : Vec α 0} : Encodable.encode v = 0 := rfl
+@[simp] theorem encode_cons {v : Vec α (n + 1)} : Encodable.encode v = (Encodable.encode v.head).pair (Encodable.encode v.tail) := rfl
+end
+
+instance [Countable α] : Countable (Vec α n) :=
+  have := Encodable.ofCountable
+  inferInstance
 
 end Vec
 
