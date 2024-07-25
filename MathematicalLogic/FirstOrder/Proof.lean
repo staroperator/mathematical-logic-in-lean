@@ -335,25 +335,28 @@ theorem iff_congr_imp : Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ �
     papply iff_mp; passumption
     passumption
 
+theorem iff_congr_neg : Γ ⊢ (p ⇔ q) ⇒ (~ p ⇔ ~ q) := by
+  pintro
+  papply iff_congr_imp
+  · passumption
+  · exact iff_refl
+
+theorem double_neg_iff : Γ ⊢ ~ ~ p ⇔ p := iff_intro.mp₂ double_neg₂ double_neg
+
 theorem forall_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q := ax .forall_imp
-
 theorem forall_elim : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := ax .forall_elim
-
 theorem forall_self : Γ ⊢ p ⇒ ∀' ↑ₚp := ax .forall_self
 
-theorem generalization : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := by
-  intro h
-  induction h with
-  | hyp h =>
-    rcases h with ⟨p, ⟨h₁, h₂⟩⟩
-    subst h₂
-    exact forall_self.mp (hyp h₁)
-  | ax h => exact ax (.all h)
-  | mp _ _ ih₁ ih₂ => exact forall_imp.mp₂ ih₁ ih₂
-
-theorem generalization_iff : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
+theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
   constructor
-  · exact generalization
+  · intro h
+    induction h with
+    | hyp h =>
+      rcases h with ⟨p, ⟨h₁, h₂⟩⟩
+      subst h₂
+      exact forall_self.mp (hyp h₁)
+    | ax h => exact ax (.all h)
+    | mp _ _ ih₁ ih₂ => exact forall_imp.mp₂ ih₁ ih₂
   · intro h
     apply shift at h
     simp [Formula.shift] at h
@@ -365,29 +368,17 @@ theorem generalization_iff : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
     rw [this] at h
     exact h
 
+theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
+
 theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   pintro
-  papply iff_intro <;> papply forall_imp <;> rw [←deduction] <;> papply forall_imp <;> apply generalization
+  papply iff_intro <;> papply forall_imp <;> rw [←deduction] <;> papply forall_imp <;> apply forall_intro
   · exact iff_mp
   · exact iff_mpr
 
-theorem not_forall : Γ ⊢ ~ ∀' p ⇒ ∃' (~ p) := by
-  papply transpose₂
-  papply forall_imp
-  apply generalization
-  exact double_neg₂
-
-theorem not_exists : Γ ⊢ ~ ∃' p ⇒ ∀' (~ p) := double_neg₂
-
-theorem forall_not : Γ ⊢ ∀' (~ p) ⇒ ~ ∃' p := double_neg
-
-theorem exists_not : Γ ⊢ ∃' (~ p) ⇒ ~ ∀' p := by
-  pintros
-  papplya 1
-  papply forall_imp
-  apply generalization
-  papply double_neg
-  passumption
+theorem not_forall_iff : Γ ⊢ ~ ∀' p ⇔ ∃' (~ p) := iff_congr_neg.mp (iff_congr_forall.mp (forall_intro (iff_symm.mp double_neg_iff)))
+theorem not_exists_iff : Γ ⊢ ~ ∃' p ⇔ ∀' (~ p) := double_neg_iff
+theorem not_exists_not_iff : Γ ⊢ ~ ∃' (~ p) ⇔ ∀' p := iff_trans.mp₂ double_neg_iff (iff_congr_forall.mp (forall_intro double_neg_iff))
 
 theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
   pintros
@@ -408,7 +399,7 @@ theorem exists_elim : Γ ⊢ ∃' p ⇒ (∀' (p ⇒ ↑ₚq)) ⇒ q := by
     · papply forall_self
       passumption
   papply forall_imp
-  · apply generalization
+  · apply forall_intro
     exact transpose₂
   · passumption
 
@@ -421,7 +412,7 @@ theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
   papply exists_elim
   · passumption 0
   · papply forall_imp (p := p ⇒ q)
-    · apply generalization
+    · apply forall_intro
       pintros 2
       papply exists_intro (t := #0)
       suffices _ ⊢ q by
@@ -571,7 +562,7 @@ theorem eq_subst_iff' (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]�
   | imp p q ih₁ ih₂ =>
     papply iff_congr_imp <;> apply_assumption <;> exact h
   | all p ih =>
-    papply iff_congr_forall; apply generalization; apply ih; intro i
+    papply iff_congr_forall; apply forall_intro; apply ih; intro i
     cases i using Fin.cases with simp
     | zero => prefl
     | succ i => apply shift (p := σ₁ i ≐ σ₂ i); apply h
@@ -665,7 +656,45 @@ theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p 
 
 end Proof
 
+namespace Theory
 
+theorem generalization_alls : ↑ᴳ^[n] 𝓣 ⊢ p ↔ 𝓣 ⊢ ∀* p := by
+  induction n with simp [Theory.shiftN, Formula.alls]
+  | succ n ih => rw [Proof.generalization, ih]
+
+theorem foralls_intro : ↑ᴳ^[n] 𝓣 ⊢ p → 𝓣 ⊢ ∀* p := generalization_alls.mp
+
+theorem foralls_elim {σ : 𝓛.Subst n m} : 𝓣 ⊢ ∀* p → ↑ᴳ^[m] 𝓣 ⊢ p[σ]ₚ := by
+  intro h
+  induction n with simp [Formula.alls] at h
+  | zero =>
+    rw [Vec.eq_nil σ]; clear σ
+    induction m with
+    | zero => rw [←Vec.eq_nil Subst.id, Formula.subst_id]; exact h
+    | succ m ih =>
+      apply Proof.shift at ih
+      simp [Formula.shift, ←Formula.subst_comp, Vec.eq_nil] at ih
+      exact ih
+  | succ n ih =>
+    apply ih (σ := σ.tail) at h
+    simp at h
+    apply Proof.forall_elim (t := σ.head).mp at h
+    rw [←Formula.subst_comp] at h
+    convert h
+    funext x; cases x using Fin.cases <;> simp [Vec.head, Term.shift_subst_single]
+
+theorem foralls_imp : 𝓣 ⊢ ∀* (p ⇒ q) ⇒ ∀* p ⇒ ∀* q := by
+  pintros
+  apply foralls_intro
+  apply Proof.mp (p := p) <;> rw [generalization_alls] <;> passumption
+
+theorem iff_congr_foralls : 𝓣 ⊢ ∀* (p ⇔ q) ⇒ ∀* p ⇔ ∀* q := by
+  pintro
+  papply Proof.iff_intro <;> papply foralls_imp <;> papply foralls_intro
+  · papply Proof.iff_mp; rw [generalization_alls]; passumption
+  · papply Proof.iff_mpr; rw [generalization_alls]; passumption
+
+end Theory
 
 notation Γ:50 "⊬" p:50 => ¬ Γ ⊢ p
 
@@ -701,6 +730,9 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
     exact h₂
 
 def Complete (Γ : 𝓛.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
+
+theorem Complete.unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
+  rcases h p with h₁ | h₁ <;> simp [h₁]
 
 def Henkin (Γ : 𝓛.FormulaSet n) := ∀ p, Γ ⊢ ∃' p → ∃ (c : 𝓛.Const), Γ ⊢ p[↦ₛ c]ₚ
 

@@ -25,7 +25,7 @@ theorem Satisfiable.of_consistent : Consistent Γ → Satisfiable Γ := by
     have : Δ ⊢ ~ ∃' ⊤ := by apply Proof.weaken h₂; passumption
     papply this
     papply Proof.exists_imp (p := p)
-    · apply Proof.generalization; pintro; exact Proof.true_intro
+    · apply Proof.forall_intro; pintro; exact Proof.true_intro
     · exact h
 
 theorem consistent_iff_satisfiable : Consistent Γ ↔ Satisfiable Γ := ⟨Satisfiable.of_consistent, Consistent.of_satisfiable⟩

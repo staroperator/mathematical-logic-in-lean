@@ -246,7 +246,7 @@ theorem Proof.const_generalization {Γ : 𝓛.FormulaSet n}
   intro h
   apply inv_const (k := 0) (c := c) h₁ at h
   rw [←Subst.singleAt, Formula.subst_singleAt_invConst (k := 0) h₂] at h
-  exact generalization h
+  exact forall_intro h
 
 
 
@@ -378,7 +378,7 @@ theorem hom_consistent {Γ : 𝓛.FormulaSet m} (h : Γ ⊢ ∃' ⊤) :
   intro h₁ h₂
   apply inv_proof at h₂
   simp [invFormula_false (k := 0)] at h₂
-  exact h₁ (Proof.exists_not.mp₂ h h₂)
+  exact h₁ ((Proof.iff_mpr.mp Proof.not_forall_iff).mp₂ h h₂)
 
 inductive axioms : (𝓛.henkinStep n).FormulaSet n where
 | henkin (p) : axioms (∃' (hom.onFormula p) ⇒ (hom.onFormula p)[↦ₛ (wit p)]ₚ)

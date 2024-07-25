@@ -277,8 +277,6 @@ prefix:59 "∀*" => Formula.alls
 
 abbrev FormulaSet (𝓛 : Language) (n : ℕ) := Set (𝓛.Formula n)
 
-abbrev Theory (𝓛 : Language) := 𝓛.FormulaSet 0
-
 abbrev FormulaSet.append (Γ : 𝓛.FormulaSet n) (p : 𝓛.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
@@ -286,5 +284,12 @@ abbrev FormulaSet.shift (Γ : 𝓛.FormulaSet n) : 𝓛.FormulaSet (n + 1) := (�
 prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : 𝓛.FormulaSet n) = ∅ := Set.image_empty _
 @[simp] theorem FormulaSet.shift_append : ↑ᴳ(Γ,' p) = ↑ᴳΓ,' ↑ₚp := Set.image_insert_eq
+
+abbrev Theory (𝓛 : Language) := 𝓛.FormulaSet 0
+
+def Theory.shiftN : (n : ℕ) → 𝓛.Theory → 𝓛.FormulaSet n
+| 0, 𝓣 => 𝓣
+| n + 1, 𝓣 => ↑ᴳ(𝓣.shiftN n)
+notation "↑ᴳ^[" n "]" => Theory.shiftN n
 
 end FirstOrder.Language

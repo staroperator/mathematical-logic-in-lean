@@ -57,7 +57,7 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
       rcases h₂ (∀' p[⇑ₛσ]ₚ) with h₂' | h₂'
       · exact h₂'
       · exfalso
-        apply Proof.not_forall.mp at h₂'
+        apply Proof.iff_mp.mp₂ Proof.not_forall_iff at h₂'
         apply h₃ at h₂'
         rcases h₂' with ⟨c, h₂'⟩
         simp at h₂'; rw [←Term.subst_const (σ := σ), ←Formula.subst_swap_single, ←Formula.subst_comp] at h₂'
