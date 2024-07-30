@@ -214,11 +214,14 @@ def IsElementary (e : 𝓜 ↪ᴹ 𝓝) :=
 
 /-- Tarski–Vaught test -/
 theorem is_elementary_iff (e : 𝓜 ↪ᴹ 𝓝) :
-  e.IsElementary ↔ ∀ {n} (p : 𝓛.Formula (n + 1)) (ρ : 𝓜.Assignment n), 𝓝 ⊨[e ∘ ρ] ∃' p → ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by
+  e.IsElementary ↔ ∀ {n} (p : 𝓛.Formula (n + 1)) (ρ : 𝓜.Assignment n), 𝓝 ⊨[e ∘ ρ] ∃' p → ∃ u, 𝓝 ⊨[e u ∷ᵥ e ∘ ρ] p := by
   constructor
   · intro h n p ρ h₁
     rw [←h] at h₁
-    simp [interpFormula] at h₁
+    simp [interp_exists] at h₁
+    rcases h₁ with ⟨u, h₁⟩
+    exists u
+    rw [←Vec.comp_cons, ←h]
     exact h₁
   · intro h n p ρ
     induction p with simp [interpFormula]
@@ -227,11 +230,12 @@ theorem is_elementary_iff (e : 𝓜 ↪ᴹ 𝓝) :
     | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
     | all p ih =>
       constructor
-      · intro h₁ u
-        by_contra h₂
-        have : 𝓝 ⊨[e ∘ ρ] ∃' (~ p) := by simp [interpFormula]; exists u
-        apply h at this
-        exact not_forall_of_exists_not this h₁
+      · intro h₁
+        by_contra h₂; simp [←interp_neg, ←interp_exists] at h₂
+        apply h at h₂
+        rcases h₂ with ⟨u, h₂⟩
+        rw [←Vec.comp_cons, interp_neg, ←ih] at h₂
+        exact h₂ (h₁ u)
       · intro h₁ u
         rw [ih, Vec.comp_cons]
         apply h₁

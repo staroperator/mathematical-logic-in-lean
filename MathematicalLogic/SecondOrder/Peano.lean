@@ -20,19 +20,19 @@ local prefix:max "S " => Term.succ
 
 namespace Theory
 
-inductive PA : Peano.Theory where
-| succ_ne_zero : PA (∀' (~ S #0 ≐ 0))
-| succ_inj : PA (∀' (∀' (S #1 ≐ S #0 ⇒ #1 ≐ #0)))
-| add_zero : PA (∀' (#0 + 0 ≐ #0))
-| add_succ : PA (∀' (∀' (#1 + S #0 ≐ S (#1 + #0))))
-| mul_zero : PA (∀' (#0 * 0 ≐ 0))
-| mul_succ : PA (∀' (∀' (#1 * S #0 ≐ #1 * #0 + #1)))
-| ind : PA (∀ʳ 1 (0 ⬝ʳᵛ [0]ᵥ ⇒ (∀' (1 ⬝ʳᵛ [#0]ᵥ ⇒ 1 ⬝ʳᵛ [S #0]ᵥ)) ⇒ ∀' (1 ⬝ʳᵛ [#0]ᵥ)))
+inductive PA₂ : Peano.Theory where
+| succ_ne_zero : PA₂ (∀' (~ S #0 ≐ 0))
+| succ_inj : PA₂ (∀' (∀' (S #1 ≐ S #0 ⇒ #1 ≐ #0)))
+| add_zero : PA₂ (∀' (#0 + 0 ≐ #0))
+| add_succ : PA₂ (∀' (∀' (#1 + S #0 ≐ S (#1 + #0))))
+| mul_zero : PA₂ (∀' (#0 * 0 ≐ 0))
+| mul_succ : PA₂ (∀' (∀' (#1 * S #0 ≐ #1 * #0 + #1)))
+| ind : PA₂ (∀ʳ 1 (0 ⬝ʳᵛ [0]ᵥ ⇒ (∀' (1 ⬝ʳᵛ [#0]ᵥ ⇒ 1 ⬝ʳᵛ [S #0]ᵥ)) ⇒ ∀' (1 ⬝ʳᵛ [#0]ᵥ)))
 
 attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
   Vec.eq_two Vec.eq_one Vec.eq_nil
 
-def PA.𝓝 : PA.Model where
+def PA₂.𝓝 : PA₂.Model where
   Dom := ℕ
   interpFunc
   | .zero, _ => 0
@@ -52,13 +52,13 @@ def PA.𝓝 : PA.Model where
 
 namespace Model
 
-variable {𝓜 : PA.Model}
+variable {𝓜 : PA₂.Model}
 
-namespace PA
+namespace PA₂
 instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
 instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
 instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
-end PA
+end PA₂
 
 def succ (u : 𝓜) := 𝓜.interpFunc .succ [u]ᵥ
 def ofNat : ℕ → 𝓜
@@ -125,9 +125,9 @@ theorem ofNat_mul : 𝓜.ofNat (n * m) = 𝓜.ofNat n * 𝓜.ofNat m := by
 
 end Model
 
-namespace PA
+namespace PA₂
 
-noncomputable def model_iso_𝓝 (𝓜 : PA.Model) : 𝓝 ≃ᴹ 𝓜.toStructure where
+noncomputable def model_iso_𝓝 (𝓜 : PA₂.Model) : 𝓝 ≃ᴹ 𝓜.toStructure where
   toEquiv := Equiv.ofBijective 𝓜.ofNat ⟨𝓜.ofNat_injective, 𝓜.ofNat_surjective⟩
   on_func
   | .zero, v => by simp [Vec.eq_nil]; rfl
@@ -136,7 +136,7 @@ noncomputable def model_iso_𝓝 (𝓜 : PA.Model) : 𝓝 ≃ᴹ 𝓜.toStructur
   | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply 𝓜.ofNat_mul
   on_rel r := nomatch r
 
-noncomputable def categorical : PA.Categorical
+noncomputable def categorical : PA₂.Categorical
 | 𝓜₁, 𝓜₂ => .trans (.symm (model_iso_𝓝 𝓜₁)) (model_iso_𝓝 𝓜₂)
 
-end SecondOrder.Language.Theory.PA
+end SecondOrder.Language.Theory.PA₂

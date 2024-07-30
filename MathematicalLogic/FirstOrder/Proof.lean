@@ -734,6 +734,11 @@ def Complete (Γ : 𝓛.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
 theorem Complete.unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
   rcases h p with h₁ | h₁ <;> simp [h₁]
 
+theorem Complete.unprovable_iff (h₁ : Complete Γ) (h₂ : Consistent Γ) : Γ ⊬ p ↔ Γ ⊢ ~ p := by
+  rcases h₁ p with h | h <;> simp [h] <;> intro h'
+  · exact h₂ (h'.mp h)
+  · exact h₂ (h.mp h')
+
 def Henkin (Γ : 𝓛.FormulaSet n) := ∀ p, Γ ⊢ ∃' p → ∃ (c : 𝓛.Const), Γ ⊢ p[↦ₛ c]ₚ
 
 theorem Entails.axioms : p ∈ 𝓛.Axioms → Γ ⊨ p := by
@@ -773,9 +778,15 @@ theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
 
 theorem Consistent.empty : Consistent (∅ : 𝓛.FormulaSet n) := by
   apply of_satisfiable
-  exists ⟨Unit, λ _ _ => .unit, λ _ _ => True⟩, λ _ => .unit
+  exists ⟨Unit, λ _ _ => (), λ _ _ => True⟩, λ _ => ()
   intro _ h
   contradiction
+
+theorem Structure.theory.complete {𝓜 : 𝓛.Structure} : Complete 𝓜.theory := by
+  intro p
+  by_cases h : 𝓜 ⊨ₛ p
+  · exact Or.inl (.hyp h)
+  · exact Or.inr (.hyp h)
 
 namespace Theory
 
