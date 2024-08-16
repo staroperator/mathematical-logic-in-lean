@@ -54,21 +54,19 @@ def ZF₂.𝓥 (κ : Cardinal) (hκ : κ.IsInaccessible) : ZF₂.Model where
     exact (Cardinal.ord_isLimit (le_of_lt hκ.1)).pos⟩
   | .insert, v => ⟨Insert.insert (v 0).val (v 1), by
     simp [mem_V_iff, rank_insert]; constructor
-    · rcases rank_is_succ (v 0) with ⟨o, h⟩
-      simp [h]; apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-      rw [←Order.succ_le_iff, ←h, ←mem_V_iff]
+    · apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+      rw [←mem_V_iff]
       exact (v 0).property
     · rw [←mem_V_iff]; exact (v 1).property⟩
   | .union, v => ⟨⋃₀ (v 0), by
     simp [mem_V_iff]
-    apply le_trans rank_sUnion_le
+    apply lt_of_le_of_lt rank_sUnion_le
     rw [←mem_V_iff]
     exact (v 0).property⟩
   | .powerset, v => ⟨ZFSet.powerset (v 0), by
     simp [mem_V_iff, rank_powerset]
-    rcases rank_is_succ (v 0) with ⟨o, h⟩
-    simp [h]; apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-    rw [←Order.succ_le_iff, ←h, ←mem_V_iff]
+    apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+    rw [←mem_V_iff]
     exact (v 0).property⟩
   | .omega, v => ⟨omega, by
     simp [mem_V_iff, rank_omega, Cardinal.lt_ord]; exact hκ.1⟩

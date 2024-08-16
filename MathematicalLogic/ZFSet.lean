@@ -1,6 +1,6 @@
 import Mathlib.SetTheory.Cardinal.Cofinality
 import Mathlib.SetTheory.ZFC.Ordinal
-
+#check WellFounded.rank
 universe u v
 
 namespace PSet
@@ -8,7 +8,7 @@ namespace PSet
 theorem mem_iff {x y : PSet} : x ∈ y ↔ ∃ b, Equiv x (y.Func b) := by rfl
 
 noncomputable def rank : PSet.{u} → Ordinal.{u}
-| ⟨_, A⟩ => Order.succ (Ordinal.sup λ i => have := Mem.mk A i; (A i).rank)
+| ⟨_, A⟩ => Ordinal.sup λ i => have := Mem.mk A i; (A i).rank + 1
 
 lemma rank_eq_of_equiv : (x y : PSet) → x.Equiv y → x.rank = y.rank
 | ⟨_, A⟩, ⟨_, B⟩, h => by
@@ -24,16 +24,19 @@ lemma rank_eq_of_equiv : (x y : PSet) → x.Equiv y → x.rank = y.rank
 
 theorem rank_lt_of_mem : {x y : PSet} → y ∈ x → y.rank < x.rank
 | ⟨_, A⟩, y, h => by
-  simp only [rank, Quotient.liftOn_mk, PSet.rank, Order.lt_succ_iff]
+  simp only [rank, Quotient.liftOn_mk, PSet.rank]
   rcases h with ⟨i, h⟩
   rw [PSet.rank_eq_of_equiv _ _ h]
+  simp; rw [←Order.succ_le_iff]
   apply Ordinal.le_sup
 
-theorem rank_le_succ_of_mem_le : {x : PSet} → (∀ y ∈ x, y.rank ≤ α) → x.rank ≤ Order.succ α
+theorem rank_le_of_mem_rank_lt : {x : PSet} → (∀ y ∈ x, y.rank < α) → x.rank ≤ α
 | ⟨_, A⟩, h => by
   simp [rank]
   apply Ordinal.sup_le
-  intro i; apply h; apply Mem.mk
+  intro i
+  rw [Order.succ_le_iff]
+  apply h; apply Mem.mk
 
 end PSet
 
@@ -152,10 +155,10 @@ theorem mem_replace : y ∈ replace x f ↔ ∃ (z : ZFSet) (h : z ∈ x), y = f
 noncomputable def rank (x : ZFSet.{u}) : Ordinal.{u} :=
   Quotient.liftOn x PSet.rank PSet.rank_eq_of_equiv
 
-theorem rank_is_succ (x : ZFSet) : ∃ o, x.rank = Order.succ o := by
-  induction' x using Quotient.inductionOn with x
-  simp only [rank, Quotient.liftOn_mk]
-  cases x; simp [PSet.rank]
+-- theorem rank_is_succ (x : ZFSet) : ∃ o, x.rank = Order.succ o := by
+--   induction' x using Quotient.inductionOn with x
+--   simp only [rank, Quotient.liftOn_mk]
+--   cases x; simp [PSet.rank]
 
 variable {x y : ZFSet}
 
@@ -164,93 +167,83 @@ theorem rank_lt_of_mem : y ∈ x → y.rank < x.rank := by
   induction' y using Quotient.inductionOn with y
   apply PSet.rank_lt_of_mem
 
-theorem rank_le_succ_of_mem_le : (∀ y ∈ x, y.rank ≤ α) → x.rank ≤ Order.succ α := by
+theorem rank_le_of_mem_rank_lt : (∀ y ∈ x, y.rank < α) → x.rank ≤ α := by
   intro h
   induction' x using Quotient.inductionOn with x
-  apply PSet.rank_le_succ_of_mem_le
+  apply PSet.rank_le_of_mem_rank_lt
   intro y h'
   apply h ⟦y⟧
   simp; exact h'
 
 theorem rank_mono : x ⊆ y → x.rank ≤ y.rank := by
   intro h
-  rcases rank_is_succ y with ⟨o, h₁⟩; rw [h₁]
-  apply rank_le_succ_of_mem_le
-  intro z h₂
-  rw [←Order.succ_le_succ_iff, ←h₁, Order.succ_le_iff]
-  apply rank_lt_of_mem; exact h h₂
+  apply rank_le_of_mem_rank_lt
+  intro z h₁; apply rank_lt_of_mem; exact h h₁
 
-theorem rank_empty : (∅ : ZFSet).rank = 1 := by
+theorem rank_empty : (∅ : ZFSet).rank = 0 := by
   apply le_antisymm
-  · rw [←Ordinal.succ_zero]; apply rank_le_succ_of_mem_le; simp
-  · rcases rank_is_succ ∅ with ⟨o, h⟩; rw [h, ←Ordinal.succ_zero]
-    apply Order.succ_le_succ; simp
+  · apply rank_le_of_mem_rank_lt; simp
+  · simp
 
 theorem rank_singleton : ({x} : ZFSet).rank = x.rank + 1 := by
   apply le_antisymm
-  · apply rank_le_succ_of_mem_le; simp
+  · apply rank_le_of_mem_rank_lt; simp
   · simp; apply rank_lt_of_mem; simp
 
 theorem rank_pair : ({x, y} : ZFSet).rank = max x.rank y.rank + 1 := by
   apply le_antisymm
-  · apply rank_le_succ_of_mem_le; simp
+  · apply rank_le_of_mem_rank_lt; simp
   · simp; constructor <;> apply rank_lt_of_mem <;> simp
 
 theorem rank_union : (x ∪ y).rank = max x.rank y.rank := by
   apply le_antisymm
-  · rcases rank_is_succ x with ⟨o, h₁⟩; rw [h₁]
-    rcases rank_is_succ y with ⟨o', h₂⟩; rw [h₂]
-    rw [←succ_max]; apply rank_le_succ_of_mem_le
-    intro z h; simp at h
-    rcases h with h | h
-    · apply le_max_of_le_left; rw [←Order.succ_le_succ_iff, ←h₁]
-      simp; exact rank_lt_of_mem h
-    · apply le_max_of_le_right; rw [←Order.succ_le_succ_iff, ←h₂]
-      simp; exact rank_lt_of_mem h
+  · apply rank_le_of_mem_rank_lt
+    intro z h; simp at h; rcases h with h | h
+    · apply lt_max_of_lt_left; exact rank_lt_of_mem h
+    · apply lt_max_of_lt_right; exact rank_lt_of_mem h
   · simp; constructor <;> apply rank_mono <;> intro <;> aesop
 
 theorem rank_insert : (insert x y).rank = max (x.rank + 1) y.rank := by
   have : insert x y = {x} ∪ y := by ext; simp
   rw [this, rank_union, rank_singleton]
 
-theorem rank_ofNat : (ofNat n).rank = n.succ := by
+theorem rank_ofNat : (ofNat n).rank = n := by
   induction n with
   | zero => simp [rank_empty]
   | succ n ih => simp [rank_insert, ih, Order.le_succ]
 
-theorem rank_omega : omega.rank = Ordinal.omega + 1 := by
+theorem rank_omega : omega.rank = Ordinal.omega := by
   apply le_antisymm
-  · apply rank_le_succ_of_mem_le
+  · apply rank_le_of_mem_rank_lt
     intro y h; simp [mem_omega_iff] at h
     rcases h with ⟨n, h⟩; subst h
     simp [rank_ofNat, Ordinal.lt_omega]
-  · rcases rank_is_succ omega with ⟨o, h₁⟩; rw [h₁]
-    simp [Ordinal.omega_le]
-    intro n; rw [←Order.succ_le_succ_iff, ←h₁, ←Ordinal.natCast_succ, ←rank_ofNat]
+  · simp [Ordinal.omega_le]
+    intro n; rw [←rank_ofNat]
     apply le_of_lt; apply rank_lt_of_mem
     simp [mem_omega_iff]
 
 theorem rank_powerset : (powerset x).rank = x.rank + 1 := by
   apply le_antisymm
-  · apply rank_le_succ_of_mem_le
-    intro y h; simp at h; exact rank_mono h
+  · apply rank_le_of_mem_rank_lt
+    intro y h; simp at h; simp [Order.lt_succ_iff]; exact rank_mono h
   · rw [←rank_singleton]; apply rank_mono
     intro y h; simp at h; simp [h, subset_refl]
 
 theorem rank_sUnion_le : (⋃₀ x : ZFSet).rank ≤ x.rank := by
-  rcases rank_is_succ x with ⟨o, h₁⟩; rw [h₁]
-  apply rank_le_succ_of_mem_le
+  apply rank_le_of_mem_rank_lt
   intro y h; simp at h; rcases h with ⟨z, h₂, h₃⟩
-  rw [←Order.succ_le_succ_iff, ←h₁, Order.succ_le_iff]
   trans <;> apply rank_lt_of_mem <;> assumption
 
-theorem rank_range {f : α → ZFSet} : (range f).rank = Ordinal.sup (rank ∘ f) + 1 := by
+theorem rank_range {f : α → ZFSet} : (range f).rank = Ordinal.sup λ i => rank (f i) + 1 := by
   apply le_antisymm
-  · apply rank_le_succ_of_mem_le; simp; apply Ordinal.le_sup
-  · rcases rank_is_succ (range f) with ⟨o, h₁⟩; rw [h₁]
-    simp; apply Ordinal.sup_le
-    intro i; rw [←Order.succ_le_succ_iff, ←h₁]; simp
-    apply rank_lt_of_mem; simp
+  · apply rank_le_of_mem_rank_lt
+    simp; intro i
+    rw [←Order.succ_le_iff]
+    apply Ordinal.le_sup
+  · apply Ordinal.sup_le
+    intro i; simp; apply rank_lt_of_mem; simp
+
 
 
 noncomputable def V (α : Ordinal.{u}) : ZFSet.{u} :=
@@ -302,31 +295,29 @@ theorem V_mono : α ≤ β → V α ⊆ V β := by
   · apply V_transitive; exact V_strict_mono h
   · simp [h, subset_refl]
 
-theorem mem_V_rank {x : ZFSet} : x ∈ V x.rank := by
+theorem mem_V_rank {x : ZFSet} : x ∈ V (x.rank + 1) := by
   induction' x using inductionOn with x ih
-  rcases rank_is_succ x with ⟨o, h₁⟩
-  simp [h₁, V_succ]
+  simp [V_succ]
   intro _ h₂
   apply V_mono _ (ih _ h₂)
-  rw [←Order.lt_succ_iff, ←h₁]
-  exact rank_lt_of_mem h₂
+  simp; exact rank_lt_of_mem h₂
 
-theorem mem_V_iff : x ∈ V α ↔ x.rank ≤ α := by
+theorem mem_V_iff : x ∈ V α ↔ x.rank < α := by
   constructor
   · intro h
     induction' α using Ordinal.induction with α ih generalizing x
     rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
     · simp [h₁, V_zero] at h
     · simp [h₁, V_succ] at *
-      apply rank_le_succ_of_mem_le
+      apply rank_le_of_mem_rank_lt
       intro y h₂; apply ih
       · rfl
       · apply h; exact h₂
     · simp [mem_V_limit h₁] at h
       rcases h with ⟨β, h₂, h₃⟩
       apply ih _ h₂ at h₃
-      exact le_of_lt (lt_of_le_of_lt h₃ h₂)
-  · intro h; apply V_mono h; exact mem_V_rank
+      exact h₃.trans h₂
+  · intro h; apply V_mono _ mem_V_rank; simp [h]
 
 theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
   α < κ.ord → (V α).card < κ := by
@@ -362,14 +353,12 @@ theorem replace_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   · rw [←card]
     apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
     apply card_V_lt_of_inaccessible hκ
-    rcases rank_is_succ x with ⟨o, h⟩; rw [h]
     apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-    rw [←Order.succ_le_iff, ←h, ←mem_V_iff]
+    rw [←mem_V_iff]
     exact h₁
-  · intro i; simp
-    rcases rank_is_succ (x.familyOfBFamily f i) with ⟨o, h⟩; rw [h]
+  · intro i
     apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-    rw [←Order.succ_lt_succ_iff, ←h]; simp [←mem_V_iff]
+    simp [←mem_V_iff]
     apply h₂
 
 end ZFSet
