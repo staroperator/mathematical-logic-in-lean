@@ -34,19 +34,21 @@ namespace Theory
 
 inductive ZF₂ : ZF₂.Theory where
 | ext : ZF₂ (∀' (∀' ((∀' (#0 ∈' #2 ⇔ #0 ∈' #1)) ⇒ #1 ≐ #0)))
-| empty : ZF₂ (∀' (~ #0 ∈' ∅))
-| insert : ZF₂ (∀' (∀' (∀' (#0 ∈' insert #2 #1 ⇔ #0 ∈' #1 ⩒ #0 ≐ #2))))
-| union : ZF₂ (∀' (∀' (#0 ∈' ⋃₀ #1 ⇔ ∃' (#0 ∈' #2 ⩑ #1 ∈' #0))))
-| powerset : ZF₂ (∀' (∀' (#0 ∈' 𝓟 #1 ⇔ ∀' (#0 ∈' #1 ⇒ #0 ∈' #2))))
+| mem_empty : ZF₂ (∀' (~ #0 ∈' ∅))
+| mem_insert : ZF₂ (∀' (∀' (∀' (#0 ∈' insert #2 #1 ⇔ #0 ∈' #1 ⩒ #0 ≐ #2))))
+| mem_union : ZF₂ (∀' (∀' (#0 ∈' ⋃₀ #1 ⇔ ∃' (#0 ∈' #2 ⩑ #1 ∈' #0))))
+| mem_powerset : ZF₂ (∀' (∀' (#0 ∈' 𝓟 #1 ⇔ ∀' (#0 ∈' #1 ⇒ #0 ∈' #2))))
 | replacement : ZF₂ (∀' (∀ᶠ 1 (∃' (∀' (#0 ∈' #1 ⇔ ∃' (#0 ∈' #4 ⩑ #1 ≐ 3 ⬝ᶠᵛ [#0]ᵥ))))))
 | infinity : ZF₂ (∅ ∈' ω ⩑ ∀' (#0 ∈' ω ⇒ insert #0 #0 ∈' ω) ⩑ (∀' (∅ ∈' #0 ⩑ ∀' (#0 ∈' #1 ⇒ insert #0 #0 ∈' #1) ⇒ ∀' (#0 ∈' ω ⇒ #0 ∈' #1))))
 | regularity : ZF₂ (∀' (∃' (#0 ∈' #1) ⇒ ∃' (#0 ∈' #1 ⩑ ~ ∃' (#0 ∈' #2 ⩑ #0 ∈' #1))))
+
+namespace ZF₂
 
 attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
 set_option maxHeartbeats 300000
 
 open ZFSet in
-def ZF₂.𝓥 (κ : Cardinal) (hκ : κ.IsInaccessible) : ZF₂.Model where
+def 𝓥 (κ : Cardinal) (hκ : κ.IsInaccessible) : ZF₂.Model where
   Dom := (V κ.ord).toSet
   interpFunc
   | .empty, _ => ⟨∅, by
@@ -79,13 +81,13 @@ def ZF₂.𝓥 (κ : Cardinal) (hκ : κ.IsInaccessible) : ZF₂.Model where
       ext z; constructor
       · intro h'; refine (h _ ?_).left h'; exact V_transitive _ h₁ h'
       · intro h'; refine (h _ ?_).right h'; exact V_transitive _ h₂ h'
-    | empty => simp
-    | insert => simp; aesop
-    | union =>
+    | mem_empty => simp
+    | mem_insert => simp; aesop
+    | mem_union =>
       simp; intro x h₁ y _; constructor
       · intro z h₂ h₃; exists z, V_transitive _ h₁ h₂
       · aesop
-    | powerset =>
+    | mem_powerset =>
       simp; intro x _ y h₁; constructor
       · aesop
       · intro h₂ z h₃; exact h₂ _ (V_transitive _ h₁ h₃) h₃
@@ -135,33 +137,31 @@ def ZF₂.𝓥 (κ : Cardinal) (hκ : κ.IsInaccessible) : ZF₂.Model where
       exists z, V_transitive _ h₁ h₃, h₃
       intro _ _; simp [eq_empty] at h₄; apply h₄
 
-namespace Model
-
 variable {𝓜 : ZF₂.Model} {x y z : 𝓜}
 
 instance : Membership 𝓜 𝓜 := ⟨(𝓜.interpRel .mem [·, ·]ᵥ)⟩
 
-@[ext] theorem ext : (∀ z, z ∈ x ↔ z ∈ y) → x = y := by
+@[ext] theorem ext' : (∀ z, z ∈ x ↔ z ∈ y) → x = y := by
   have := 𝓜.satisfy_theory _ .ext x y
   simp [Vec.eq_two, ←iff_iff_implies_and_implies] at this
   exact this
 
 instance : EmptyCollection 𝓜 := ⟨𝓜.interpFunc .empty []ᵥ⟩
-@[simp] theorem mem_empty : ¬ x ∈ (∅ : 𝓜) := by
-  have := 𝓜.satisfy_theory _ .empty
+@[simp] theorem mem_empty' : ¬ x ∈ (∅ : 𝓜) := by
+  have := 𝓜.satisfy_theory _ .mem_empty
   simp [Vec.eq_two, Vec.eq_nil] at this
   apply this
 
 def Nonempty (x : 𝓜) := ∃ y, y ∈ x
-theorem nonempty_iff : 𝓜.Nonempty x ↔ x ≠ ∅ := by
+theorem nonempty_iff : Nonempty x ↔ x ≠ ∅ := by
   constructor
   · intro ⟨y, h₁⟩ h₂; simp [h₂, mem_empty] at h₁
   · intro h₁; by_contra h₂; simp [Nonempty] at h₂
     apply h₁; ext z; simp [h₂ z, mem_empty]
 
 instance : Insert 𝓜 𝓜 := ⟨(𝓜.interpFunc .insert [·, ·]ᵥ)⟩
-@[simp] theorem mem_insert : x ∈ insert y z ↔ x ∈ z ∨ x = y := by
-  have := 𝓜.satisfy_theory _ .insert y z x
+@[simp] theorem mem_insert' : x ∈ insert y z ↔ x ∈ z ∨ x = y := by
+  have := 𝓜.satisfy_theory _ .mem_insert y z x
   simp [Vec.eq_two, Vec.eq_nil, ←or_iff_not_imp_left, ←iff_iff_implies_and_implies] at this
   exact this
 
@@ -171,15 +171,14 @@ instance : Singleton 𝓜 𝓜 := ⟨(insert · ∅)⟩
 
 def sUnion (x : 𝓜) : 𝓜 := 𝓜.interpFunc .union [x]ᵥ
 @[simp] theorem mem_sUnion : x ∈ sUnion y ↔ ∃ z, z ∈ y ∧ x ∈ z := by
-  have := 𝓜.satisfy_theory _ .union y x
+  have := 𝓜.satisfy_theory _ .mem_union y x
   simp [Vec.eq_two, Vec.eq_one] at this
   simp [iff_iff_implies_and_implies]
   exact this
 
-def union (x y : 𝓜) := sUnion {x, y}
-instance : Union 𝓜 := ⟨𝓜.union⟩
-@[simp] theorem mem_union : x ∈ y ∪ z ↔ x ∈ y ∨ x ∈ z := by
-  simp [Union.union, union, or_comm]
+instance : Union 𝓜 := ⟨(sUnion {·, ·})⟩
+@[simp] theorem mem_union' : x ∈ y ∪ z ↔ x ∈ y ∨ x ∈ z := by
+  simp [Union.union, or_comm]
 
 instance : HasSubset 𝓜 := ⟨(∀ z, z ∈ · → z ∈ ·)⟩
 theorem subset_iff : x ⊆ y ↔ ∀ z ∈ x, z ∈ y := by rfl
@@ -202,8 +201,8 @@ theorem ssubset_trans : x ⊂ y → y ⊂ z → x ⊂ z := by
   apply h₁'; exact subset_antisymm h₁ h₂
 
 def powerset (x : 𝓜) : 𝓜 := 𝓜.interpFunc .powerset [x]ᵥ
-@[simp] theorem mem_powerset : x ∈ powerset y ↔ x ⊆ y := by
-  have := 𝓜.satisfy_theory _ .powerset y x
+@[simp] theorem mem_powerset' : x ∈ powerset y ↔ x ⊆ y := by
+  have := 𝓜.satisfy_theory _ .mem_powerset y x
   simp [Vec.eq_two, Vec.eq_one] at this
   simp [Subset, iff_iff_implies_and_implies]
   exact this
@@ -215,16 +214,16 @@ lemma exists_replacement (x : 𝓜) (f : 𝓜 → 𝓜) :
   simp [iff_iff_implies_and_implies]
   exact this
 
-noncomputable def replacement (x : 𝓜) (f : 𝓜 → 𝓜) : 𝓜 :=
+noncomputable def replace (x : 𝓜) (f : 𝓜 → 𝓜) : 𝓜 :=
   Classical.choose (exists_replacement x f)
-@[simp] theorem mem_replacement : x ∈ replacement y f ↔ ∃ z, z ∈ y ∧ x = f z :=
+@[simp] theorem mem_replace : x ∈ replace y f ↔ ∃ z, z ∈ y ∧ x = f z :=
   Classical.choose_spec (exists_replacement y f) x
 
 open Classical in
-noncomputable def separation (x : 𝓜) (p : 𝓜 → Prop) : 𝓜 :=
-  if h : ∃ y ∈ x, p y then replacement x (λ z => if p z then z else choose h) else ∅
-@[simp] theorem mem_separation : x ∈ separation y p ↔ x ∈ y ∧ p x := by
-  simp [separation]
+noncomputable def sep (x : 𝓜) (p : 𝓜 → Prop) : 𝓜 :=
+  if h : ∃ y ∈ x, p y then replace x (λ z => if p z then z else choose h) else ∅
+@[simp] theorem mem_sep : x ∈ sep y p ↔ x ∈ y ∧ p x := by
+  simp [sep]
   by_cases h : ∃ z ∈ y, p z
   · simp [h]
     constructor
@@ -239,35 +238,34 @@ noncomputable def separation (x : 𝓜) (p : 𝓜 → Prop) : 𝓜 :=
     intro h₁ h₂
     exact h ⟨x, h₁, h₂⟩
 
-noncomputable def intersect (x y : 𝓜) := 𝓜.separation x (· ∈ y)
-noncomputable instance : Inter 𝓜 := ⟨𝓜.intersect⟩
+noncomputable instance : Inter 𝓜 := ⟨λ x y => sep x (· ∈ y)⟩
 @[simp] theorem mem_intersect : z ∈ x ∩ y ↔ z ∈ x ∧ z ∈ y := by
-  simp [Inter.inter, intersect]
+  simp [Inter.inter]
 
 def omega : 𝓜 := 𝓜.interpFunc .omega []ᵥ
 
-theorem empty_mem_omega : ∅ ∈ 𝓜.omega := by
+theorem empty_mem_omega : ∅ ∈ @omega 𝓜 := by
   have := 𝓜.satisfy_theory _ .infinity
   simp [Vec.eq_two, Vec.eq_nil] at this
   exact this.left
 
-theorem succ_mem_omega : x ∈ 𝓜.omega → insert x x ∈ 𝓜.omega := by
+theorem succ_mem_omega : x ∈ @omega 𝓜 → insert x x ∈ omega := by
   have := 𝓜.satisfy_theory _ .infinity
   simp [Vec.eq_two, Vec.eq_nil] at this
   exact this.right.left x
 
-theorem omega_minimal : ∅ ∈ x → (∀ y ∈ x, insert y y ∈ x) → 𝓜.omega ⊆ x := by
+theorem omega_minimal : ∅ ∈ x → (∀ y ∈ x, insert y y ∈ x) → @omega 𝓜 ⊆ x := by
   have := 𝓜.satisfy_theory _ .infinity
   simp [Vec.eq_two, Vec.eq_nil] at this
   exact this.right.right x
 
-def ofNatZF : ℕ → 𝓜
+def ofNat : ℕ → 𝓜
 | 0 => ∅
-| n + 1 => insert (ofNatZF n) (ofNatZF n)
+| n + 1 => insert (ofNat n) (ofNat n)
 
-theorem mem_omega : x ∈ omega ↔ ∃ n, x = ofNatZF n := by
+theorem mem_omega : x ∈ omega ↔ ∃ n, x = ofNat n := by
   constructor
-  · let y : 𝓜 := separation omega (λ x => ∃ n, x = ofNatZF n)
+  · let y : 𝓜 := sep omega (λ x => ∃ n, x = ofNat n)
     have h₁ : ∅ ∈ y := by simp [y, empty_mem_omega]; exists 0
     have h₂ : ∀ z ∈ y, insert z z ∈ y := by
       intro z h; simp [y] at h; rcases h with ⟨h₁, ⟨n, h₂⟩⟩; subst h₂
@@ -276,11 +274,11 @@ theorem mem_omega : x ∈ omega ↔ ∃ n, x = ofNatZF n := by
     apply omega_minimal h₁ h₂ at h; simp [y] at h
     exact h.right
   · intro ⟨n, h⟩; subst h
-    induction n with simp [ofNatZF]
+    induction n with simp [ofNat]
     | zero => exact empty_mem_omega
     | succ _ ih => exact succ_mem_omega ih
 
-theorem regularity : Nonempty x → ∃ y ∈ x, ¬ Nonempty (x ∩ y) := by
+theorem regular : Nonempty x → ∃ y ∈ x, ¬ Nonempty (x ∩ y) := by
   have := 𝓜.satisfy_theory _ .regularity x
   simp [Vec.eq_two, Vec.eq_nil] at this
   simp [Nonempty]
@@ -288,7 +286,7 @@ theorem regularity : Nonempty x → ∃ y ∈ x, ¬ Nonempty (x ∩ y) := by
 
 theorem not_mem_self : ¬ x ∈ x := by
   have : Nonempty {x} := by simp [Nonempty]
-  apply regularity at this
+  apply regular at this
   rcases this with ⟨y, h₁, h₂⟩
   simp at h₁; subst h₁
   simp [Nonempty] at h₂
@@ -301,40 +299,41 @@ lemma ssubset_succ : x ⊂ insert x x := by
   rw [←h] at this
   exact not_mem_self this
 
-theorem ofNatZF_ssubset : n < m → 𝓜.ofNatZF n ⊂ 𝓜.ofNatZF m := by
+theorem ofNat_ssubset : n < m → @ofNat 𝓜 n ⊂ ofNat m := by
   intro h
   induction h with
   | refl => exact ssubset_succ
   | step _ ih => exact ssubset_trans ih ssubset_succ
 
-theorem ofNatZF_injective : Function.Injective 𝓜.ofNatZF := by
+theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
   intro n m h₁
   by_contra h₂
   apply lt_or_gt_of_ne at h₂
-  rcases h₂ with h₂ | h₂ <;> apply 𝓜.ofNatZF_ssubset at h₂ <;> simp [h₁] at h₂
+  rcases h₂ with h₂ | h₂ <;> apply @ofNat_ssubset 𝓜 at h₂ <;> simp [h₁] at h₂
 
 open Classical in
 noncomputable def iUnionOmega (f : ℕ → 𝓜) : 𝓜 :=
-  sUnion (replacement omega (λ x => if h : ∃ n, x = ofNatZF n then f (Classical.choose h) else ∅))
+  sUnion (replace omega (λ x => if h : ∃ n, x = ofNat n then f (Classical.choose h) else ∅))
 @[simp] theorem mem_iUnionOmega : x ∈ iUnionOmega f ↔ ∃ n, x ∈ f n := by
   simp [iUnionOmega, mem_omega]
   constructor
   · intro ⟨_, ⟨_, ⟨⟨n, h₁⟩, h₂⟩⟩, h₃⟩
     subst h₁ h₂
-    have h : ∃ m, 𝓜.ofNatZF n = ofNatZF m := ⟨n, rfl⟩
-    simp [h] at h₃
-    exact ⟨_, h₃⟩
+    split at h₃
+    next h => exact ⟨_, h₃⟩
+    next => simp at h₃
   · intro ⟨n, h₁⟩
-    have h : ∃ m, 𝓜.ofNatZF n = ofNatZF m := ⟨n, rfl⟩
     exists f n
     constructor
-    · exists ofNatZF n; simp; congr; apply 𝓜.ofNatZF_injective; exact Classical.choose_spec h
+    · exists ofNat n; simp; congr
+      apply ofNat_injective
+      exact Classical.choose_spec (⟨n, rfl⟩ : ∃ m, ofNat n = ofNat m)
     · exact h₁
 
 def Transitive (x : 𝓜) := ∀ y ∈ x, y ⊆ x
 
-theorem Transitive.nat : Transitive (𝓜.ofNatZF n) := by
-  induction n with simp [ofNatZF]
+theorem Transitive.nat : Transitive (@ofNat 𝓜 n) := by
+  induction n with simp [ofNat]
   | zero => simp [Transitive]
   | succ _ ih =>
     intro x h; simp at h
@@ -371,8 +370,8 @@ theorem transClosure.minimal : ∀ y ⊇ x, Transitive y → transClosure x ⊆ 
 theorem mem_wellfounded : @WellFounded 𝓜 (· ∈ ·) := by
   rw [WellFounded.wellFounded_iff_has_min]
   intro s ⟨x, h₁⟩
-  by_cases h₂ : Nonempty (separation (transClosure x) s)
-  · apply regularity at h₂; simp [Nonempty] at h₂
+  by_cases h₂ : Nonempty (sep (transClosure x) s)
+  · apply regular at h₂; simp [Nonempty] at h₂
     rcases h₂ with ⟨y, ⟨h₂, h₃⟩, h₄⟩
     exists y, h₃
     intro z h₅ h₆
@@ -396,4 +395,4 @@ theorem satisfy_global_choice : 𝓜 ⊨ₛ ZF₂.global_choice := by
   simp [this]
   exact Classical.choose_spec this
 
-end Model
+end SecondOrder.Language.Theory.ZF₂

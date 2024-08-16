@@ -1,6 +1,6 @@
 import Mathlib.SetTheory.Cardinal.Cofinality
 import Mathlib.SetTheory.ZFC.Ordinal
-#check WellFounded.rank
+
 universe u v
 
 namespace PSet

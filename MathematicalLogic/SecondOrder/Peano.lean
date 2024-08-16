@@ -29,10 +29,13 @@ inductive PA₂ : Peano.Theory where
 | mul_succ : PA₂ (∀' (∀' (#1 * S #0 ≐ #1 * #0 + #1)))
 | ind : PA₂ (∀ʳ 1 (0 ⬝ʳᵛ [0]ᵥ ⇒ (∀' (1 ⬝ʳᵛ [#0]ᵥ ⇒ 1 ⬝ʳᵛ [S #0]ᵥ)) ⇒ ∀' (1 ⬝ʳᵛ [#0]ᵥ)))
 
+
+namespace PA₂
+
 attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
   Vec.eq_two Vec.eq_one Vec.eq_nil
 
-def PA₂.𝓝 : PA₂.Model where
+def 𝓝 : PA₂.Model where
   Dom := ℕ
   interpFunc
   | .zero, _ => 0
@@ -50,22 +53,18 @@ def PA₂.𝓝 : PA₂.Model where
       | zero => exact h₁
       | succ n ih => exact h₂ _ ih
 
-namespace Model
-
 variable {𝓜 : PA₂.Model}
 
-namespace PA₂
 instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
 instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
 instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
-end PA₂
 
 def succ (u : 𝓜) := 𝓜.interpFunc .succ [u]ᵥ
 def ofNat : ℕ → 𝓜
 | 0 => 0
-| n + 1 => 𝓜.succ (ofNat n)
+| n + 1 => succ (ofNat n)
 
-theorem ofNat_injective : Function.Injective 𝓜.ofNat := by
+theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
   intro n m h₁
   by_contra h₂
   apply Nat.lt_or_gt_of_ne at h₂
@@ -86,18 +85,18 @@ theorem ofNat_injective : Function.Injective 𝓜.ofNat := by
     cases' m with m <;> simp at h₃
     exact ih _ h₁ h₃
 
-theorem ofNat_surjective : Function.Surjective 𝓜.ofNat := by
+theorem ofNat_surjective : Function.Surjective (@ofNat 𝓜) := by
   intro u
   have := 𝓜.satisfy_theory _ .ind
   simp at this
-  apply this (r := λ v => ∃ n, 𝓜.ofNat n = v 0)
+  apply this (r := λ v => ∃ n, ofNat n = v 0)
   · exists 0
   · intro u ⟨n, h₁⟩
     exists n.succ
     rw [ofNat, h₁]
     rfl
 
-theorem ofNat_add : 𝓜.ofNat (n + m) = 𝓜.ofNat n + 𝓜.ofNat m := by
+theorem ofNat_add : @ofNat 𝓜 (n + m) = ofNat n + ofNat m := by
   symm
   induction m with
   | zero =>
@@ -110,7 +109,7 @@ theorem ofNat_add : 𝓜.ofNat (n + m) = 𝓜.ofNat n + 𝓜.ofNat m := by
     · apply this
     · simp_rw [Nat.add_succ, ofNat, ←ih]; rfl
 
-theorem ofNat_mul : 𝓜.ofNat (n * m) = 𝓜.ofNat n * 𝓜.ofNat m := by
+theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
   symm
   induction m with
   | zero =>
@@ -123,17 +122,13 @@ theorem ofNat_mul : 𝓜.ofNat (n * m) = 𝓜.ofNat n * 𝓜.ofNat m := by
     · apply this
     · simp [Nat.mul_succ, ofNat_add, ←ih]; rfl
 
-end Model
-
-namespace PA₂
-
 noncomputable def model_iso_𝓝 (𝓜 : PA₂.Model) : 𝓝 ≃ᴹ 𝓜.toStructure where
-  toEquiv := Equiv.ofBijective 𝓜.ofNat ⟨𝓜.ofNat_injective, 𝓜.ofNat_surjective⟩
+  toEquiv := Equiv.ofBijective ofNat ⟨ofNat_injective, ofNat_surjective⟩
   on_func
   | .zero, v => by simp [Vec.eq_nil]; rfl
   | .succ, v => by rw [Vec.eq_one (_ ∘ _)]; rfl
-  | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply 𝓜.ofNat_add
-  | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply 𝓜.ofNat_mul
+  | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofNat_add
+  | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofNat_mul
   on_rel r := nomatch r
 
 noncomputable def categorical : PA₂.Categorical

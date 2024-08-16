@@ -53,10 +53,12 @@ inductive Real : OrderedField.Theory where
 | mul_le_mul : Real (∀' (∀' (∀' (#2 ⪁ #1 ⇒ 0 ⪁ #0 ⇒ #2 * #0 ⪁ #1 * #0))))
 | exists_lub : Real (∀ʳ 1 (∃' (1 ⬝ʳᵛ [#0]ᵥ) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1)) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1) ⩑ ∀' (∀' (3 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1) ⇒ #1 ⪁ #0))))
 
+namespace Real
+
 attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
   Vec.eq_two Vec.eq_one Vec.eq_nil
 
-noncomputable def Real.𝓡 : Real.Model where
+noncomputable def 𝓡 : Real.Model where
   Dom := ℝ
   interpFunc
   | .zero, _ => 0
@@ -84,8 +86,6 @@ noncomputable def Real.𝓡 : Real.Model where
       exists sSup (R [·]ᵥ)
       exact Real.isLUB_sSup (R [·]ᵥ) ⟨a, h₁⟩ ⟨b, h₂⟩
 
-namespace Model
-
 variable {𝓜 : Real.Model} (a b c : 𝓜)
 
 namespace Real
@@ -97,170 +97,171 @@ instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
 instance : Inv 𝓜 := ⟨(𝓜.interpFunc .inv [·]ᵥ)⟩
 end Real
 
-theorem add_assoc : a + b + c = a + (b + c) := by
+theorem add_assoc' : a + b + c = a + (b + c) := by
   have := 𝓜.satisfy_theory _ .add_assoc a b c
   simp at this; exact this
 
-theorem add_comm : a + b = b + a := by
+theorem add_comm' : a + b = b + a := by
   have := 𝓜.satisfy_theory _ .add_comm a b
   simp at this; exact this
 
-theorem add_zero : a + 0 = a := by
+theorem add_zero' : a + 0 = a := by
   have := 𝓜.satisfy_theory _ .add_zero a
   simp at this; exact this
 
-theorem zero_add : 0 + a = a := by rw [add_comm, add_zero]
+theorem zero_add' : 0 + a = a := by rw [add_comm', add_zero']
 
-theorem add_left_neg : -a + a = 0 := by
+theorem add_left_neg' : -a + a = 0 := by
   have := 𝓜.satisfy_theory _ .add_left_neg a
   simp at this; exact this
 
 instance : AddCommGroup 𝓜 where
-  add_assoc := add_assoc
-  add_comm := add_comm
-  zero_add := zero_add
-  add_zero := add_zero
-  add_left_neg := add_left_neg
+  add_assoc := add_assoc'
+  add_comm := add_comm'
+  zero_add := zero_add'
+  add_zero := add_zero'
+  add_left_neg := add_left_neg'
   nsmul := nsmulRec
   zsmul := zsmulRec
 
-theorem mul_assoc : a * b * c = a * (b * c) := by
+theorem mul_assoc' : a * b * c = a * (b * c) := by
   have := 𝓜.satisfy_theory _ .mul_assoc a b c
   simp at this; exact this
 
-theorem mul_comm : a * b = b * a := by
+theorem mul_comm' : a * b = b * a := by
   have := 𝓜.satisfy_theory _ .mul_comm a b
   simp at this; exact this
 
-theorem mul_one : a * 1 = a := by
+theorem mul_one' : a * 1 = a := by
   have := 𝓜.satisfy_theory _ .mul_one a
   simp at this; exact this
 
-theorem one_mul : 1 * a = a := by rw [mul_comm, mul_one]
+theorem one_mul' : 1 * a = a := by rw [mul_comm', mul_one']
 
-theorem inv_zero : (0 : 𝓜)⁻¹ = 0 := by
+theorem inv_zero' : (0 : 𝓜)⁻¹ = 0 := by
   have := 𝓜.satisfy_theory _ .inv_zero
   simp at this; exact this
 
-theorem mul_inv_cancel (h : a ≠ 0) : a * a⁻¹ = 1 := by
+theorem mul_inv_cancel' (h : a ≠ 0) : a * a⁻¹ = 1 := by
   have := 𝓜.satisfy_theory _ .mul_inv_cancel a
   simp at this; exact this h
 
-theorem left_distrib : a * (b + c) = a * b + a * c := by
+theorem left_distrib' : a * (b + c) = a * b + a * c := by
   have := 𝓜.satisfy_theory _ .left_distrib a b c
   simp at this; exact this
 
-theorem right_distrib : (a + b) * c = a * c + b * c := by rw [mul_comm, left_distrib, mul_comm c a, mul_comm c b]
+theorem right_distrib' : (a + b) * c = a * c + b * c := by
+  rw [mul_comm', left_distrib', mul_comm' c a, mul_comm' c b]
 
-theorem zero_mul : 0 * a = 0 := by
+theorem zero_mul' : 0 * a = 0 := by
   apply add_left_cancel (a := 0 * a)
-  rw [←right_distrib, add_zero, add_zero]
+  rw [←right_distrib', add_zero', add_zero']
 
-theorem mul_zero : a * 0 = 0 := by rw [mul_comm, zero_mul]
+theorem mul_zero' : a * 0 = 0 := by rw [mul_comm', zero_mul']
 
-theorem zero_ne_one : (0 : 𝓜) ≠ 1 := by
+theorem zero_ne_one' : (0 : 𝓜) ≠ 1 := by
   have := 𝓜.satisfy_theory _ .zero_ne_one
   simp at this; exact this
 
 instance : Field 𝓜 where
-  add_left_neg := add_left_neg
-  mul_assoc := mul_assoc
-  mul_comm := mul_comm
-  mul_one := mul_one
-  one_mul := one_mul
-  inv_zero := inv_zero
-  mul_inv_cancel := mul_inv_cancel
-  left_distrib := left_distrib
-  right_distrib := right_distrib
-  zero_mul := zero_mul
-  mul_zero := mul_zero
-  exists_pair_ne := ⟨0, 1, zero_ne_one⟩
+  add_left_neg := add_left_neg'
+  mul_assoc := mul_assoc'
+  mul_comm := mul_comm'
+  mul_one := mul_one'
+  one_mul := one_mul'
+  inv_zero := inv_zero'
+  mul_inv_cancel := mul_inv_cancel'
+  left_distrib := left_distrib'
+  right_distrib := right_distrib'
+  zero_mul := zero_mul'
+  mul_zero := mul_zero'
+  exists_pair_ne := ⟨0, 1, zero_ne_one'⟩
   zsmul := zsmulRec
   qsmul := _
   nnqsmul := _
 
 instance : LE 𝓜 := ⟨(𝓜.interpRel .le [·, ·]ᵥ)⟩
 
-theorem le_refl : a ≤ a := by
+theorem le_refl' : a ≤ a := by
   have := 𝓜.satisfy_theory _ .le_refl a
   simp at this; exact this
 
-theorem le_antisymm : a ≤ b → b ≤ a → a = b := by
+theorem le_antisymm' : a ≤ b → b ≤ a → a = b := by
   have := 𝓜.satisfy_theory _ .le_antisymm a b
   simp at this; exact this
 
-theorem le_trans : a ≤ b → b ≤ c → a ≤ c := by
+theorem le_trans' : a ≤ b → b ≤ c → a ≤ c := by
   have := 𝓜.satisfy_theory _ .le_trans a b c
   simp at this; exact this
 
-theorem le_total : a ≤ b ∨ b ≤ a := by
+theorem le_total' : a ≤ b ∨ b ≤ a := by
   have := 𝓜.satisfy_theory _ .le_total a b
   simp at this; rw [or_iff_not_imp_left]; exact this
 
 open Classical
 
 noncomputable instance : LinearOrder 𝓜 where
-  le_refl := le_refl
-  le_antisymm := le_antisymm
-  le_trans := le_trans
-  le_total := le_total
+  le_refl := le_refl'
+  le_antisymm := le_antisymm'
+  le_trans := le_trans'
+  le_total := le_total'
   decidableLE := _
 
-theorem add_le_add_right : a ≤ b → a + c ≤ b + c := by
+theorem add_le_add_right' : a ≤ b → a + c ≤ b + c := by
   have := 𝓜.satisfy_theory _ .add_le_add a b c
   simp at this; exact this
 
-theorem add_le_add_left : a ≤ b → c + a ≤ c + b := by
-  rw [add_comm c a, add_comm c b]
-  apply add_le_add_right
+theorem add_le_add_left' : a ≤ b → c + a ≤ c + b := by
+  rw [add_comm' c a, add_comm' c b]
+  apply add_le_add_right'
 
-theorem zero_le_neg_iff : 0 ≤ -a ↔ a ≤ 0 := by
+theorem zero_le_neg_iff' : 0 ≤ -a ↔ a ≤ 0 := by
   constructor
   · intro h
-    apply add_le_add_left _ _ a at h
-    rw [add_zero, add_right_neg] at h
+    apply add_le_add_left' _ _ a at h
+    rw [add_zero', add_right_neg] at h
     exact h
   · intro h
-    apply add_le_add_left _ _ (-a) at h
-    rw [add_zero, add_left_neg] at h
+    apply add_le_add_left' _ _ (-a) at h
+    rw [add_zero', add_left_neg'] at h
     exact h
 
-theorem mul_le_mul_right : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
+theorem mul_le_mul_right' : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
   have := 𝓜.satisfy_theory _ .mul_le_mul a b c
   simp at this; exact this
 
-theorem zero_le_one : (0 : 𝓜) ≤ 1 := by
+theorem zero_le_one' : (0 : 𝓜) ≤ 1 := by
   by_contra h₁
   simp at h₁
   have h₂ : (0 : 𝓜) ≤ -1 := by
-    rw [zero_le_neg_iff 1]
+    rw [zero_le_neg_iff' 1]
     exact le_of_lt h₁
   have h₃ := lt_of_lt_of_le h₁ h₂
-  have h₄ := mul_le_mul_right _ _ _ (le_of_lt h₃) h₂
+  have h₄ := mul_le_mul_right' _ _ _ (le_of_lt h₃) h₂
   rw [mul_neg_one, mul_neg_one, neg_neg] at h₄
-  have h₅ := le_antisymm _ _ h₄ (le_of_lt h₃)
+  have h₅ := le_antisymm' _ _ h₄ (le_of_lt h₃)
   simp [h₅] at h₃
 
-theorem mul_pos : 0 < a → 0 < b → 0 < a * b := by
+theorem mul_pos' : 0 < a → 0 < b → 0 < a * b := by
   intro h₁ h₂
   apply lt_of_le_of_ne
-  · have h₃ := mul_le_mul_right _ _ _ (le_of_lt h₁) (le_of_lt h₂)
+  · have h₃ := mul_le_mul_right' _ _ _ (le_of_lt h₁) (le_of_lt h₂)
     rw [zero_mul] at h₃; exact h₃
   · simp [ne_of_gt h₁, ne_of_gt h₂]
 
 noncomputable instance : LinearOrderedField 𝓜 where
-  mul_comm := mul_comm
-  inv_zero := inv_zero
-  mul_inv_cancel := mul_inv_cancel
+  mul_comm := mul_comm'
+  inv_zero := inv_zero'
+  mul_inv_cancel := mul_inv_cancel'
   qsmul := _
   nnqsmul := _
   decidableLE := _
-  le_total := le_total
-  add_le_add_left a b h c := add_le_add_left a b c h
-  zero_le_one := zero_le_one
-  mul_pos := mul_pos
+  le_total := le_total'
+  add_le_add_left a b h c := add_le_add_left' a b c h
+  zero_le_one := zero_le_one'
+  mul_pos := mul_pos'
 
-theorem exists_lub (s : Set 𝓜) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
+theorem exists_lub' (s : Set 𝓜) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
   intro ⟨x, h₁⟩ ⟨y, h₂⟩
   have := 𝓜.satisfy_theory _ .exists_lub
   simp at this
@@ -268,29 +269,30 @@ theorem exists_lub (s : Set 𝓜) : s.Nonempty → BddAbove s → ∃ u, IsLUB s
 
 noncomputable def ofReal (x : ℝ) : 𝓜 :=
   Classical.choose
-    (exists_lub { ↑y | (y : ℚ) (_ : ↑y ≤ x) }
+    (exists_lub' { ↑y | (y : ℚ) (_ : ↑y ≤ x) }
       ((exists_rat_lt x).elim λ y h => ⟨y, y, le_of_lt h, rfl⟩)
-      ((exists_rat_gt x).elim λ y h => ⟨y, by simp [upperBounds]; intro z; rw [←@Rat.cast_le z y ℝ]; exact le_trans' (le_of_lt h)⟩))
+      ((exists_rat_gt x).elim λ y h => ⟨y, by
+        simp [upperBounds]; intro z; rw [←@Rat.cast_le z y ℝ]; exact _root_.le_trans' (le_of_lt h)⟩))
 
 variable {x y z : ℝ} {q : ℚ}
 
-theorem ofReal_isLUB : IsLUB { ↑y | (y : ℚ) (_ : ↑y ≤ x) } (𝓜.ofReal x) := Classical.choose_spec _
+theorem ofReal_isLUB : IsLUB { ↑y | (y : ℚ) (_ : ↑y ≤ x) } (@ofReal 𝓜 x) := Classical.choose_spec _
 
-theorem ofReal_rat : 𝓜.ofReal q = q := by
+theorem ofReal_rat : @ofReal 𝓜 q = q := by
   apply ofReal_isLUB.unique
   constructor
   · intro y; simp; intro z h₁ h₂; simp [←h₂, h₁]
   · intro y h₁; simp [upperBounds] at h₁; exact h₁ q (by rfl)
 
-theorem ofReal_zero : 𝓜.ofReal 0 = 0 := by
+theorem ofReal_zero : @ofReal 𝓜 0 = 0 := by
   have := @ofReal_rat 𝓜 0
   simp at this; exact this
 
-theorem ofReal_one : 𝓜.ofReal 1 = 1 := by
+theorem ofReal_one : @ofReal 𝓜 1 = 1 := by
   have := @ofReal_rat 𝓜 1
   simp at this; exact this
 
-theorem ofReal_lt : 𝓜.ofReal x < 𝓜.ofReal y ↔ x < y := by
+theorem ofReal_lt : @ofReal 𝓜 x < ofReal y ↔ x < y := by
   constructor
   · intro h₁
     simp [isLUB_lt_iff ofReal_isLUB, upperBounds] at h₁
@@ -314,12 +316,12 @@ theorem ofReal_lt : 𝓜.ofReal x < 𝓜.ofReal y ↔ x < y := by
       simp at h₃
       exists r, le_of_lt h₄
 
-theorem ofReal_le : 𝓜.ofReal x ≤ 𝓜.ofReal y ↔ x ≤ y := by
+theorem ofReal_le : @ofReal 𝓜 x ≤ ofReal y ↔ x ≤ y := by
   rw [←not_iff_not, not_le, not_le, ofReal_lt]
 
-theorem ofReal_injective : Function.Injective 𝓜.ofReal := by
+theorem ofReal_injective : Function.Injective (@ofReal 𝓜) := by
   intro x y h
-  apply _root_.le_antisymm <;> simp [←𝓜.ofReal_le, h]
+  apply _root_.le_antisymm <;> rw [←ofReal_le, h]
 
 lemma exists_nat_gt (a : 𝓜) : ∃ (n : ℕ), a < n := by
   by_contra h₁
@@ -327,7 +329,7 @@ lemma exists_nat_gt (a : 𝓜) : ∃ (n : ℕ), a < n := by
   let s : Set 𝓜 := { ↑n | (n : ℕ) }
   have h₂ : s.Nonempty := by exists 0; simp [s]
   have h₃ : BddAbove s := by exists a; simp [s, upperBounds]; exact h₁
-  rcases exists_lub s h₂ h₃ with ⟨b, h₄⟩
+  rcases exists_lub' s h₂ h₃ with ⟨b, h₄⟩
   have h₄ : b ≤ b - 1 := by
     apply h₄.right
     simp [upperBounds, s]
@@ -344,7 +346,7 @@ instance : Archimedean 𝓜 where
     exists n
     simp [le_of_lt h']
 
-theorem ofReal_surjective : Function.Surjective 𝓜.ofReal := by
+theorem ofReal_surjective : Function.Surjective (@ofReal 𝓜) := by
   intro a
   let s : Set ℝ := { ↑q | (q : ℚ) (_ : q ≤ a) }
   have h₁ : s.Nonempty := by
@@ -367,7 +369,7 @@ theorem ofReal_surjective : Function.Surjective 𝓜.ofReal := by
     rw [lt_isLUB_iff (Real.isLUB_sSup _ h₁ h₂)] at h₅
     rcases h₅ with ⟨_, ⟨r', h₅, h₆⟩, h₇⟩
     subst h₆; simp at h₇
-    apply le_trans' h₅
+    apply _root_.le_trans' h₅
     apply le_of_lt; simp [h₇]
   · intro b h₃
     simp [upperBounds] at h₃
@@ -378,7 +380,7 @@ theorem ofReal_surjective : Function.Surjective 𝓜.ofReal := by
     exists r
     simp [le_of_lt h₄]
 
-theorem ofReal_add : 𝓜.ofReal (x + y) = 𝓜.ofReal x + 𝓜.ofReal y := by
+theorem ofReal_add : @ofReal 𝓜 (x + y) = ofReal x + ofReal y := by
   apply ofReal_isLUB.unique
   constructor
   · intro z; simp; intro q h₁ h₂; subst h₂
@@ -393,23 +395,23 @@ theorem ofReal_add : 𝓜.ofReal (x + y) = 𝓜.ofReal x + 𝓜.ofReal y := by
       simp [sub_add_sub_comm, δ, ←Rat.cast_add] at this
       rw [←Rat.cast_add, Rat.cast_le]
       exact le_of_lt this
-    · apply add_le_add <;> rw [←ofReal_rat, ofReal_le] <;> apply le_of_lt <;> assumption
+    · apply _root_.add_le_add <;> rw [←ofReal_rat, ofReal_le] <;> apply le_of_lt <;> assumption
   · intro a h₁; simp [upperBounds] at h₁
     apply le_of_forall_rat_lt_imp_le
     intro q h₂
-    let δ := (𝓜.ofReal x + 𝓜.ofReal y - q) / 2
+    let δ := (@ofReal 𝓜 x + @ofReal 𝓜 y - q) / 2
     have h₃ : 0 < δ := by simp [δ, h₂]
-    rcases exists_rat_btwn (sub_lt_self (𝓜.ofReal x) h₃) with ⟨r₁, h₄, h₅⟩
-    rcases exists_rat_btwn (sub_lt_self (𝓜.ofReal y) h₃) with ⟨r₂, h₆, h₇⟩
+    rcases exists_rat_btwn (sub_lt_self (ofReal x) h₃) with ⟨r₁, h₄, h₅⟩
+    rcases exists_rat_btwn (sub_lt_self (ofReal y) h₃) with ⟨r₂, h₆, h₇⟩
     trans r₁ + r₂
     · have := add_lt_add h₄ h₆
       simp [sub_add_sub_comm, δ, ←Rat.cast_add] at this
       rw [←Rat.cast_add, Rat.cast_le]
       exact le_of_lt this
     · rw [←Rat.cast_add]; apply h₁; simp
-      apply add_le_add <;> rw [←𝓜.ofReal_le, ofReal_rat] <;> apply le_of_lt <;> assumption
+      apply _root_.add_le_add <;> rw [←@ofReal_le 𝓜, ofReal_rat] <;> apply le_of_lt <;> assumption
 
-theorem ofReal_neg : 𝓜.ofReal (-x) = -𝓜.ofReal x := by
+theorem ofReal_neg : @ofReal 𝓜 (-x) = -ofReal x := by
   rw [eq_neg_iff_add_eq_zero, ←ofReal_add, _root_.add_left_neg, ofReal_zero]
 
 lemma exists_sqrt (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
@@ -431,7 +433,7 @@ lemma exists_sqrt (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     · exact h₄
     · simp
     · simp
-  rcases exists_lub s h₁ h₂ with ⟨b, h₃⟩
+  rcases exists_lub' s h₁ h₂ with ⟨b, h₃⟩
   exists b
   have h₄ : 0 ≤ b := by apply h₃.left; simp [s]; exact h
   simp [h₄]
@@ -446,7 +448,7 @@ lemma exists_sqrt (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
       · apply lt_of_lt_of_le zero_lt_one; simp; exact h₄
     have h₇ : (b + δ) ^ 2 ≤ a := by
       calc
-        (b + δ) ^ 2 = b ^ 2 + δ * (2 * b + δ) := by rw [add_pow_two, mul_add, ←add_assoc, mul_comm δ, pow_two δ]
+        (b + δ) ^ 2 = b ^ 2 + δ * (2 * b + δ) := by rw [add_pow_two, mul_add, ←add_assoc', mul_comm' δ, pow_two δ]
         _ ≤ b ^ 2 + δ * (2 * b + 1) := by simp [add_le_add_iff_left, mul_le_mul_left h₆]; apply min_le_left
         _ ≤ b ^ 2 + (a - b ^ 2) := by
           rw [add_le_add_iff_left, ←le_div_iff]
@@ -466,18 +468,18 @@ lemma exists_sqrt (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
       · simp; exact h₆
     have h₈ : (b - δ) ^ 2 ≥ a := by
       calc
-        (b - δ) ^ 2 = b ^ 2 - δ * (2 * b - δ) := by rw [sub_pow_two, mul_sub, ←sub_add, mul_comm δ, pow_two δ]
+        (b - δ) ^ 2 = b ^ 2 - δ * (2 * b - δ) := by rw [sub_pow_two, mul_sub, ←sub_add, mul_comm' δ, pow_two δ]
         _ ≥ b ^ 2 - δ * (2 * b) := by apply sub_le_sub_left; rw [mul_le_mul_left h₇]; simp; exact le_of_lt h₇
         _ ≥ b ^ 2 - (b ^ 2 - a) := by apply sub_le_sub_left; rw [←le_div_iff]; simp; exact h₆
         _ ≥ a := by simp
     have h₉ : b - δ ∈ upperBounds s := by
       intro c ⟨h', h''⟩
-      apply le_trans' h₈ at h''
+      apply _root_.le_trans' h₈ at h''
       rw [pow_le_pow_iff_left] at h''
       · exact h''
       · exact h'
       · simp [δ]; rw [div_le_iff]
-        · simp [two_mul, mul_add, pow_two, add_assoc]
+        · simp [two_mul, mul_add, pow_two, add_assoc']
           exact add_nonneg (mul_nonneg h₄ h₄) h
         · simp; exact h₆
       · simp
@@ -485,7 +487,7 @@ lemma exists_sqrt (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     simp at h₉
     exact not_lt_of_ge h₉ h₇
 
-theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y := by
+theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
   wlog h : 0 < x generalizing x y
   · simp at h
     rcases lt_or_eq_of_le h with h | h
@@ -530,11 +532,11 @@ theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y :
           simp; exact le_of_lt h₃
         · apply div_nonneg (mul_nonneg (le_of_lt h) (le_of_lt h'))
           simp; exact le_of_lt h₃
-      · apply mul_le_mul
+      · apply _root_.mul_le_mul
         · rw [←ofReal_rat, ofReal_le]; exact le_of_lt h₆
         · rw [←ofReal_rat, ofReal_le]; exact le_of_lt h₈
         · simp; rw [←Rat.cast_le (K := ℝ), Rat.cast_zero]
-          apply le_trans' (le_of_lt h₇)
+          apply _root_.le_trans' (le_of_lt h₇)
           exact div_nonneg (le_of_lt h') (_root_.le_trans _root_.zero_le_one (le_of_lt h₄))
         · rw [←ofReal_zero, ofReal_le]; exact le_of_lt h
     · simp at h₃
@@ -545,7 +547,7 @@ theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y :
     apply le_of_forall_rat_lt_imp_le
     intro q h₂
     by_cases h₃ : q > 0
-    · rcases exists_sqrt (𝓜.ofReal x * 𝓜.ofReal y / q : 𝓜)
+    · rcases exists_sqrt (@ofReal 𝓜 x * @ofReal 𝓜 y / q : 𝓜)
         (by
           apply div_nonneg
           · apply mul_nonneg <;> rw [←ofReal_zero, ofReal_le] <;> apply le_of_lt <;> assumption
@@ -555,8 +557,8 @@ theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y :
         rw [h₅, lt_div_iff]
         · simp; exact h₂
         · simp; exact h₃
-      rcases exists_rat_btwn (div_lt_self (a := 𝓜.ofReal x) (by rw [←ofReal_zero, ofReal_lt]; exact h) h₆) with ⟨r₁, h₇, h₈⟩
-      rcases exists_rat_btwn (div_lt_self (a := 𝓜.ofReal y) (by rw [←ofReal_zero, ofReal_lt]; exact h') h₆) with ⟨r₂, h₉, h₁₀⟩
+      rcases exists_rat_btwn (div_lt_self (a := ofReal x) (by rw [←ofReal_zero, ofReal_lt]; exact h) h₆) with ⟨r₁, h₇, h₈⟩
+      rcases exists_rat_btwn (div_lt_self (a := ofReal y) (by rw [←ofReal_zero, ofReal_lt]; exact h') h₆) with ⟨r₂, h₉, h₁₀⟩
       trans r₁ * r₂
       · have := mul_lt_mul'' h₇ h₉
           (div_nonneg (by rw [←ofReal_zero, ofReal_le]; exact le_of_lt h) (_root_.le_trans _root_.zero_le_one (le_of_lt h₆)))
@@ -565,11 +567,11 @@ theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y :
         · exact le_of_lt this
         · apply ne_of_gt; apply mul_pos <;> rw [←ofReal_zero, ofReal_lt] <;> assumption
       · rw [←Rat.cast_mul]; apply h₁; simp
-        apply mul_le_mul
+        apply _root_.mul_le_mul
         · rw [←ofReal_rat, ofReal_lt] at h₈; exact le_of_lt h₈
         · rw [←ofReal_rat, ofReal_lt] at h₁₀; exact le_of_lt h₁₀
         · simp; rw [←Rat.cast_le (K := 𝓜), Rat.cast_zero]
-          apply le_trans' (le_of_lt h₉)
+          apply _root_.le_trans' (le_of_lt h₉)
           apply div_nonneg
           · rw [←ofReal_zero, ofReal_le]; exact le_of_lt h'
           · exact (_root_.le_trans _root_.zero_le_one (le_of_lt h₆))
@@ -579,27 +581,23 @@ theorem ofReal_mul {x y} : 𝓜.ofReal (x * y) = 𝓜.ofReal x * 𝓜.ofReal y :
       · simp; exact h₃
       · rw [←Rat.cast_zero]; apply h₁; simp; exact mul_nonneg (le_of_lt h) (le_of_lt h')
 
-theorem ofReal_inv : 𝓜.ofReal x⁻¹ = (𝓜.ofReal x)⁻¹ := by
+theorem ofReal_inv : @ofReal 𝓜 x⁻¹ = (ofReal x)⁻¹ := by
   by_cases h : x = 0
   · simp [h, ofReal_zero]
   · rw [←mul_eq_one_iff_eq_inv₀, ←ofReal_mul, inv_mul_cancel h, ofReal_one]
     intro h'; rw [←ofReal_zero] at h'; exact h (ofReal_injective h')
 
-end Model
-
-namespace Real
-
 noncomputable def model_iso_𝓡 (𝓜 : Real.Model) : 𝓡 ≃ᴹ 𝓜.toStructure where
-  toEquiv := Equiv.ofBijective 𝓜.ofReal ⟨𝓜.ofReal_injective, 𝓜.ofReal_surjective⟩
+  toEquiv := Equiv.ofBijective ofReal ⟨ofReal_injective, ofReal_surjective⟩
   on_func
-  | .zero, v => by simp [Vec.eq_nil]; apply 𝓜.ofReal_zero
-  | .one, v => by simp [Vec.eq_nil]; apply 𝓜.ofReal_one
-  | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply 𝓜.ofReal_add
-  | .neg, v => by rw [Vec.eq_one (_ ∘ _)]; apply 𝓜.ofReal_neg
-  | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply 𝓜.ofReal_mul
-  | .inv, v => by rw [Vec.eq_one (_ ∘ _)]; apply 𝓜.ofReal_inv
+  | .zero, v => by simp [Vec.eq_nil]; apply ofReal_zero
+  | .one, v => by simp [Vec.eq_nil]; apply ofReal_one
+  | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_add
+  | .neg, v => by rw [Vec.eq_one (_ ∘ _)]; apply ofReal_neg
+  | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_mul
+  | .inv, v => by rw [Vec.eq_one (_ ∘ _)]; apply ofReal_inv
   on_rel
-  | .le, v => by rw [Vec.eq_two (_ ∘ _)]; symm; apply 𝓜.ofReal_le
+  | .le, v => by rw [Vec.eq_two (_ ∘ _)]; symm; apply ofReal_le
 
 noncomputable def categorical : Real.Categorical
 | 𝓜₁, 𝓜₂ => .trans (.symm (model_iso_𝓡 𝓜₁)) (model_iso_𝓡 𝓜₂)
