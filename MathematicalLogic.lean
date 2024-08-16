@@ -11,3 +11,5 @@ import MathematicalLogic.SecondOrder.Syntax
 import MathematicalLogic.SecondOrder.Semantics
 import MathematicalLogic.SecondOrder.Peano
 import MathematicalLogic.SecondOrder.Real
+import MathematicalLogic.ZFSet
+import MathematicalLogic.SecondOrder.ZF
