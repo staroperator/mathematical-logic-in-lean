@@ -69,9 +69,6 @@ macro_rules
 @[ext] theorem ext {v₁ v₂ : Vec α n} :
   (∀ i, v₁ i = v₂ i) → v₁ = v₂ := funext
 
-theorem ext_iff {v₁ v₂ : Vec α n} :
-  (∀ i, v₁ i = v₂ i) ↔ v₁ = v₂ := ⟨ext, congr_fun⟩
-
 def head (v : Vec α (n + 1)) := v 0
 @[simp] theorem head_cons : (a ∷ᵥ v).head = a := rfl
 def tail (v : Vec α (n + 1)) : Vec α n := v ∘ Fin.succ

@@ -135,7 +135,6 @@ elab "papply" t:(ppSpace colGt term) d:((" with " num)?) : tactic =>
     let weakenTy ← do
       let weakenTy := Lean.mkApp3
         (.const ``Set.Subset [0]) (Lean.mkApp2 (.const ``Formula []) 𝓛 n) Γ Δ
-      Lean.Meta.checkTypeIsProp weakenTy
       pure weakenTy
     let weakenTerm ← do
       let mut weakenTerm ← `(Set.Subset.refl _)

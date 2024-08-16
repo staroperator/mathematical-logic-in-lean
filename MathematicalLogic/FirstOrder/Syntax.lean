@@ -31,7 +31,7 @@ instance Term.decEq [∀ n, DecidableEq (𝓛.Func n)] : DecidableEq (𝓛.Term 
     · exact isFalse h
   case func.func n f v₁ m g v₂ =>
     by_cases h : n = m
-    · subst h; simp [Term.func.injEq]; rw [←Vec.ext_iff]
+    · subst h; simp [Term.func.injEq]; rw [Vec.ext_iff]
       have := λ i => decEq (v₁ i) (v₂ i)
       apply And.decidable
     · simp [h]; exact isFalse not_false
@@ -159,7 +159,7 @@ instance Formula.decEq [∀ n, DecidableEq (𝓛.Func n)] [∀ n, DecidableEq (�
   cases p <;> cases q
   case rel.rel n r₁ v₁ m r₂ v₂ =>
     by_cases h : n = m
-    · subst h; simp [rel.injEq]; rw [←Vec.ext_iff]; apply And.decidable
+    · subst h; simp [rel.injEq]; rw [Vec.ext_iff]; apply And.decidable
     · simp [h]; exact isFalse not_false
   case eq.eq =>
     rw [eq.injEq]; apply And.decidable

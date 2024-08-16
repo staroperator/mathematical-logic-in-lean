@@ -483,7 +483,7 @@ theorem monotone_chain {𝓛 : ℕ → Language} {φ : ∀ i, 𝓛 i →ᴸ 𝓛
   ∀ i j h, ((ofChain 𝓛 φ).hom i j h).onFormula '' Γ i ⊆ Γ j := by
   intro i j h
   induction h with
-  | refl => simp_rw [hom_id]; simp [Hom.id_onFormula]; rfl
+  | refl => simp_rw [hom_id]; simp [Hom.id_onFormula]
   | @step j h ih =>
     simp at h
     apply Set.Subset.trans _ (h₁ j)
