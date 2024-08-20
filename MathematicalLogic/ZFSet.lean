@@ -144,7 +144,7 @@ end
 noncomputable def replace (x : ZFSet) (f : ∀ y ∈ x, ZFSet) :=
   @range x.family (x.familyOfBFamily f)
 
-theorem mem_replace : y ∈ replace x f ↔ ∃ (z : ZFSet) (h : z ∈ x), y = f z h := by
+theorem mem_replace : y ∈ replace x f ↔ ∃ z h, y = f z h := by
   simp [replace]; constructor
   · intro ⟨a, h₁⟩; subst h₁
     exists x.familyEquiv a, (x.familyEquiv a).property
@@ -154,11 +154,6 @@ theorem mem_replace : y ∈ replace x f ↔ ∃ (z : ZFSet) (h : z ∈ x), y = f
 
 noncomputable def rank (x : ZFSet.{u}) : Ordinal.{u} :=
   Quotient.liftOn x PSet.rank PSet.rank_eq_of_equiv
-
--- theorem rank_is_succ (x : ZFSet) : ∃ o, x.rank = Order.succ o := by
---   induction' x using Quotient.inductionOn with x
---   simp only [rank, Quotient.liftOn_mk]
---   cases x; simp [PSet.rank]
 
 variable {x y : ZFSet}
 
@@ -181,9 +176,7 @@ theorem rank_mono : x ⊆ y → x.rank ≤ y.rank := by
   intro z h₁; apply rank_lt_of_mem; exact h h₁
 
 theorem rank_empty : (∅ : ZFSet).rank = 0 := by
-  apply le_antisymm
-  · apply rank_le_of_mem_rank_lt; simp
-  · simp
+  rw [←Ordinal.le_zero]; apply rank_le_of_mem_rank_lt; simp
 
 theorem rank_singleton : ({x} : ZFSet).rank = x.rank + 1 := by
   apply le_antisymm
@@ -345,17 +338,21 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
       · apply Ordinal.typein_lt_self
       · trans; apply Ordinal.typein_lt_self; exact h
 
+theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
+  x ∈ V κ.ord → x.card < κ := by
+  intro h
+  apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
+  apply card_V_lt_of_inaccessible hκ
+  apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+  rw [←mem_V_iff]
+  exact h
+
 theorem replace_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
   x ∈ V κ.ord → (∀ y h, f y h ∈ V κ.ord) → x.replace f ∈ V κ.ord := by
   intro h₁ h₂
   simp [mem_V_iff, replace, rank_range]
   apply Cardinal.sup_lt_ord_of_isRegular hκ.2.1
-  · rw [←card]
-    apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
-    apply card_V_lt_of_inaccessible hκ
-    apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-    rw [←mem_V_iff]
-    exact h₁
+  · rw [←card]; exact card_lt_of_mem_V_inaccessible hκ h₁
   · intro i
     apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
     simp [←mem_V_iff]
