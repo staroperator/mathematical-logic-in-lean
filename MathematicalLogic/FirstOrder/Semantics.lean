@@ -128,8 +128,7 @@ end Theory
 
 namespace Structure
 
-def theory (𝓜 : 𝓛.Structure) : 𝓛.Theory :=
-  { p | 𝓜 ⊨ₛ p }
+def theory (𝓜 : 𝓛.Structure) : 𝓛.Theory := { p | 𝓜 ⊨ₛ p }
 
 theorem theory.satisfiable {𝓜 : Structure.{u} 𝓛} : Satisfiable.{u} 𝓜.theory := by
   rw [Theory.satisfiable_iff]; exact ⟨𝓜, λ _ h => h⟩

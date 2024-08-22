@@ -117,7 +117,7 @@ theorem card_empty : card ∅ = 0 := by
 theorem card_powerset : card (powerset x) = 2 ^ card x := by
   rw [←lift_inj, card_eq, lift_power, lift_two, card_eq, ←mk_powerset, Cardinal.eq]
   refine ⟨⟨
-    λ ⟨y, h⟩ => ⟨{z | z ∈ y}, λ z h' => by simp at *; exact h h'⟩,
+    λ ⟨y, h⟩ => ⟨{ z | z ∈ y }, λ z h' => by simp at *; exact h h'⟩,
     λ ⟨s, _⟩ => ⟨x.sep s, by simp; intro; aesop⟩,
     ?_, ?_⟩⟩
   · intro ⟨y, h⟩; ext z; aesop

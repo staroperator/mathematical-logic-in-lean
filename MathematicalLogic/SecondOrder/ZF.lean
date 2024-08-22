@@ -365,7 +365,7 @@ theorem mem_wf : @WellFounded 𝓜 (· ∈ ·) := by
 instance : WellFoundedRelation 𝓜 := ⟨_, mem_wf⟩
 
 open Cardinal in
-def card (x : 𝓜) : Cardinal.{u} := #{y | y ∈ x}
+def card (x : 𝓜) : Cardinal.{u} := #{ y | y ∈ x }
 
 theorem card_mono : x ⊆ y → card x ≤ card y := by
   intro h
@@ -377,7 +377,7 @@ theorem card_power : card (power x) = 2 ^ card x := by
   rw [card, card, ←Cardinal.mk_powerset, Cardinal.eq]
   simp [Set.powerset]
   refine ⟨
-    λ ⟨y, h⟩ => ⟨{z | z ∈ y}, by simp; exact h⟩,
+    λ ⟨y, h⟩ => ⟨{ z | z ∈ y }, by simp; exact h⟩,
     λ ⟨s, h⟩ => ⟨sep x (· ∈ s), by intro z; simp; intro _ h'; exact h h'⟩,
     ?_, ?_⟩
   · intro ⟨y, h⟩; ext z; simp; apply h
