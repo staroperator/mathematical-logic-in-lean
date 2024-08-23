@@ -29,6 +29,13 @@ namespace Fin
   (zero : motive 0) (one : motive 1) (two : motive 2)
   (i : Fin 3) : motive i :=
   i.cases zero (λ i => i.cases one (λ j => j.cases two (·.elim0)))
+
+@[simp] theorem forall_fin1 {p : Fin 1 → Prop} : (∀ (i : Fin 1), p i) ↔ p 0 :=
+  ⟨λ h => h 0, λ h i => i.cases1 h⟩
+@[simp] theorem forall_fin2 {p : Fin 2 → Prop} : (∀ (i : Fin 2), p i) ↔ p 0 ∧ p 1 :=
+  ⟨λ h => ⟨h 0, h 1⟩, λ h i => i.cases2 h.left h.right⟩
+@[simp] theorem forall_fin3 {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 :=
+  ⟨λ h => ⟨h 0, h 1, h 2⟩, λ h i => i.cases3 h.left h.right.left h.right.right⟩
 end Fin
 
 def Vec (α : Type u) (n : ℕ) := Fin n → α
@@ -94,6 +101,15 @@ theorem eq_three (v : Vec α 3) : v = [v 0, v 1, v 2]ᵥ := by
   rw [eq_cons v, eq_two v.tail]; rfl
 theorem eq_four (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
   rw [eq_cons v, eq_three v.tail]; rfl
+
+@[simp] theorem exists_vec0 {p : Vec α 0 → Prop} : ∃ (v : Vec α 0), p v ↔ p []ᵥ := by
+  simp [Vec, Fin.exists_fin_zero_pi]; simp [Vec.eq_nil]
+@[simp] theorem exists_vec1 {p : Vec α 1 → Prop} : (∃ (v : Vec α 1), p v) ↔ ∃ x, p [x]ᵥ := by
+  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
+@[simp] theorem exists_vec2 {p : Vec α 2 → Prop} : (∃ (v : Vec α 2), p v) ↔ ∃ x y, p [x, y]ᵥ := by
+  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
+@[simp] theorem exists_vec3 {p : Vec α 3 → Prop} : (∃ (v : Vec α 3), p v) ↔ ∃ x y z, p [x, y, z]ᵥ := by
+  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
 
 section
 
@@ -233,6 +249,7 @@ instance encodable : Encodable (Vec α n) where
 
 @[simp] theorem encode_nil {v : Vec α 0} : Encodable.encode v = 0 := rfl
 @[simp] theorem encode_cons {v : Vec α (n + 1)} : Encodable.encode v = (Encodable.encode v.head).pair (Encodable.encode v.tail) := rfl
+theorem encode_eq {v : Vec α n} : Encodable.encode v = Vec.paired (λ i => Encodable.encode (v i)) := rfl
 end
 
 instance [Countable α] : Countable (Vec α n) :=

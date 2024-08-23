@@ -787,6 +787,15 @@ theorem Structure.theory.complete {𝓜 : 𝓛.Structure} : Complete 𝓜.theory
   · exact Or.inl (.hyp h)
   · exact Or.inr (.hyp h)
 
+theorem Complete.provable_iff_satisfied {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} :
+  Complete 𝓣 → (𝓣 ⊢ p ↔ 𝓜 ⊨ₛ p) := by
+  intro h
+  by_cases h' : 𝓣 ⊢ p <;> simp [h']
+  · apply soundness h'; exact 𝓜.satisfy_theory
+  · cases h p with
+    | inl h => contradiction
+    | inr h => apply soundness h; exact 𝓜.satisfy_theory
+
 namespace Theory
 
 abbrev theorems (𝓣 : 𝓛.Theory) : 𝓛.Theory := { p | 𝓣 ⊢ p }
@@ -797,10 +806,7 @@ theorem eq_theory_of_complete {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} :
   Complete 𝓣 → 𝓣.theorems = 𝓜.theory := by
   intro h
   ext p
-  by_cases h' : 𝓣 ⊢ p <;> simp [h']
-  · apply soundness h'; exact 𝓜.satisfy_theory
-  · cases h p with
-    | inl h => contradiction
-    | inr h => apply soundness h; exact 𝓜.satisfy_theory
+  simp [Structure.theory]
+  rw [h.provable_iff_satisfied]
 
 end FirstOrder.Language.Theory

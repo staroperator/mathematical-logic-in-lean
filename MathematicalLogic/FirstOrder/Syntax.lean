@@ -137,6 +137,16 @@ def Formula.andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | _ + 1, v => v.head ⩑ andN v.tail
 notation3:57 "⋀"(...)", " r:(scoped r => Formula.andN r) => r
 
+def Formula.allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
+| 0, p => p
+| m + 1, p => allN m (∀' p)
+notation "∀^[" n "]" => Formula.allN n
+
+def Formula.existsN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
+| 0, p => p
+| m + 1, p => existsN m (∃' p)
+notation "∃^[" n "]" => Formula.existsN n
+
 @[simp] theorem Formula.false_eq : Formula.false = (⊥ : 𝓛.Formula n) := rfl
 @[simp] theorem Formula.imp_eq : Formula.imp p q = p ⇒ q := rfl
 @[simp] theorem Formula.imp_inj {p₁ q₁ p₂ q₂ : 𝓛.Formula n} : (p₁ ⇒ q₁) = p₂ ⇒ q₂ ↔ p₁ = p₂ ∧ q₁ = q₂ :=

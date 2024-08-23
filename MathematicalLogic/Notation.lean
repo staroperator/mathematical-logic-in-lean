@@ -1,4 +1,4 @@
-import Mathlib.Order.BoundedOrder
+import Mathlib.Order.Notation
 
 class PropNotation (α : Type u) where
   false : α

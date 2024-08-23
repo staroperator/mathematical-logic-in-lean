@@ -124,6 +124,10 @@ theorem satisfiable_iff {𝓣 : 𝓛.Theory} : Satisfiable.{u} 𝓣 ↔ Nonempty
   · intro ⟨𝓜, ρ, h⟩; rw [Vec.eq_nil ρ] at h; exact ⟨⟨𝓜, h⟩⟩
   · intro ⟨𝓜⟩; exists 𝓜, []ᵥ; apply 𝓜.satisfy_theory
 
+def Model.weaken {𝓣₁ 𝓣₂ : 𝓛.Theory} (𝓜 : 𝓣₁.Model) (h : 𝓣₂ ⊆ 𝓣₁) : 𝓣₂.Model where
+  toStructure := 𝓜.toStructure
+  satisfy_theory p h' := 𝓜.satisfy_theory p (h h')
+
 end Theory
 
 namespace Structure
