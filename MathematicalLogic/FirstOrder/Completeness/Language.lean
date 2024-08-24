@@ -1,4 +1,5 @@
 import MathematicalLogic.FirstOrder.Proof
+import MathematicalLogic.FirstOrder.Semantics
 
 section
 

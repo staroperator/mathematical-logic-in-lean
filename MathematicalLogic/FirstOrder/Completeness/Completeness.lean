@@ -1,3 +1,4 @@
+import MathematicalLogic.FirstOrder.Soundness
 import MathematicalLogic.FirstOrder.Completeness.Henkin
 import MathematicalLogic.FirstOrder.Completeness.Lindenbaum
 import MathematicalLogic.FirstOrder.Completeness.TermModel

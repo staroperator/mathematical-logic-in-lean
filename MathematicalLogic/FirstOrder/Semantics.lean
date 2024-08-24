@@ -22,19 +22,12 @@ def interpTerm (𝓜 : 𝓛.Structure) : 𝓛.Term n → 𝓜.Assignment n → �
 | f ⬝ₜ v, ρ => 𝓜.interpFunc f λ i => 𝓜.interpTerm (v i) ρ
 notation:80 "⟦" t "⟧ₜ " 𝓜 ", " ρ:80 => interpTerm 𝓜 t ρ
 
-def Assignment.subst (ρ : 𝓜.Assignment n) (σ : 𝓛.Subst m n) : 𝓜.Assignment m :=
-  λ x => ⟦ σ x ⟧ₜ 𝓜, ρ
-notation:80 ρ "[" σ "]ₐ" => Structure.Assignment.subst ρ σ
-
-lemma Assignment.subst_shift : (u ∷ᵥ ρ)[Subst.shift]ₐ = ρ := by
-  funext x; simp [Assignment.subst, interpTerm]
-
-lemma Assignment.subst_single : ρ[↦ₛ t]ₐ = ⟦ t ⟧ₜ 𝓜, ρ ∷ᵥ ρ := by
-  funext x; cases x using Fin.cases <;> simp [Assignment.subst, interpTerm]
-
-theorem interpTerm_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, ρ[σ]ₐ := by
-  induction t with simp [Structure.Assignment.subst, interpTerm]
+theorem interpTerm_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, λ x => ⟦ σ x ⟧ₜ 𝓜, ρ := by
+  induction t with simp [interpTerm]
   | func f v ih => simp [ih]
+
+theorem interpTerm_shift : ⟦ ↑ₜt ⟧ₜ 𝓜, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ 𝓜, ρ := by
+  simp [Term.shift, interpTerm_subst]; rfl
 
 def interpFormula (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
 | _, r ⬝ᵣ v, ρ => 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
@@ -56,14 +49,24 @@ theorem interp_andN {v : Vec (𝓛.Formula n) m} :
   | zero => simp [interpFormula]
   | succ n ih => simp [interp_and, ih, Fin.forall_fin_succ, Vec.head]
 
-theorem interpFormula_subst {σ : 𝓛.Subst m n} : 𝓜 ⊨[ρ] p[σ]ₚ ↔ 𝓜 ⊨[ρ[σ]ₐ] p := by
-  induction p generalizing n with simp [Assignment.subst, interpFormula]
+theorem interpFormula_subst {σ : 𝓛.Subst m n} : 𝓜 ⊨[ρ] p[σ]ₚ ↔ 𝓜 ⊨[λ x => ⟦ σ x ⟧ₜ 𝓜, ρ] p := by
+  induction p generalizing n with simp [interpFormula]
   | rel | eq => simp [interpTerm_subst]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
-      apply forall_congr'
-      intro u; simp [ih]; congr!
-      funext x; cases x using Fin.cases <;> simp [Assignment.subst, Assignment.subst_shift, interpTerm, Term.shift, interpTerm_subst]
+    apply forall_congr'
+    intro u; simp [ih]
+    congr! with x
+    cases x using Fin.cases <;> simp [interpTerm, interpTerm_shift]
+
+theorem interpFormula_subst_single : 𝓜 ⊨[ρ] p[↦ₛ t]ₚ ↔ 𝓜 ⊨[ ⟦t⟧ₜ 𝓜, ρ ∷ᵥ ρ ] p := by
+  simp [interpFormula_subst]
+  congr! with x
+  cases x using Fin.cases <;> simp [interpTerm]
+
+theorem interpFormula_shift : 𝓜 ⊨[u ∷ᵥ ρ] ↑ₚp ↔ 𝓜 ⊨[ρ] p := by
+  simp [Formula.shift, interpFormula_subst]
+  rfl
 
 abbrev satisfy (𝓜 : 𝓛.Structure) (p : 𝓛.Sentence) := 𝓜 ⊨[[]ᵥ] p
 infix:50 " ⊨ₛ " => satisfy

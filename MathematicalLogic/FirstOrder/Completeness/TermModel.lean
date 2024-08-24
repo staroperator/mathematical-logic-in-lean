@@ -1,5 +1,6 @@
 import Mathlib.Data.Fintype.Quotient
 import MathematicalLogic.FirstOrder.Proof
+import MathematicalLogic.FirstOrder.Semantics
 
 def Quotient.liftOnVec {s : Setoid α} (v : Vec (Quotient s) n) (f : Vec α n → β)
   (h : (v₁ v₂ : Vec α n) → (∀ i, v₁ i ≈ v₂ i) → f v₁ = f v₂) : β :=
