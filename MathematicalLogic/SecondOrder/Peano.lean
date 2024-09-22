@@ -21,13 +21,13 @@ local prefix:max "S " => Term.succ
 namespace Theory
 
 inductive PA₂ : Peano.Theory where
-| succ_ne_zero : PA₂ (∀' (~ S #0 ≐ 0))
-| succ_inj : PA₂ (∀' (∀' (S #1 ≐ S #0 ⇒ #1 ≐ #0)))
-| add_zero : PA₂ (∀' (#0 + 0 ≐ #0))
-| add_succ : PA₂ (∀' (∀' (#1 + S #0 ≐ S (#1 + #0))))
-| mul_zero : PA₂ (∀' (#0 * 0 ≐ 0))
-| mul_succ : PA₂ (∀' (∀' (#1 * S #0 ≐ #1 * #0 + #1)))
-| ind : PA₂ (∀ʳ 1 (0 ⬝ʳᵛ [0]ᵥ ⇒ (∀' (1 ⬝ʳᵛ [#0]ᵥ ⇒ 1 ⬝ʳᵛ [S #0]ᵥ)) ⇒ ∀' (1 ⬝ʳᵛ [#0]ᵥ)))
+| ax_succ_ne_zero : PA₂ (∀' (~ S #0 ≐ 0))
+| ax_succ_inj : PA₂ (∀' (∀' (S #1 ≐ S #0 ⇒ #1 ≐ #0)))
+| ax_add_zero : PA₂ (∀' (#0 + 0 ≐ #0))
+| ax_add_succ : PA₂ (∀' (∀' (#1 + S #0 ≐ S (#1 + #0))))
+| ax_mul_zero : PA₂ (∀' (#0 * 0 ≐ 0))
+| ax_mul_succ : PA₂ (∀' (∀' (#1 * S #0 ≐ #1 * #0 + #1)))
+| ax_ind : PA₂ (∀ʳ 1 (0 ⬝ʳᵛ [0]ᵥ ⇒ (∀' (1 ⬝ʳᵛ [#0]ᵥ ⇒ 1 ⬝ʳᵛ [S #0]ᵥ)) ⇒ ∀' (1 ⬝ʳᵛ [#0]ᵥ)))
 
 
 namespace PA₂
@@ -45,9 +45,9 @@ def 𝓝 : PA₂.Model where
   interpRel r := nomatch r
   satisfy_theory p h := by
     cases h with simp
-    | add_succ => intro n m; rfl
-    | mul_succ => intro n m; rfl
-    | ind =>
+    | ax_add_succ => intro n m; rfl
+    | ax_mul_succ => intro n m; rfl
+    | ax_ind =>
       intros r h₁ h₂ n
       induction n with
       | zero => exact h₁
@@ -77,17 +77,17 @@ theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
   cases' m with m <;> simp [Nat.lt_succ] at h₃
   induction n generalizing m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .succ_ne_zero
+    have := 𝓜.satisfy_theory _ .ax_succ_ne_zero
     simp at this; apply this; symm; exact h₁
   | succ n ih =>
-    have := 𝓜.satisfy_theory _ .succ_inj
+    have := 𝓜.satisfy_theory _ .ax_succ_inj
     simp at this; apply this at h₁
     cases' m with m <;> simp at h₃
     exact ih _ h₁ h₃
 
 theorem ofNat_surjective : Function.Surjective (@ofNat 𝓜) := by
   intro u
-  have := 𝓜.satisfy_theory _ .ind
+  have := 𝓜.satisfy_theory _ .ax_ind
   simp at this
   apply this (r := λ v => ∃ n, ofNat n = v 0)
   · exists 0
@@ -100,10 +100,10 @@ theorem ofNat_add : @ofNat 𝓜 (n + m) = ofNat n + ofNat m := by
   symm
   induction m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .add_zero
+    have := 𝓜.satisfy_theory _ .ax_add_zero
     simp at this; apply this
   | succ m ih =>
-    have := 𝓜.satisfy_theory _ .add_succ
+    have := 𝓜.satisfy_theory _ .ax_add_succ
     simp at this
     trans
     · apply this
@@ -113,10 +113,10 @@ theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
   symm
   induction m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .mul_zero
+    have := 𝓜.satisfy_theory _ .ax_mul_zero
     simp at this; apply this
   | succ m ih =>
-    have := 𝓜.satisfy_theory _ .mul_succ
+    have := 𝓜.satisfy_theory _ .ax_mul_succ
     simp at this
     trans
     · apply this

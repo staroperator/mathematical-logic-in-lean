@@ -3,9 +3,9 @@ import MathematicalLogic.FirstOrder.Semantics
 
 section
 
-variable (r : α → α → Prop) [IsTrans α r] [IsDirected α r] [h : Nonempty α] 
+variable (r : α → α → Prop) [IsTrans α r] [IsDirected α r]
 
-lemma directed_of_vec (v : Vec α n) : ∃ a, ∀ i, r (v i) a := by
+lemma directed_of_vec [h : Nonempty α] (v : Vec α n) : ∃ a, ∀ i, r (v i) a := by
   induction n with
   | zero => rcases h with ⟨a⟩; exists a; exact (·.elim0)
   | succ n ih =>
@@ -460,7 +460,7 @@ theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (𝓛 i).Formu
       apply Set.mem_of_subset_of_mem (h₁ j₂ k (h₇.trans h₈'))
       simp; exists q
     · simp_rw [←φ.hom_comp h₄ h₈, Hom.comp_onFormula]
-      rw [←Function.comp, Set.image_comp]
+      rw [←Function.comp_def, Set.image_comp]
       apply Set.Subset.trans (Set.image_subset _ h₅)
       apply h₁
 
@@ -489,7 +489,7 @@ theorem monotone_chain {𝓛 : ℕ → Language} {φ : ∀ i, 𝓛 i →ᴸ 𝓛
     simp at h
     apply Set.Subset.trans _ (h₁ j)
     simp_rw [←hom_comp _ h (Nat.le_succ j), Hom.comp_onFormula]
-    rw [←Function.comp, Set.image_comp]
+    rw [←Function.comp_def, Set.image_comp]
     simp only [ofChain_hom_succ]
     apply Set.image_subset
     exact ih

@@ -144,7 +144,7 @@ instance decEq [DecidableEq α] : DecidableEq (Vec α n) := by
   | succ n ih =>
     rw [eq_cons v₁, eq_cons v₂, cons_eq_iff]
     have := ih v₁.tail v₂.tail
-    exact And.decidable
+    infer_instance
 
 def max : {n : ℕ} → Vec ℕ n → ℕ
 | 0, _ => 0
@@ -239,7 +239,7 @@ theorem encode_decode {v : Vec α n} : decode n v.encode = some v := by
   induction n with simp [encode, decode, paired]
   | zero => simp [eq_nil]
   | succ n ih =>
-    simp [head, tail, Function.comp]
+    simp [head, tail, Function.comp_def]
     rw [←encode, ih, eq_cons v]; rfl
 
 instance encodable : Encodable (Vec α n) where
@@ -248,7 +248,7 @@ instance encodable : Encodable (Vec α n) where
   encodek _ := encode_decode
 
 @[simp] theorem encode_nil {v : Vec α 0} : Encodable.encode v = 0 := rfl
-@[simp] theorem encode_cons {v : Vec α (n + 1)} : Encodable.encode v = (Encodable.encode v.head).pair (Encodable.encode v.tail) := rfl
+@[simp] theorem encode_cons {v : Vec α n} : Encodable.encode (a ∷ᵥ v) = (Encodable.encode a).pair (Encodable.encode v) := rfl
 theorem encode_eq {v : Vec α n} : Encodable.encode v = Vec.paired (λ i => Encodable.encode (v i)) := rfl
 end
 

@@ -1,0 +1,6 @@
+{
+    "lean4.input.customTranslations": {
+        "dotand": "⩑",
+        "dotor": "⩒"
+    }
+}

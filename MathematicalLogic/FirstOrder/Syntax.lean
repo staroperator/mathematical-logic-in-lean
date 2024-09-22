@@ -33,7 +33,7 @@ instance Term.decEq [∀ n, DecidableEq (𝓛.Func n)] : DecidableEq (𝓛.Term 
     by_cases h : n = m
     · subst h; simp [Term.func.injEq]; rw [Vec.ext_iff]
       have := λ i => decEq (v₁ i) (v₂ i)
-      apply And.decidable
+      infer_instance
     · simp [h]; exact isFalse not_false
   all_goals exact isFalse Term.noConfusion
 
@@ -63,7 +63,7 @@ def Subst.id : 𝓛.Subst n n := λ x => #x
 def Subst.comp (σ₁ : 𝓛.Subst n m) (σ₂ : 𝓛.Subst m k) : 𝓛.Subst n k := λ x => (σ₁ x)[σ₂]ₜ
 infixl:90 " ∘ₛ " => Subst.comp
 @[simp] theorem Subst.comp_app : (σ₁ ∘ₛ σ₂) x = (σ₁ x)[σ₂]ₜ := rfl
-@[simp] theorem Term.subst_comp : t[σ₁ ∘ₛ σ₂]ₜ = t[σ₁]ₜ[σ₂]ₜ := by
+theorem Term.subst_comp : t[σ₁ ∘ₛ σ₂]ₜ = t[σ₁]ₜ[σ₂]ₜ := by
   induction t with simp
   | func f v ih => ext; apply ih
 
@@ -93,6 +93,7 @@ def Subst.lift (σ : 𝓛.Subst n m) : 𝓛.Subst (n + 1) (m + 1) := #0 ∷ᵥ �
 prefix:max "⇑ₛ" => Subst.lift
 @[simp] theorem Subst.lift_app_zero : ⇑ₛσ 0 = #0 := rfl
 @[simp] theorem Subst.lift_app_succ : ⇑ₛσ x.succ = ↑ₜ(σ x) := rfl
+@[simp] theorem Subst.lift_app_one {σ : 𝓛.Subst (n + 1) m} : ⇑ₛσ 1 = ↑ₜ(σ 0) := rfl
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   simp_rw [shift, ←subst_comp]; congr
@@ -169,16 +170,16 @@ instance Formula.decEq [∀ n, DecidableEq (𝓛.Func n)] [∀ n, DecidableEq (�
   cases p <;> cases q
   case rel.rel n r₁ v₁ m r₂ v₂ =>
     by_cases h : n = m
-    · subst h; simp [rel.injEq]; rw [Vec.ext_iff]; apply And.decidable
+    · subst h; simp [rel.injEq]; rw [Vec.ext_iff]; infer_instance
     · simp [h]; exact isFalse not_false
   case eq.eq =>
-    rw [eq.injEq]; apply And.decidable
+    rw [eq.injEq]; infer_instance
   case false.false => exact isTrue rfl
   case imp.imp p₁ q₁ p₂ q₂ =>
     rw [imp.injEq]
     have := decEq p₁ p₂
     have := decEq q₁ q₂
-    apply And.decidable
+    infer_instance
   case all.all p q =>
     rw [all.injEq]
     exact decEq p q
@@ -215,7 +216,7 @@ theorem Formula.subst_id : p[Subst.id]ₚ = p := by
   | all p ih => simp [Subst.lift_id, ih]
 
 theorem Formula.subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ ∘ₛ σ₂]ₚ = p[σ₁]ₚ[σ₂]ₚ := by
-  induction p generalizing m k with simp
+  induction p generalizing m k with simp [Term.subst_comp]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_comp, ih]
 

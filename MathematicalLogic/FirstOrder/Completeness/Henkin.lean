@@ -223,7 +223,7 @@ theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.T
     simp [Subst.insertAt, Vec.tail, Function.comp, Term.invConst]
     rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
     · simp [h, Subst.insertAt_app_embedAt]
-    · simp [h, Subst.insertAt_app_insertAt]
+    · simp [h, Subst.insertAt_app_insertAt, Term.invConst]
 
 lemma Axioms.inv_const {p : 𝓛.Formula (n + k)} :
   p ∈ 𝓛.Axioms → p.invConst k c ∈ 𝓛.Axioms := by
@@ -305,8 +305,8 @@ theorem invTerm_shift : invTerm (k + 1) (↑ₜt) = ↑ₜ(invTerm k t) := by
   congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt]
-    induction k <;> aesop
+  · simp [h, Subst.insertAt_app_insertAt, invTerm]
+    induction k <;> aesop 
 
 def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Formula (m + k + 1)
 | k, r ⬝ᵣ v => r ⬝ᵣ λ i => invTerm k (v i)
@@ -346,7 +346,7 @@ theorem invFormula_shift : invFormula (k + 1) (↑ₚp) = ↑ₚ(invFormula k p)
   congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt]
+  · simp [h, Subst.insertAt_app_insertAt, invTerm]
     induction k <;> aesop
 
 theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k + 1) p)[↦ₛ (invTerm k t)]ₚ := by
@@ -358,7 +358,7 @@ theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k
     simp [Subst.insertAt, Vec.tail, Function.comp, invTerm]
     rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
     · simp [h, Subst.insertAt_app_embedAt]
-    · simp [h, Subst.insertAt_app_insertAt]
+    · simp [h, Subst.insertAt_app_insertAt, invTerm]
 
 theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axioms → invFormula k p ∈ 𝓛.Axioms := by
   intro h
@@ -434,13 +434,30 @@ def henkinChain (Γ : 𝓛.FormulaSet n) : (i : ℕ) → (𝓛.henkinChain n i).
 def henkinize (Γ : 𝓛.FormulaSet n) : (𝓛.henkinize n).FormulaSet n :=
   ⋃i, (DirectedSystem.homLimit _ i).onFormula '' Γ.henkinChain i
 
-variable {Γ : 𝓛.FormulaSet n} (h₁ : Γ ⊢ ∃' ⊤)
+variable {Γ : 𝓛.FormulaSet n}
+
+theorem henkinize.supset_henkin : Γ.henkinize ⊆ Δ → Henkin Δ := by
+  intro h₁ p h₂
+  rcases DirectedSystem.formula_of_homLimit p with ⟨i, q, h₃⟩
+  exists (DirectedSystem.homLimit _ (i + 1)).onFunc (henkinStep.wit q)
+  revert h₂; apply Proof.mp
+  apply Proof.hyp
+  apply h₁
+  rw [←DirectedSystem.homLimit_comp_hom (h := Nat.le_succ i)] at h₃
+  simp [Hom.comp_onFormula, DirectedSystem.ofChain_hom_succ] at h₃
+  simp [henkinize]
+  exists i + 1, _, .inr (henkinStep.axioms.henkin q)
+  simp [h₃, Hom.onFormula, Hom.onTerm, Hom.onFormula_subst_single, Hom.id_onFormula, Vec.eq_nil]
+
+variable (h₁ : Γ ⊢ ∃' ⊤)
+include h₁
 
 lemma henkinChain.nontrivial : {i : ℕ} → Γ.henkinChain i ⊢ ∃' ⊤
 | 0 => h₁
 | _ + 1 => Proof.weaken (Set.subset_union_left) (henkinStep.hom.on_proof nontrivial)
 
 variable (h₂ : Consistent Γ)
+include h₂
 
 theorem henkinChain.consistent : {i : ℕ} → Consistent (Γ.henkinChain i)
 | 0 => h₂
@@ -456,16 +473,3 @@ theorem henkinize.consistent : Consistent Γ.henkinize := by
   apply henkinChain.consistent h₁ h₂
   apply Proof.weaken h₈
   exact Hom.on_proof h₆
-
-theorem henkinize.supset_henkin : Γ.henkinize ⊆ Δ → Henkin Δ := by
-  intro h₁ p h₂
-  rcases DirectedSystem.formula_of_homLimit p with ⟨i, q, h₃⟩
-  exists (DirectedSystem.homLimit _ (i + 1)).onFunc (henkinStep.wit q)
-  revert h₂; apply Proof.mp
-  apply Proof.hyp
-  apply h₁
-  rw [←DirectedSystem.homLimit_comp_hom (h := Nat.le_succ i)] at h₃
-  simp [Hom.comp_onFormula, DirectedSystem.ofChain_hom_succ] at h₃
-  simp [henkinize]
-  exists i + 1, _, .inr (henkinStep.axioms.henkin q)
-  simp [h₃, Hom.onFormula, Hom.onTerm, Hom.onFormula_subst_single, Hom.id_onFormula, Vec.eq_nil]

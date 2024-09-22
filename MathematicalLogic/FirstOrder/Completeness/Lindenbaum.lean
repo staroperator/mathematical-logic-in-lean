@@ -47,12 +47,12 @@ theorem lindenbaum (Γ : 𝓛.FormulaSet n) (h : Consistent Γ) :
   ∃ Δ, Γ ⊆ Δ ∧ Consistent Δ ∧ Complete Δ := by
   apply zorn_subset_nonempty _ consistent_chain_upper_bound at h
   rcases h with ⟨Δ, h₁, h₂, h₃⟩
-  exists Δ, h₂, h₁
+  exists Δ, h₁, h₂
   intro p
   by_contra h; simp at h; rcases h with ⟨h, h'⟩
   rw [←Consistent.append] at h'
-  have := h₃ _ h' (Set.subset_insert _ _)
-  simp at this
-  exact h (.hyp this)
+  apply h
+  apply Proof.hyp
+  apply h₃ h' <;> simp
 
 end FirstOrder.Language.FormulaSet

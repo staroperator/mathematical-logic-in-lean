@@ -38,6 +38,7 @@ theorem interp_term : ⟦ t ⟧ₜ Γ.TermModel, (⟦σ ·⟧) = ⟦t[σ]ₜ⟧ 
   | func f v ih => simp [ih, Quotient.liftOnVec_mk]
 
 variable (h₁ : Consistent Γ) (h₂ : Complete Γ) (h₃ : Henkin Γ)
+include h₁ h₂ h₃
 
 theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ := by
   induction p generalizing n with simp [Structure.interpFormula]

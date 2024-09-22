@@ -1,42 +1,60 @@
 import Mathlib.SetTheory.Cardinal.Cofinality
 import Mathlib.SetTheory.ZFC.Ordinal
+import Mathlib.SetTheory.ZFC.Rank
 
 universe u v
 
+theorem ZFSet.rank_mk : rank (mk x) = PSet.rank x := rfl
+
 namespace PSet
 
-theorem mem_iff {x y : PSet} : x ∈ y ↔ ∃ b, Equiv x (y.Func b) := by rfl
+local instance typeSetoid (x : PSet) : Setoid x.Type where
+  r a b := x.Func a ≈ x.Func b
+  iseqv.refl _ := Equiv.refl _
+  iseqv.symm := Equiv.symm
+  iseqv.trans := Equiv.trans
 
-noncomputable def rank : PSet.{u} → Ordinal.{u}
-| ⟨_, A⟩ => Ordinal.sup λ i => have := Mem.mk A i; (A i).rank + 1
+def Type' (x : PSet) := Quotient (typeSetoid x)
 
-lemma rank_eq_of_equiv : (x y : PSet) → x.Equiv y → x.rank = y.rank
-| ⟨_, A⟩, ⟨_, B⟩, h => by
-  simp [rank]
-  apply Ordinal.sup_eq_of_range_eq
-  ext α; simp; constructor
-  · intro ⟨i, h₁⟩
-    rcases h.left i with ⟨j, h₂⟩
-    exists j; rw [←h₁, rank_eq_of_equiv _ _ h₂]
-  · intro ⟨j, h₁⟩
-    rcases h.right j with ⟨i, h₂⟩
-    exists i; rw [←h₁, rank_eq_of_equiv _ _ h₂]
+def Func' (x : PSet) (a : x.Type') : ZFSet :=
+  Quotient.liftOn a (ZFSet.mk ∘ x.Func) λ _ _ h => Quotient.sound h
 
-theorem rank_lt_of_mem : {x y : PSet} → y ∈ x → y.rank < x.rank
-| ⟨_, A⟩, y, h => by
-  simp only [rank, Quotient.liftOn_mk, PSet.rank]
-  rcases h with ⟨i, h⟩
-  rw [PSet.rank_eq_of_equiv _ _ h]
-  simp; rw [←Order.succ_le_iff]
-  apply Ordinal.le_sup
+variable {x : PSet}
 
-theorem rank_le_of_mem_rank_lt : {x : PSet} → (∀ y ∈ x, y.rank < α) → x.rank ≤ α
-| ⟨_, A⟩, h => by
-  simp [rank]
-  apply Ordinal.sup_le
-  intro i
-  rw [Order.succ_le_iff]
-  apply h; apply Mem.mk
+theorem func'_inj : Function.Injective x.Func' :=
+  λ a₁ a₂ => Quotient.inductionOn₂ a₁ a₂ λ _ _ h => Quotient.sound (Quotient.exact (s := setoid) h)
+
+theorem func'_mem_mk (a) : x.Func' a ∈ ZFSet.mk x :=
+  Quotient.inductionOn a λ _ => ZFSet.mk_mem_iff.2 (func_mem _ _)
+
+theorem mem_mk_of_func' {x : PSet} : ∀ y ∈ ZFSet.mk x, ∃ a, y = x.Func' a :=
+  λ y => Quotient.inductionOn y λ _ ⟨a, h⟩ => ⟨⟦a⟧, Quotient.sound h⟩
+
+open Cardinal
+
+def card (x : PSet.{u}) : Cardinal.{u} := #x.Type'
+
+theorem card_eq {x : PSet} :
+  Cardinal.lift.{u+1, u} (card x) = #((ZFSet.mk x).toSet) := by
+  rw [←lift_id #(ZFSet.mk x).toSet, card, Cardinal.lift_mk_eq.{u,u+1,u+1}]
+  refine ⟨_root_.Equiv.ofBijective (λ a => ⟨x.Func' a, func'_mem_mk a⟩) ⟨?_, ?_⟩⟩
+  · intro _ _ h; simp at h; exact func'_inj h
+  · intro ⟨_, h⟩; simp; exact (mem_mk_of_func' _ h).imp λ _ => Eq.symm
+
+theorem card_congr {x y : PSet.{u}} : Equiv x y → card x = card y := by
+  suffices ∀ {x y}, Equiv x y → card x ≤ card y by
+    intro h
+    exact (this h).antisymm (this h.symm)
+  rintro ⟨_, A⟩ ⟨_, B⟩ ⟨h, _⟩
+  simp [card, Cardinal.le_def]
+  refine ⟨λ a => ⟦Classical.choose (h a.out)⟧, ?_⟩
+  intro a₁ a₂ h
+  apply Quotient.exact (s := typeSetoid _) at h
+  simp at h
+  rw [←Quotient.out_equiv_out]
+  refine Equiv.trans ?_ (h.trans ?_)
+  · apply Classical.choose_spec (p := λ x => (A (a₁.out)).Equiv (B x))
+  · symm; apply Classical.choose_spec (p := λ x => (A (a₂.out)).Equiv (B x))
 
 end PSet
 
@@ -53,57 +71,12 @@ theorem mem_omega_iff : x ∈ omega ↔ ∃ n, x = ofNat n := by
   · intro ⟨⟨n⟩, h⟩; simp at h; exists n; exact Quotient.sound h
   · intro ⟨_, h⟩; exact ⟨_, ZFSet.exact h⟩
 
-section
-
-local instance familySetoid (x : ZFSet) : Setoid x.out.Type := PSet.setoid.comap x.out.Func
-
-theorem familySetoid_equiv_iff {x : ZFSet} {a b : x.out.Type} :
-  a ≈ b ↔ x.out.Func a ≈ x.out.Func b := by rfl
-
-def family (x : ZFSet) := Quotient x.familySetoid
-
-theorem familyOfMem {x y : ZFSet} (h : y ∈ x) : ∃ a, y.out.Equiv (x.out.Func a) := by
-  rw [←PSet.mem_iff, ←mk_mem_iff, mk_out, mk_out]; exact h
-
-noncomputable def familyEquiv (x : ZFSet) : x.family ≃ x.toSet where
-  toFun a := ⟨⟦x.out.Func a.out⟧, by
-    simp; conv => rhs; rw [←x.out_eq]
-    simp only [mk_eq, mk_mem_iff]
-    apply PSet.Mem.mk⟩
-  invFun
-  | ⟨y, h⟩ => ⟦Classical.choose (familyOfMem h)⟧
-  left_inv := by
-    intro a; simp
-    have h : x.out.Func a.out ∈ x.out := PSet.Mem.mk _ _
-    rw [←mk_mem_iff, mk_out] at h
-    apply familyOfMem at h
-    have := Classical.choose_spec h
-    have := (Quotient.mk_out ((Quotient.out x).Func (Quotient.out a))).symm.trans this
-    rw [Quotient.mk_eq_iff_out]
-    exact this.symm
-  right_inv
-  | ⟨y, h⟩ => by
-    simp at h
-    apply familyOfMem at h
-    have := Classical.choose_spec h
-    simp; rw [←mk_eq, Quotient.mk_eq_iff_out]
-    refine (this.trans ?_).symm
-    exact (Quotient.mk_out (Classical.choose h)).symm
-
-noncomputable def familyOfBFamily {α : Sort v} (x : ZFSet.{u}) (f : ∀ y ∈ x, α) : x.family → α :=
-  λ a => f (x.familyEquiv a) (x.familyEquiv a).property
-
-noncomputable def bfamilyOfFamily {α : Sort v} (x : ZFSet.{u}) (f : x.family → α) : ∀ y ∈ x, α :=
-  λ y h => f (x.familyEquiv.invFun ⟨y, h⟩)
-
 open Cardinal
-def card (x : ZFSet.{u}) : Cardinal.{u} := #x.family
 
-theorem card_eq {x : ZFSet.{u}} : lift.{u+1, u} (card x) = #(↥x.toSet) := by
-  rw [←lift_id #(↥x.toSet)]
-  simp only [card]
-  rw [Cardinal.lift_mk_eq.{u,u+1,u+1}]
-  exact ⟨x.familyEquiv⟩
+def card : ZFSet.{u} → Cardinal.{u} := Quotient.lift PSet.card λ _ _ => PSet.card_congr
+
+theorem card_eq {x : ZFSet.{u}} : lift.{u+1, u} (card x) = #x.toSet :=
+  Quotient.inductionOn x λ _ => PSet.card_eq
 
 theorem card_mono : x ⊆ y → card x ≤ card y := by
   intro h
@@ -139,75 +112,14 @@ theorem card_sUnion_range_le : card (sUnion (range f)) ≤ sum λ i => (f i).car
   · simp at h; simp [h]
   · intro z; simp [h']
 
-end
-
-noncomputable def replace (x : ZFSet) (f : ∀ y ∈ x, ZFSet) :=
-  @range x.family (x.familyOfBFamily f)
-
-theorem mem_replace : y ∈ replace x f ↔ ∃ z h, y = f z h := by
-  simp [replace]; constructor
-  · intro ⟨a, h₁⟩; subst h₁
-    exists x.familyEquiv a, (x.familyEquiv a).property
-  · intro ⟨y, h₁, h₂⟩; subst h₂
-    exists x.familyEquiv.invFun ⟨y, h₁⟩
-    simp [familyOfBFamily]
-
-noncomputable def rank (x : ZFSet.{u}) : Ordinal.{u} :=
-  Quotient.liftOn x PSet.rank PSet.rank_eq_of_equiv
-
-variable {x y : ZFSet}
-
-theorem rank_lt_of_mem : y ∈ x → y.rank < x.rank := by
-  induction' x using Quotient.inductionOn with x
-  induction' y using Quotient.inductionOn with y
-  apply PSet.rank_lt_of_mem
-
-theorem rank_le_of_mem_rank_lt : (∀ y ∈ x, y.rank < α) → x.rank ≤ α := by
-  intro h
-  induction' x using Quotient.inductionOn with x
-  apply PSet.rank_le_of_mem_rank_lt
-  intro y h'
-  apply h ⟦y⟧
-  simp; exact h'
-
-theorem rank_mono : x ⊆ y → x.rank ≤ y.rank := by
-  intro h
-  apply rank_le_of_mem_rank_lt
-  intro z h₁; apply rank_lt_of_mem; exact h h₁
-
-theorem rank_empty : (∅ : ZFSet).rank = 0 := by
-  rw [←Ordinal.le_zero]; apply rank_le_of_mem_rank_lt; simp
-
-theorem rank_singleton : ({x} : ZFSet).rank = x.rank + 1 := by
-  apply le_antisymm
-  · apply rank_le_of_mem_rank_lt; simp
-  · simp; apply rank_lt_of_mem; simp
-
-theorem rank_pair : ({x, y} : ZFSet).rank = max x.rank y.rank + 1 := by
-  apply le_antisymm
-  · apply rank_le_of_mem_rank_lt; simp
-  · simp; constructor <;> apply rank_lt_of_mem <;> simp
-
-theorem rank_union : (x ∪ y).rank = max x.rank y.rank := by
-  apply le_antisymm
-  · apply rank_le_of_mem_rank_lt
-    intro z h; simp at h; rcases h with h | h
-    · apply lt_max_of_lt_left; exact rank_lt_of_mem h
-    · apply lt_max_of_lt_right; exact rank_lt_of_mem h
-  · simp; constructor <;> apply rank_mono <;> intro <;> aesop
-
-theorem rank_insert : (insert x y).rank = max (x.rank + 1) y.rank := by
-  have : insert x y = {x} ∪ y := by ext; simp
-  rw [this, rank_union, rank_singleton]
-
-theorem rank_ofNat : (ofNat n).rank = n := by
+theorem rank_ofNat : rank (ofNat n) = n := by
   induction n with
   | zero => simp [rank_empty]
   | succ n ih => simp [rank_insert, ih, Order.le_succ]
 
-theorem rank_omega : omega.rank = Ordinal.omega := by
+theorem rank_omega : rank omega = Ordinal.omega := by
   apply le_antisymm
-  · apply rank_le_of_mem_rank_lt
+  · rw [rank_le_iff]
     intro y h; simp [mem_omega_iff] at h
     rcases h with ⟨n, h⟩; subst h
     simp [rank_ofNat, Ordinal.lt_omega]
@@ -216,28 +128,22 @@ theorem rank_omega : omega.rank = Ordinal.omega := by
     apply le_of_lt; apply rank_lt_of_mem
     simp [mem_omega_iff]
 
-theorem rank_powerset : (powerset x).rank = x.rank + 1 := by
+theorem rank_image {f : ZFSet.{u} → ZFSet.{u}} [PSet.Definable 1 f] :
+  rank (image f x) = Ordinal.lsub λ a => rank (f (x.out.Func' a)) := by
   apply le_antisymm
-  · apply rank_le_of_mem_rank_lt
-    intro y h; simp at h; simp [Order.lt_succ_iff]; exact rank_mono h
-  · rw [←rank_singleton]; apply rank_mono
-    intro y h; simp at h; simp [h, subset_refl]
-
-theorem rank_sUnion_le : (⋃₀ x : ZFSet).rank ≤ x.rank := by
-  apply rank_le_of_mem_rank_lt
-  intro y h; simp at h; rcases h with ⟨z, h₂, h₃⟩
-  trans <;> apply rank_lt_of_mem <;> assumption
-
-theorem rank_range {f : α → ZFSet} : (range f).rank = Ordinal.sup λ i => rank (f i) + 1 := by
-  apply le_antisymm
-  · apply rank_le_of_mem_rank_lt
-    simp; intro i
-    rw [←Order.succ_le_iff]
-    apply Ordinal.le_sup
-  · apply Ordinal.sup_le
-    intro i; simp; apply rank_lt_of_mem; simp
-
-
+  · simp [rank_le_iff]
+    intro y h
+    rw [←mk_out x] at h
+    apply PSet.mem_mk_of_func' at h
+    rcases h with ⟨a, h⟩
+    rw [h]
+    apply Ordinal.lt_lsub
+  · apply Ordinal.lsub_le
+    intro a
+    apply rank_lt_of_mem
+    have := @PSet.func'_mem_mk x.out a
+    rw [mk_out] at this
+    simp; exact ⟨_, this, rfl⟩
 
 noncomputable def V (α : Ordinal.{u}) : ZFSet.{u} :=
   α.limitRecOn ∅ (λ _ ih => powerset ih)
@@ -302,7 +208,7 @@ theorem mem_V_iff : x ∈ V α ↔ x.rank < α := by
     rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
     · simp [h₁, V_zero] at h
     · simp [h₁, V_succ] at *
-      apply rank_le_of_mem_rank_lt
+      rw [rank_le_iff]
       intro y h₂; apply ih
       · rfl
       · apply h; exact h₂
@@ -347,15 +253,19 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   rw [←mem_V_iff]
   exact h
 
-theorem replace_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
-  x ∈ V κ.ord → (∀ y h, f y h ∈ V κ.ord) → x.replace f ∈ V κ.ord := by
+theorem replace_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [PSet.Definable 1 f] :
+  x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
   intro h₁ h₂
-  simp [mem_V_iff, replace, rank_range]
-  apply Cardinal.sup_lt_ord_of_isRegular hκ.2.1
-  · rw [←card]; exact card_lt_of_mem_V_inaccessible hκ h₁
-  · intro i
-    apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
-    simp [←mem_V_iff]
+  rw [mem_V_iff, rank_image]
+  apply Cardinal.lsub_lt_ord_of_isRegular hκ.2.1
+  · rw [←PSet.card]
+    rw [←mk_out x] at h₁
+    exact card_lt_of_mem_V_inaccessible hκ h₁
+  · intro a
+    rw [←mem_V_iff]
     apply h₂
+    have := PSet.func'_mem_mk a
+    rw [mk_out x] at this
+    exact this
 
 end ZFSet

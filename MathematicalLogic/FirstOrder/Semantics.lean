@@ -208,8 +208,8 @@ def refl : 𝓜 ↪ᴹ 𝓜 where
 
 def trans (e₁ : 𝓜 ↪ᴹ 𝓝) (e₂ : 𝓝 ↪ᴹ 𝓢) : 𝓜 ↪ᴹ 𝓢 where
   toEmbedding := .trans e₁.toEmbedding e₂.toEmbedding
-  on_func f v := by simp [Function.comp, e₁.on_func, e₂.on_func]
-  on_rel r v := by rw [e₁.on_rel, e₂.on_rel]; simp [Function.comp]
+  on_func f v := by simp [e₁.on_func, e₂.on_func]; rfl
+  on_rel r v := by rw [e₁.on_rel, e₂.on_rel]; rfl
 
 theorem on_term (e : 𝓜 ↪ᴹ 𝓝) (t : 𝓛.Term n) (ρ : 𝓜.Assignment n) : e (⟦t⟧ₜ 𝓜, ρ) = ⟦t⟧ₜ 𝓝, e ∘ ρ := by
   induction t with simp [interpTerm]
@@ -264,13 +264,13 @@ def refl : 𝓜 ≃ᴹ 𝓜 where
 
 def symm (i : 𝓜 ≃ᴹ 𝓝) : 𝓝 ≃ᴹ 𝓜 where
   toEquiv := .symm i.toEquiv
-  on_func f v := by apply i.toEquiv.injective; simp [Function.comp, i.on_func]
-  on_rel r v := by rw [i.on_rel]; simp [Function.comp]
+  on_func f v := by apply i.toEquiv.injective; simp [i.on_func, Function.comp_def]
+  on_rel r v := by rw [i.on_rel]; simp [Function.comp_def]
 
 def trans (i₁ : 𝓜 ≃ᴹ 𝓝) (i₂ : 𝓝 ≃ᴹ 𝓢) : 𝓜 ≃ᴹ 𝓢 where
   toEquiv := .trans i₁.toEquiv i₂.toEquiv
-  on_func f v := by simp [Function.comp, i₁.on_func, i₂.on_func]
-  on_rel r v := by rw [i₁.on_rel, i₂.on_rel]; simp [Function.comp]
+  on_func f v := by simp [i₁.on_func, i₂.on_func]; rfl
+  on_rel r v := by rw [i₁.on_rel, i₂.on_rel]; rfl
 
 def toEmbedding (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ↪ᴹ 𝓝 where
   toEmbedding := i.toEquiv
