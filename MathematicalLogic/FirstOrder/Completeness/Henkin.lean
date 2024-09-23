@@ -448,6 +448,7 @@ theorem henkinize.supset_henkin : Γ.henkinize ⊆ Δ → Henkin Δ := by
   simp [henkinize]
   exists i + 1, _, .inr (henkinStep.axioms.henkin q)
   simp [h₃, Hom.onFormula, Hom.onTerm, Hom.onFormula_subst_single, Hom.id_onFormula, Vec.eq_nil]
+  rfl
 
 variable (h₁ : Γ ⊢ ∃' ⊤)
 include h₁

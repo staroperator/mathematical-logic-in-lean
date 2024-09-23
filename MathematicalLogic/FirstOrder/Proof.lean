@@ -71,15 +71,46 @@ theorem subst : Γ ⊢ p → (·[σ]ₚ) '' Γ ⊢ p[σ]ₚ := by
 
 theorem shift : Γ ⊢ p → ↑ᴳΓ ⊢ ↑ₚp := subst
 
-macro "pintro" : tactic => `(tactic| apply deduction.mpr)
+theorem forall_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q := ax .forall_imp
+theorem forall_elim : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := ax .forall_elim
+theorem forall_self : Γ ⊢ p ⇒ ∀' ↑ₚp := ax .forall_self
 
-elab "pintros" n:(ppSpace colGt num)? : tactic => do
+theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
+  constructor
+  · intro h
+    induction h with
+    | hyp h =>
+      rcases h with ⟨p, ⟨h₁, h₂⟩⟩
+      subst h₂
+      exact forall_self.mp (hyp h₁)
+    | ax h => exact ax (.all h)
+    | mp _ _ ih₁ ih₂ => exact forall_imp.mp₂ ih₁ ih₂
+  · intro h
+    apply shift at h
+    simp [Formula.shift] at h
+    apply forall_elim.mp at h
+    have : p[⇑ₛSubst.shift]ₚ[↦ₛ #0]ₚ = p := by
+      rw [←Formula.subst_comp]
+      conv => rhs; rw [←Formula.subst_id (p := p)]
+      congr; funext x; cases x using Fin.cases <;> simp
+    rw [this] at h
+    exact h
+
+theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
+
+/--
+  Introduce a new hypothesis through deduction theorem, or introduce a new variable
+  through generalization theorem. -/
+macro "pintro" : tactic => `(tactic| first | apply deduction.mpr | apply forall_intro)
+
+/-- Revert a hypothesis through deduction theorem. -/
+macro "prevert" : tactic => `(tactic| apply deduction.mp)
+
+/-- Repeatly introduce new hypotheses and variables. -/
+macro "pintros" n:(ppSpace colGt num)? : tactic =>
   match n with
-  | some n =>
-    for _ in [:n.getNat] do
-      Lean.Elab.Tactic.evalTactic (←`(tactic| pintro))
-  | none =>
-    Lean.Elab.Tactic.evalTactic (←`(tactic| repeat pintro))
+  | some n => `(tactic| iterate $n pintro)
+  | none => `(tactic| repeat pintro)
 
 private def hypTerm (n : ℕ) : Lean.MacroM (Lean.TSyntax `term) := do
   let mut t ← `(hyp_append)
@@ -87,6 +118,10 @@ private def hypTerm (n : ℕ) : Lean.MacroM (Lean.TSyntax `term) := do
     t ← `(weaken_append $t)
   return t
 
+/--
+  Close the proof goal using assumption.
+  If a number `n` is given, the `n`-th assumption (from right to left) will be used.
+  Otherwise, this tactic will try to search for such an assumption. -/
 macro "passumption" n:(ppSpace colGt num)? : tactic => do
   match n with
   | some n => `(tactic| exact $(← hypTerm n.getNat))
@@ -98,8 +133,7 @@ macro "psuffices" t:(ppSpace colGt term) : tactic =>
   `(tactic| (refine cut (p := $t) ?_ ?_; swap))
 
 /--
-  Unify `Γ ⊆ Δ` as `Γ, p₁, ⋯, pₙ = Δ`.
-  Return `some n` if succeed, and `none` if fail. -/
+  Unify `Γ ⊆ Δ` as `Γ, p₁, ⋯, pₙ = Δ`. Return `some n` if succeed, and `none` if fail. -/
 private partial def isSubsetOf (Γ Δ : Lean.Expr) : Lean.MetaM (Option ℕ) := do
   let s ← Lean.MonadBacktrack.saveState
   if ← Lean.Meta.isDefEq Γ Δ then
@@ -172,7 +206,7 @@ elab "papply" t:(ppSpace colGt term) d:((" with " num)?) : tactic =>
           newMVarIds := newMVarIds ++ [mvarid]
     Lean.Elab.Tactic.replaceMainGoal newMVarIds
 
-/-- Apply an assumption through MP. -/
+/-- Apply the `n`-th assumption through MP. -/
 macro "papplya" n:(ppSpace colGt num) : tactic => do
   `(tactic| papply $(← hypTerm n.getNat))
 
@@ -342,36 +376,9 @@ theorem iff_congr_neg : Γ ⊢ (p ⇔ q) ⇒ (~ p ⇔ ~ q) := by
 
 theorem double_neg_iff : Γ ⊢ ~ ~ p ⇔ p := iff_intro.mp₂ double_neg₂ double_neg
 
-theorem forall_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q := ax .forall_imp
-theorem forall_elim : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := ax .forall_elim
-theorem forall_self : Γ ⊢ p ⇒ ∀' ↑ₚp := ax .forall_self
-
-theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
-  constructor
-  · intro h
-    induction h with
-    | hyp h =>
-      rcases h with ⟨p, ⟨h₁, h₂⟩⟩
-      subst h₂
-      exact forall_self.mp (hyp h₁)
-    | ax h => exact ax (.all h)
-    | mp _ _ ih₁ ih₂ => exact forall_imp.mp₂ ih₁ ih₂
-  · intro h
-    apply shift at h
-    simp [Formula.shift] at h
-    apply forall_elim.mp at h
-    have : p[⇑ₛSubst.shift]ₚ[↦ₛ #0]ₚ = p := by
-      rw [←Formula.subst_comp]
-      conv => rhs; rw [←Formula.subst_id (p := p)]
-      congr; funext x; cases x using Fin.cases <;> simp
-    rw [this] at h
-    exact h
-
-theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
-
 theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   pintro
-  papply iff_intro <;> papply forall_imp <;> rw [←deduction] <;> papply forall_imp <;> apply forall_intro
+  papply iff_intro <;> papply forall_imp <;> prevert <;> papply forall_imp <;> apply forall_intro
   · exact iff_mp
   · exact iff_mpr
 
@@ -379,7 +386,7 @@ theorem not_forall_iff : Γ ⊢ ~ ∀' p ⇔ ∃' (~ p) := iff_congr_neg.mp (iff
 theorem not_exists_iff : Γ ⊢ ~ ∃' p ⇔ ∀' (~ p) := double_neg_iff
 theorem not_exists_not_iff : Γ ⊢ ~ ∃' (~ p) ⇔ ∀' p := iff_trans.mp₂ double_neg_iff (iff_congr_forall.mp (forall_intro double_neg_iff))
 
-theorem exists_intro : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
+theorem exists_intro (t) : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
   pintros
   suffices _ ⊢ (~ p)[↦ₛ t]ₚ by
     papply this
@@ -413,7 +420,7 @@ theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
   · papply forall_imp (p := p ⇒ q)
     · apply forall_intro
       pintros 2
-      papply exists_intro (t := #0)
+      papply exists_intro #0
       suffices _ ⊢ q by
         convert this
         rw [←Formula.subst_comp]; nth_rw 2 [←Formula.subst_id (p := q)]
@@ -620,7 +627,7 @@ syntax rwRule := ("← "?) term
 
 /--
   Rewrite goal using given terms.
-  If a number instead of term is given, it will use assumption in rewrite.
+  If a number `n` instead of a term is given, the `n`-th assumption will be used.
   
   Use `←` to change the direction. -/
 elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
@@ -629,8 +636,8 @@ elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
       match rule with
       | `(rwRule | $n:num) => Lean.Elab.liftMacroM (hypTerm n.getNat)
       | `(rwRule | $t:term) => pure t
-      | `(rwRule | ← $n:num) => `(mp symm $(← Lean.Elab.liftMacroM (hypTerm n.getNat)))
-      | `(rwRule | ← $t:term) => `(mp symm $t)
+      | `(rwRule | ← $n:num) => `(mp eq_symm $(← Lean.Elab.liftMacroM (hypTerm n.getNat)))
+      | `(rwRule | ← $t:term) => `(mp eq_symm $t)
       | _ => throwError "unreachable"
     Lean.Elab.Tactic.evalTactic (←`(tactic| prewrite $t))
 
@@ -708,7 +715,7 @@ theorem Consistent.append : Consistent (Γ,' p) ↔ Γ ⊬ ~ p := by
   constructor
   · intro h₁ h₂
     apply h₁
-    rw [←Proof.deduction]
+    prevert
     exact h₂
   · intro h₁ h₂
     apply h₁
@@ -719,7 +726,7 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
   constructor
   · intro h₁ h₂
     apply h₁
-    rw [←Proof.deduction]
+    prevert
     papply Proof.double_neg
     exact h₂
   · intro h₁ h₂

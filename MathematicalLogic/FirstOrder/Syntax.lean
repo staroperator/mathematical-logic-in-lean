@@ -71,6 +71,7 @@ def Subst.single (t : 𝓛.Term n) : 𝓛.Subst (n + 1) n := t ∷ᵥ id
 prefix:max "↦ₛ " => Subst.single
 @[simp] theorem Subst.single_app_zero : (↦ₛ t) 0 = t := rfl
 @[simp] theorem Subst.single_app_succ : (↦ₛ t) x.succ = #x := rfl
+@[simp] theorem Subst.single_app_one {t : 𝓛.Term (n + 1)} : (↦ₛ t) 1 = #0 := rfl
 
 def Subst.shift : 𝓛.Subst n (n + 1) := λ x => #x.succ
 @[simp] theorem Subst.shift_app : (shift x : 𝓛.Term (n + 1)) = #x.succ := rfl
@@ -130,7 +131,7 @@ infix:70 " ⬝ᵣ " => Formula.rel
 infix:60 " ≐ " => Formula.eq
 instance : PropNotation (𝓛.Formula n) := ⟨Formula.false, Formula.imp⟩
 prefix:59 "∀' " => Formula.all
-abbrev Formula.exist (p : 𝓛.Formula (n + 1)) := ~ ∀' (~ p)
+def Formula.exist (p : 𝓛.Formula (n + 1)) := ~ ∀' (~ p)
 prefix:59 "∃' " => Formula.exist
 
 def Formula.andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
@@ -197,6 +198,9 @@ notation:80 p "[" σ "]ₚ" => Formula.subst p σ
 @[simp] theorem Formula.subst_false : ⊥[σ]ₚ = ⊥ := rfl
 @[simp] theorem Formula.subst_imp : (p ⇒ q)[σ]ₚ = p[σ]ₚ ⇒ q[σ]ₚ := rfl
 @[simp] theorem Formula.subst_all : (∀' p)[σ]ₚ = ∀' (p[⇑ₛσ]ₚ) := rfl
+@[simp] theorem Formula.subst_and : (p ⩑ q)[σ]ₚ = p[σ]ₚ ⩑ q[σ]ₚ := rfl
+@[simp] theorem Formula.subst_or : (p ⩒ q)[σ]ₚ = p[σ]ₚ ⩒ q[σ]ₚ := rfl
+@[simp] theorem Formula.subst_exist : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
 
 theorem Formula.subst_andN {v : Vec (𝓛.Formula n) m} : (⋀i, v i)[σ]ₚ = ⋀i, (v i)[σ]ₚ := by
   induction m with
@@ -205,6 +209,11 @@ theorem Formula.subst_andN {v : Vec (𝓛.Formula n) m} : (⋀i, v i)[σ]ₚ = �
 
 def Formula.shift (p : 𝓛.Formula n) : 𝓛.Formula (n + 1) := p[Subst.shift]ₚ
 prefix:max "↑ₚ" => Formula.shift
+@[simp] theorem Formula.shift_eq : ↑ₚ(t₁ ≐ t₂) = ↑ₜt₁ ≐ ↑ₜt₂ := rfl
+@[simp] theorem Formula.shift_false : ↑ₚ(⊥ : 𝓛.Formula n) = ⊥ := rfl
+@[simp] theorem Formula.shift_imp : ↑ₚ(p ⇒ q) = ↑ₚp ⇒ ↑ₚq := rfl
+@[simp] theorem Formula.shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
+@[simp] theorem Formula.shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
 
 abbrev Formula.existUnique (p : 𝓛.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
