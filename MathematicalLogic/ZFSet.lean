@@ -253,7 +253,7 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   rw [←mem_V_iff]
   exact h
 
-theorem replace_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [PSet.Definable 1 f] :
+theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [PSet.Definable 1 f] :
   x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
   intro h₁ h₂
   rw [mem_V_iff, rank_image]
