@@ -117,13 +117,13 @@ theorem rank_ofNat : rank (ofNat n) = n := by
   | zero => simp [rank_empty]
   | succ n ih => simp [rank_insert, ih, Order.le_succ]
 
-theorem rank_omega : rank omega = Ordinal.omega := by
+theorem rank_omega : rank omega = Ordinal.omega0 := by
   apply le_antisymm
   · rw [rank_le_iff]
     intro y h; simp [mem_omega_iff] at h
     rcases h with ⟨n, h⟩; subst h
-    simp [rank_ofNat, Ordinal.lt_omega]
-  · simp [Ordinal.omega_le]
+    simp [rank_ofNat, Ordinal.lt_omega0]
+  · simp [Ordinal.omega0_le]
     intro n; rw [←rank_ofNat]
     apply le_of_lt; apply rank_lt_of_mem
     simp [mem_omega_iff]
@@ -224,7 +224,7 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
   induction' α using Ordinal.induction with α ih
   rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
   · simp [h₁, V_zero, card_empty]
-    have := (Cardinal.ord_isLimit (le_of_lt hκ.1)).pos
+    have := (Cardinal.isLimit_ord (le_of_lt hκ.1)).pos
     simp [Cardinal.lt_ord] at this
     exact this
   · subst h₁; simp [V_succ, card_powerset] at *
@@ -249,7 +249,7 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   intro h
   apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
   apply card_V_lt_of_inaccessible hκ
-  apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+  apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
   rw [←mem_V_iff]
   exact h
 

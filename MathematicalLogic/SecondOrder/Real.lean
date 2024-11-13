@@ -62,7 +62,6 @@ noncomputable def 𝓡 : Real.Model where
   | .add, v => v 0 + v 1
   | .neg, v => - v 0
   | .mul, v => v 0 * v 1
-  -- | .inv, v => (v 0)⁻¹
   interpRel
   | .le, v => v 0 ≤ v 1
   satisfy_theory p h := by
@@ -80,17 +79,15 @@ noncomputable def 𝓡 : Real.Model where
     | ax_exists_lub =>
       intro R a h₁ b h₂
       exists sSup (R [·]ᵥ)
-      exact Real.isLUB_sSup (R [·]ᵥ) ⟨a, h₁⟩ ⟨b, h₂⟩
+      exact Real.isLUB_sSup ⟨a, h₁⟩ ⟨b, h₂⟩
 
-variable {𝓜 : Real.Model} -- (a b c : 𝓜)
+variable {𝓜 : Real.Model}
 
-namespace Real
 instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
 instance : One 𝓜 := ⟨𝓜.interpFunc .one []ᵥ⟩
 instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
 instance : Neg 𝓜 := ⟨(𝓜.interpFunc .neg [·]ᵥ)⟩
 instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
-end Real
 
 theorem add_comm (a b : 𝓜) : a + b = b + a := by
   have := 𝓜.satisfy_theory _ .ax_add_comm a b
@@ -310,7 +307,7 @@ lemma exists_nat_gt (a : 𝓜) : ∃ (n : ℕ), a < n := by
 instance : Archimedean 𝓜 where
   arch x y h := by
     rcases exists_nat_gt (x / y) with ⟨n, h'⟩
-    simp [div_lt_iff h] at h'
+    simp [div_lt_iff₀ h] at h'
     exists n
     simp [le_of_lt h']
 
@@ -334,7 +331,7 @@ theorem ofReal_surjective : Function.Surjective (@ofReal 𝓜) := by
     apply le_of_forall_rat_lt_imp_le
     intro r h₄; simp at h₄
     have h₅ := lt_of_lt_of_le (Rat.cast_lt.mpr h₄) h₃
-    rw [lt_isLUB_iff (Real.isLUB_sSup _ h₁ h₂)] at h₅
+    rw [lt_isLUB_iff (Real.isLUB_sSup h₁ h₂)] at h₅
     rcases h₅ with ⟨_, ⟨r', h₅, h₆⟩, h₇⟩
     subst h₆; simp at h₇
     apply le_trans' h₅
@@ -394,7 +391,7 @@ lemma exists_sqrt (a : 𝓜) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     intro b ⟨h₄, h₅⟩
     rw [←pow_le_pow_iff_left (n := 2)]
     · apply h₅.trans; apply (le_of_lt h₂).trans
-      apply le_self_pow
+      apply le_self_pow₀
       · rw [←ofReal_one, ←Rat.cast_natCast, ←ofReal_rat, ofReal_le]
         simp [Nat.succ_le]; exact Nat.pos_of_ne_zero (ne_zero_of_lt h₃)
       · simp
@@ -480,7 +477,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
     by_cases h₃ : r > 0
     · let δ := √(x * y / r)
       have h₄ : 1 < δ := by
-        simp [δ, Real.lt_sqrt]; rw [lt_div_iff]
+        simp [δ, Real.lt_sqrt]; rw [lt_div_iff₀]
         · simp; exact lt_of_lt_of_le (Rat.cast_lt.mpr h₂) h₁
         · simp [h₃]
       rcases exists_rat_btwn (div_lt_self h h₄) with ⟨r₁, h₅, h₆⟩
@@ -522,7 +519,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
           · simp; exact le_of_lt h₃) with ⟨δ, h₄, h₅⟩
       have h₆ : 1 < δ := by
         rw [←pow_lt_pow_iff_left (n := 2) (by simp) h₄ (by simp)]
-        rw [h₅, lt_div_iff]
+        rw [h₅, lt_div_iff₀]
         · simp; exact h₂
         · simp; exact h₃
       rcases exists_rat_btwn (div_lt_self (a := ofReal x) (by rw [←ofReal_zero, ofReal_lt]; exact h) h₆) with ⟨r₁, h₇, h₈⟩

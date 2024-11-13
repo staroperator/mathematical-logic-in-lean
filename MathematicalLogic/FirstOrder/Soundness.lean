@@ -7,7 +7,7 @@ variable {𝓛 : Language}
 
 theorem Entails.axioms : p ∈ 𝓛.Axioms → Γ ⊨ p := by
   intro h 𝓜 ρ _
-  induction h <;> simp [Structure.interpFormula] <;> tauto
+  induction h <;> simp [Structure.interpFormula] <;> try tauto
   case forall_elim =>
     intro h
     simp [Structure.interpFormula_subst_single]
@@ -62,6 +62,11 @@ theorem Complete.provable_iff_satisfied {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model}
     | inr h => apply soundness h; exact 𝓜.satisfy_theory
 
 namespace Theory
+
+theorem soundness {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} : 𝓣 ⊢ p → 𝓜 ⊨ₛ p := by
+  intro h
+  apply Language.soundness h
+  apply 𝓜.satisfy_theory
 
 abbrev theorems (𝓣 : 𝓛.Theory) : 𝓛.Theory := { p | 𝓣 ⊢ p }
 

@@ -53,10 +53,10 @@ def 𝓥 (κ : Cardinal.{u}) (hκ : κ.IsInaccessible) : Model.{u+1} ZF₂ where
   interpFunc
   | .empty, _ => ⟨∅, by
     simp [mem_V_iff, rank_empty, Order.one_le_iff_pos]
-    exact (Cardinal.ord_isLimit (le_of_lt hκ.1)).pos⟩
+    exact (Cardinal.isLimit_ord (le_of_lt hκ.1)).pos⟩
   | .insert, v => ⟨Insert.insert (v 0).val (v 1), by
     simp [mem_V_iff, rank_insert]; constructor
-    · apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+    · apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
       rw [←mem_V_iff]
       exact (v 0).property
     · rw [←mem_V_iff]; exact (v 1).property⟩
@@ -67,7 +67,7 @@ def 𝓥 (κ : Cardinal.{u}) (hκ : κ.IsInaccessible) : Model.{u+1} ZF₂ where
     exact (v 0).property⟩
   | .powerset, v => ⟨ZFSet.powerset (v 0), by
     simp [mem_V_iff, rank_powerset]
-    apply (Cardinal.ord_isLimit (le_of_lt hκ.1)).succ_lt
+    apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
     rw [←mem_V_iff]
     exact (v 0).property⟩
   | .omega, v => ⟨omega, by
@@ -360,6 +360,7 @@ theorem mem_wf : @WellFounded 𝓜 (· ∈ ·) := by
     · exact trcl.self_subset h₄
     · exact h₃
 
+instance : IsWellFounded 𝓜 (· ∈ ·) := ⟨mem_wf⟩
 instance : WellFoundedRelation 𝓜 := ⟨_, mem_wf⟩
 
 open Cardinal in
@@ -469,15 +470,15 @@ theorem kappa_regular : (kappa 𝓜).IsRegular := by
 theorem kappa_inaccessible : (kappa 𝓜).IsInaccessible :=
   ⟨kappa_gt_aleph0, kappa_regular, kappa_strong_limit⟩
 
-noncomputable def rank : 𝓜 → Ordinal.{u} := mem_wf.rank
+noncomputable def rank : 𝓜 → Ordinal.{u} := IsWellFounded.rank (· ∈ ·)
 
 theorem rank_lt_kappa : rank x < (kappa 𝓜).ord := by
   induction' x using mem_wf.induction with x ih
-  rw [rank, mem_wf.rank_eq]
+  rw [rank, IsWellFounded.rank_eq]
   apply Cardinal.iSup_lt_ord_of_isRegular kappa_regular
   · apply card_lt_kappa
   · intro ⟨y, h⟩
-    apply (Cardinal.ord_isLimit (le_of_lt kappa_gt_aleph0)).succ_lt
+    apply (Cardinal.isLimit_ord (le_of_lt kappa_gt_aleph0)).succ_lt
     exact ih y h
 
 noncomputable def toZFSet (x : 𝓜) : ZFSet.{u} :=
@@ -561,8 +562,8 @@ theorem rank_toZFSet : (toZFSet x).rank = rank x := by
     intro y h; simp [mem_toZFSet] at h
     rcases h with ⟨y', h₁, h₂⟩; subst h₂
     rw [ih _ h₁]
-    exact mem_wf.rank_lt_of_rel h₁
-  · rw [rank, mem_wf.rank_eq]
+    exact IsWellFounded.rank_lt_of_rel h₁
+  · rw [rank, IsWellFounded.rank_eq]
     apply Ordinal.iSup_le
     intro ⟨y, h⟩
     simp; rw [←rank, ←ih _ h]
