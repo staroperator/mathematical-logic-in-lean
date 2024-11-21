@@ -69,6 +69,9 @@ instance : Encodable (𝓛.Term n) where
 @[simp] theorem Term.encode_func {v : Vec (𝓛.Term n) m} :
   Encodable.encode (f ⬝ₜ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 := rfl
 
+instance : Encodable (𝓛.Subst n m) := Vec.encodable
+theorem Subst.encode_eq {σ : 𝓛.Subst n m} : Encodable.encode σ = @Encodable.encode (Vec _ _) _ σ := rfl
+
 variable [∀ n, Encodable (𝓛.Rel n)]
 
 def Formula.encode : 𝓛.Formula n → ℕ
@@ -144,13 +147,15 @@ instance : Encodable (𝓛.Formula n) where
 @[simp] theorem Formula.encode_all {p : 𝓛.Formula (n + 1)} :
   Encodable.encode (∀' p) = 4 * Encodable.encode p + 4 := rfl
 
-lemma Formula.encode_lt_imp_left {p q : 𝓛.Formula n} : Encodable.encode p < Encodable.encode (p ⇒ q) := by
+lemma Formula.encode_lt_imp_left {p q : 𝓛.Formula n} :
+  Encodable.encode p < Encodable.encode (p ⇒ q) := by
   simp [Nat.lt_succ]
   apply le_trans' (Nat.le_add_right _ _)
   apply le_trans' (Nat.le_mul_of_pos_left _ (by simp))
   apply Nat.left_le_pair
 
-lemma Formula.encode_lt_imp_right {p q : 𝓛.Formula n} : Encodable.encode q < Encodable.encode (p ⇒ q) := by
+lemma Formula.encode_lt_imp_right {p q : 𝓛.Formula n} :
+  Encodable.encode q < Encodable.encode (p ⇒ q) := by
   simp [encode, Nat.lt_succ]
   apply le_trans' (Nat.le_add_right _ _)
   apply le_trans' (Nat.le_mul_of_pos_left _ (by simp))
@@ -159,11 +164,13 @@ lemma Formula.encode_lt_imp_right {p q : 𝓛.Formula n} : Encodable.encode q < 
 end
 
 section
+
 variable [∀ n, Countable (𝓛.Func n)] [∀ n, Countable (𝓛.Rel n)]
 noncomputable scoped instance : Encodable (𝓛.Func n) := Encodable.ofCountable _
 noncomputable scoped instance : Encodable (𝓛.Rel n) := Encodable.ofCountable _
 instance : Countable (𝓛.Term n) := inferInstance
 instance : Countable (𝓛.Formula n) := inferInstance
+
 end
 
 end FirstOrder.Language

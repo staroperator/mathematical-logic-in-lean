@@ -38,7 +38,7 @@ namespace Fin
   ⟨λ h => ⟨h 0, h 1, h 2⟩, λ h i => i.cases3 h.left h.right.left h.right.right⟩
 end Fin
 
-def Vec (α : Type u) (n : ℕ) := Fin n → α
+abbrev Vec (α : Type u) (n : ℕ) := Fin n → α
 
 namespace Vec
 
@@ -255,6 +255,15 @@ end
 instance [Countable α] : Countable (Vec α n) :=
   have := Encodable.ofCountable
   inferInstance
+
+def toList (v : Vec α n) : List α :=
+  match n, v with
+  | 0, _ => []
+  | _ + 1, v => v.head :: v.tail.toList
+
+open Std in
+instance [Repr α] : Repr (Vec α n) where
+  reprPrec v _ := Format.bracketFill "[" (Format.joinSep (Vec.toList (repr ∘ v)) ", ") "]ᵥ"
 
 end Vec
 

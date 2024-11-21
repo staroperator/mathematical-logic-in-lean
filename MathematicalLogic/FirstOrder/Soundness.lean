@@ -68,10 +68,6 @@ theorem soundness {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} : 𝓣 ⊢ p → 𝓜
   apply Language.soundness h
   apply 𝓜.satisfy_theory
 
-abbrev theorems (𝓣 : 𝓛.Theory) : 𝓛.Theory := { p | 𝓣 ⊢ p }
-
-abbrev Decidable (𝓣 : 𝓛.Theory) := DecidablePred 𝓣.theorems
-
 theorem eq_theory_of_complete {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} :
   Complete 𝓣 → 𝓣.theorems = 𝓜.theory := by
   intro h

@@ -300,6 +300,10 @@ abbrev FormulaSet (𝓛 : Language) (n : ℕ) := Set (𝓛.Formula n)
 abbrev FormulaSet.append (Γ : 𝓛.FormulaSet n) (p : 𝓛.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
+theorem FormulaSet.mem_append : p ∈ Γ,' p := Set.mem_insert _ _
+theorem FormulaSet.subset_append : Γ ⊆ Γ,' p := Set.subset_insert _ _
+theorem FormulaSet.append_subset_append : Γ ⊆ Δ → Γ,' p ⊆ Δ,' p := Set.insert_subset_insert
+
 abbrev FormulaSet.shift (Γ : 𝓛.FormulaSet n) : 𝓛.FormulaSet (n + 1) := (↑ₚ ·) '' Γ
 prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : 𝓛.FormulaSet n) = ∅ := Set.image_empty _

@@ -32,7 +32,7 @@ namespace Proof
 
 variable {n} {Γ : 𝓛.FormulaSet n}
 
-theorem hyp_append : Γ,' p ⊢ p := hyp (Set.mem_insert _ _)
+theorem hyp_append : Γ,' p ⊢ p := hyp FormulaSet.mem_append
 
 theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   intros h₁ h₂
@@ -41,7 +41,7 @@ theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
   | ax h => exact ax h
   | mp _ _ ih₁ ih₂ => exact mp ih₁ ih₂
 
-theorem weaken_append : Γ ⊢ p → Γ,' q ⊢ p := weaken (Set.subset_insert _ _)
+theorem weaken_append : Γ ⊢ p → Γ,' q ⊢ p := weaken FormulaSet.subset_append
 
 theorem mp₂ (h₁ : Γ ⊢ p ⇒ q ⇒ r) (h₂ : Γ ⊢ p) (h₃ : Γ ⊢ q) : Γ ⊢ r := mp (mp h₁ h₂) h₃
 
@@ -106,7 +106,7 @@ macro "pintro" : tactic => `(tactic| first | apply deduction.mpr | apply forall_
 /-- Revert a hypothesis through deduction theorem. -/
 macro "prevert" : tactic => `(tactic| apply deduction.mp)
 
-/-- Repeatly introduce new hypotheses and variables. -/
+/-- Repeatly introduce new hypotheses and variables. Use `pintros n` to contol the number of hypothesis introduced. -/
 macro "pintros" n:(ppSpace colGt num)? : tactic =>
   match n with
   | some n => `(tactic| iterate $n pintro)
@@ -131,6 +131,14 @@ macro "phave" t:(ppSpace colGt term) : tactic =>
   `(tactic| refine cut (p := $t) ?_ ?_)
 macro "psuffices" t:(ppSpace colGt term) : tactic =>
   `(tactic| (refine cut (p := $t) ?_ ?_; swap))
+
+/--
+  Remove the `n`-th assumption. -/
+macro "pclear" n:(ppSpace colGt num) : tactic => do
+  let mut weakenTerm ← `(FormulaSet.subset_append)
+  for _ in [:n.getNat] do
+    weakenTerm ← `(FormulaSet.append_subset_append $weakenTerm)
+  `(tactic| apply weaken $weakenTerm)
 
 /--
   Unify `Γ ⊆ Δ` as `Γ, p₁, ⋯, pₙ = Δ`. Return `some n` if succeed, and `none` if fail. -/
@@ -173,7 +181,7 @@ elab "papply" t:(ppSpace colGt term) d:((" with " num)?) : tactic =>
     let weakenTerm ← do
       let mut weakenTerm ← `(Set.Subset.refl _)
       for _ in [:weakenDepth] do
-        weakenTerm := ← `(Set.Subset.trans $weakenTerm (Set.subset_insert _ _))
+        weakenTerm := ← `(Set.Subset.trans $weakenTerm FormulaSet.subset_append)
       Lean.Elab.Term.elabTerm weakenTerm (some weakenTy)
     let mut proofTerm := Lean.mkApp7
       (.const ``weaken []) 𝓛 n Γ Δ p weakenTerm
@@ -192,11 +200,8 @@ elab "papply" t:(ppSpace colGt term) d:((" with " num)?) : tactic =>
       else if let some (_, _, p, q) := (← Lean.Meta.whnf goalFormula).app4? ``Formula.imp then
         let mvarId ← Lean.mkFreshMVarId
         newMVarIds := newMVarIds ++ [mvarId]
-        let mvar ← Lean.Meta.mkFreshExprMVarWithId mvarId (some (
-          Lean.mkApp4 (.const ``Proof []) 𝓛 n Δ p))
-        let newProofTerm := Lean.mkApp7
-          (.const ``mp []) 𝓛 n Δ p q proofTerm mvar
-        proofTerm := newProofTerm
+        let mvar ← Lean.Meta.mkFreshExprMVarWithId mvarId (some (Lean.mkApp4 (.const ``Proof []) 𝓛 n Δ p))
+        proofTerm := Lean.mkApp7 (.const ``mp []) 𝓛 n Δ p q proofTerm mvar
         goalFormula := q
       else
         throwError "failed to apply {appType} at {goalType}"
@@ -613,16 +618,6 @@ theorem Formula.sound : Formula Γ p q → Γ ⊢ p ⇔ q := by
   | imp => papply iff_congr_imp <;> assumption
   | refl => exact iff_refl
 
-macro "prewrite" t:term : tactic =>
-  `(tactic| (
-    apply mp₂ iff_mpr
-    · apply Formula.sound
-      repeat' first
-      | apply Formula.rel | apply Formula.eq | apply Formula.imp | exact Formula.refl
-      | apply Terms.cons | exact Terms.refl
-      | exact Term.matched (by pexact $t) | apply Term.func | exact Term.refl
-    try simp))
-
 syntax rwRule := ("← "?) term
 
 /--
@@ -632,16 +627,32 @@ syntax rwRule := ("← "?) term
   Use `←` to change the direction. -/
 elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
   for rule in rules.raw.getSepArgs do
-    let t ←
-      match rule with
-      | `(rwRule | $n:num) => Lean.Elab.liftMacroM (hypTerm n.getNat)
-      | `(rwRule | $t:term) => pure t
-      | `(rwRule | ← $n:num) => `(mp eq_symm $(← Lean.Elab.liftMacroM (hypTerm n.getNat)))
-      | `(rwRule | ← $t:term) => `(mp eq_symm $t)
+    let t ← match rule with
+      | `(rwRule | $n:num) =>
+        let t ← Lean.Elab.liftMacroM (hypTerm n.getNat)
+        `(tacticSeq | pexact $t)
+      | `(rwRule | $t:term) => `(tacticSeq | pexact $t)
+      | `(rwRule | ← $n:num) =>
+        let t ← Lean.Elab.liftMacroM (hypTerm n.getNat)
+        `(tacticSeq | psymm; pexact $t)
+      | `(rwRule | ← $t:term) => `(tacticSeq | psymm; pexact $t)
       | _ => throwError "unreachable"
-    Lean.Elab.Tactic.evalTactic (←`(tactic| prewrite $t))
+    Lean.Elab.Tactic.evalTactic (←`(tactic | (
+      apply mp₂ iff_mpr
+      · apply Formula.sound
+        repeat' first
+        | apply Formula.rel | apply Formula.eq | apply Formula.imp | exact Formula.refl
+        | apply Terms.cons | exact Terms.refl
+        | exact Term.matched (by $t) | apply Term.func | exact Term.refl
+      try simp)))
 
 end Rewrite
+
+theorem ne_symm : Γ ⊢ ~ t₁ ≐ t₂ ⇒ ~ t₂ ≐ t₁ := by
+  pintros
+  papplya 1
+  prw [0]
+  prefl
 
 theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
   intro h
@@ -699,6 +710,10 @@ theorem iff_congr_foralls : 𝓣 ⊢ ∀* (p ⇔ q) ⇒ ∀* p ⇔ ∀* q := by
   papply Proof.iff_intro <;> papply foralls_imp <;> papply foralls_intro
   · papply Proof.iff_mp; rw [generalization_alls]; passumption
   · papply Proof.iff_mpr; rw [generalization_alls]; passumption
+
+abbrev theorems (𝓣 : 𝓛.Theory) : 𝓛.Theory := { p | 𝓣 ⊢ p }
+
+abbrev Decidable (𝓣 : 𝓛.Theory) := DecidablePred 𝓣.theorems
 
 end Theory
 
