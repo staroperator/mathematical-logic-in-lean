@@ -52,18 +52,18 @@ scoped notation "⌜" x "⌝" => ofNat (Encodable.encode x)
 @[simp] theorem shift_mul {t₁ t₂ : Peano.Term n} : ↑ₜ(t₁ * t₂) = ↑ₜt₁ * ↑ₜt₂ := subst_mul
 
 def le (t₁ t₂ : Peano.Term n) := ∃' (↑ₜt₁ + #0 ≐ ↑ₜt₂)
-scoped infix:60 " ̇≤ " => le
-@[simp] theorem subst_le : (t₁ ̇≤ t₂)[σ]ₚ = t₁[σ]ₜ ̇≤ t₂[σ]ₜ := by simp [le, Term.shift_subst_lift]
-@[simp] theorem shift_le : ↑ₚ(t₁ ̇≤ t₂) = ↑ₜt₁ ̇≤ ↑ₜt₂ := subst_le
+scoped infix:60 " ⪁ " => le
+@[simp] theorem subst_le : (t₁ ⪁ t₂)[σ]ₚ = t₁[σ]ₜ ⪁ t₂[σ]ₜ := by simp [le, Term.shift_subst_lift]
+@[simp] theorem shift_le : ↑ₚ(t₁ ⪁ t₂) = ↑ₜt₁ ⪁ ↑ₜt₂ := subst_le
 
-def lt (t₁ t₂ : Peano.Term n) := S t₁ ̇≤ t₂
-scoped infix:60 " ̇< " => lt
-@[simp] theorem subst_lt : (t₁ ̇< t₂)[σ]ₚ = t₁[σ]ₜ ̇< t₂[σ]ₜ := by simp [lt]
-@[simp] theorem shift_lt : ↑ₚ(t₁ ̇< t₂) = ↑ₜt₁ ̇< ↑ₜt₂ := subst_lt
+def lt (t₁ t₂ : Peano.Term n) := S t₁ ⪁ t₂
+scoped infix:60 " ⋖ " => lt
+@[simp] theorem subst_lt : (t₁ ⋖ t₂)[σ]ₚ = t₁[σ]ₜ ⋖ t₂[σ]ₜ := by simp [lt]
+@[simp] theorem shift_lt : ↑ₚ(t₁ ⋖ t₂) = ↑ₜt₁ ⋖ ↑ₜt₂ := subst_lt
 
-@[simp] theorem Term.subst_le : (t₁ ̇≤ t₂)[σ]ₚ = t₁[σ]ₜ ̇≤ t₂[σ]ₜ := by
+@[simp] theorem Term.subst_le : (t₁ ⪁ t₂)[σ]ₚ = t₁[σ]ₜ ⪁ t₂[σ]ₜ := by
   simp [le, Term.shift_subst_lift]
-@[simp] theorem Term.shift_le : ↑ₚ(t₁ ̇≤ t₂) = ↑ₜt₁ ̇≤ ↑ₜt₂ := Term.subst_le
+@[simp] theorem Term.shift_le : ↑ₚ(t₁ ⪁ t₂) = ↑ₜt₁ ⪁ ↑ₜt₂ := Term.subst_le
 
 instance : Encodable (Language.Func Peano n) where
   encode
@@ -302,7 +302,7 @@ lemma add_eq_zero_left : ↑ᴳ^[k] PA ⊢ t₁ + t₂ ≐ 0 ⇒ t₁ ≐ 0 := b
 lemma add_eq_zero_right : ↑ᴳ^[k] PA ⊢ t₁ + t₂ ≐ 0 ⇒ t₂ ≐ 0 := by
   prw [add_comm]; exact add_eq_zero_left
 
-theorem le_ofNat {n m : ℕ} : n ≤ m → ↑ᴳ^[k] PA ⊢ n ̇≤ m := by
+theorem le_ofNat {n m : ℕ} : n ≤ m → ↑ᴳ^[k] PA ⊢ n ⪁ m := by
   intro h
   papply Proof.exists_intro (m - n)
   simp [Term.shift_subst_single]
@@ -310,12 +310,12 @@ theorem le_ofNat {n m : ℕ} : n ≤ m → ↑ᴳ^[k] PA ⊢ n ̇≤ m := by
   rw [Nat.add_sub_cancel' h]
   prefl
 
-theorem le_refl : ↑ᴳ^[k] PA ⊢ t ̇≤ t := by
+theorem le_refl : ↑ᴳ^[k] PA ⊢ t ⪁ t := by
   papply Proof.exists_intro 0
   simp [Term.shift_subst_single]
   apply add_zero
 
-theorem le_antisymm : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₂ ̇≤ t₁ ⇒ t₁ ≐ t₂ := by
+theorem le_antisymm : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t₂ ⪁ t₁ ⇒ t₁ ≐ t₂ := by
   pintros
   papply Proof.exists_elim
   · passumption 1
@@ -331,7 +331,7 @@ theorem le_antisymm : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₂ ̇≤ t₁ ⇒ 
       prw [←add_zero ↑ₜ↑ₜt₁, ←0, 2]
       prefl
 
-theorem le_trans : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₂ ̇≤ t₃ ⇒ t₁ ̇≤ t₃ := by
+theorem le_trans : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t₂ ⪁ t₃ ⇒ t₁ ⪁ t₃ := by
   pintros 2
   papply Proof.exists_elim
   · passumption 1
@@ -344,18 +344,18 @@ theorem le_trans : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₂ ̇≤ t₃ ⇒ t�
       prw [add_assoc, 1, 0]
       prefl
 
-theorem zero_le : ↑ᴳ^[k] PA ⊢ 0 ̇≤ t := by
+theorem zero_le : ↑ᴳ^[k] PA ⊢ 0 ⪁ t := by
   papply Proof.exists_intro t
   simp [Term.shift_subst_single]
   apply zero_add
 
-theorem le_succ_self : ↑ᴳ^[k] PA ⊢ t ̇≤ S t := by
+theorem le_succ_self : ↑ᴳ^[k] PA ⊢ t ⪁ S t := by
   papply Proof.exists_intro 1
   simp [Term.shift_subst_single]
   prw [add_succ, add_zero]
   prefl
 
-theorem add_le_add : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₃ ̇≤ t₄ ⇒ t₁ + t₃ ̇≤ t₂ + t₄ := by
+theorem add_le_add : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t₃ ⪁ t₄ ⇒ t₁ + t₃ ⪁ t₂ + t₄ := by
   pintros 2
   papply Proof.exists_elim
   · passumption 1
@@ -368,63 +368,63 @@ theorem add_le_add : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₃ ̇≤ t₄ ⇒ t
       prw [add_assoc, ←add_assoc _ _ #0, 0, add_right_comm, 1]
       prefl
 
-theorem add_le_add_left : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t + t₁ ̇≤ t + t₂ := by
+theorem add_le_add_left : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t + t₁ ⪁ t + t₂ := by
   pintro
   papply add_le_add
   · pexact le_refl
   · passumption
 
-theorem add_le_add_right : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₁ + t ̇≤ t₂ + t := by
+theorem add_le_add_right : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t₁ + t ⪁ t₂ + t := by
   pintro
   papply add_le_add
   · passumption
   · pexact le_refl
 
-theorem lt_ofNat {n m : ℕ} : n < m → ↑ᴳ^[k] PA ⊢ n ̇< m := by
+theorem lt_ofNat {n m : ℕ} : n < m → ↑ᴳ^[k] PA ⊢ n ⋖ m := by
   intro h
   rw [←Nat.succ_le_iff] at h
   exact le_ofNat h
 
-theorem le_of_lt : ↑ᴳ^[k] PA ⊢ t₁ ̇< t₂ ⇒ t₁ ̇≤ t₂ := by
+theorem le_of_lt : ↑ᴳ^[k] PA ⊢ t₁ ⋖ t₂ ⇒ t₁ ⪁ t₂ := by
   pintro
   papply Proof.exists_elim
   · passumption 0
-  pintros 2; simp
-  papply Proof.exists_intro (S #0); simp [Term.shift_subst_single]
-  prw [←0, add_succ, succ_add]
-  prefl
+  · pintros 2; simp
+    papply Proof.exists_intro (S #0); simp [Term.shift_subst_single]
+    prw [←0, add_succ, succ_add]
+    prefl
 
-theorem ne_of_lt : ↑ᴳ^[k] PA ⊢ t₁ ̇< t₂ ⇒ ~ t₁ ≐ t₂ := by
+theorem ne_of_lt : ↑ᴳ^[k] PA ⊢ t₁ ⋖ t₂ ⇒ ~ t₁ ≐ t₂ := by
   pintros
   papply Proof.exists_elim
   · passumption 1
-  pintros; simp
-  papply succ_ne_zero (t := #0)
-  papply add_left_cancel (t := ↑ₜt₂)
-  prw [add_zero, ←1, add_succ, ←succ_add, 0, 1]
-  prefl
+  · pintros; simp
+    papply succ_ne_zero (t := #0)
+    papply add_left_cancel (t := ↑ₜt₂)
+    prw [add_zero, ←1, add_succ, ←succ_add, 0, 1]
+    prefl
 
-theorem eq_or_lt_of_le : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ t₁ ≐ t₂ ⩒ t₁ ̇< t₂ := by
+theorem eq_or_lt_of_le : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ t₁ ≐ t₂ ⩒ t₁ ⋖ t₂ := by
   pintro
   papply Proof.exists_elim
   · passumption 0
-  pintros 2; simp
-  papply Proof.or_elim
-  · pexact zero_or_succ #0
-  · pintro
-    papply Proof.or_inl
-    prw [←1, 0, add_zero]
-    prefl
-  · pintro
-    papply Proof.or_inr
-    papply Proof.exists_elim
-    · passumption 0
-    pintros 2; simp
-    papply Proof.exists_intro #0; simp [Term.shift_subst_single]
-    prw [succ_add, ←add_succ, ←0, 2]
-    prefl
+  · pintros 2; simp
+    papply Proof.or_elim
+    · pexact zero_or_succ #0
+    · pintro
+      papply Proof.or_inl
+      prw [←1, 0, add_zero]
+      prefl
+    · pintro
+      papply Proof.or_inr
+      papply Proof.exists_elim
+      · passumption 0
+      pintros 2; simp
+      papply Proof.exists_intro #0; simp [Term.shift_subst_single]
+      prw [succ_add, ←add_succ, ←0, 2]
+      prefl
 
-theorem lt_of_le_of_ne : ↑ᴳ^[k] PA ⊢ t₁ ̇≤ t₂ ⇒ ~ t₁ ≐ t₂ ⇒ t₁ ̇< t₂ := eq_or_lt_of_le
+theorem lt_of_le_of_ne : ↑ᴳ^[k] PA ⊢ t₁ ⪁ t₂ ⇒ ~ t₁ ≐ t₂ ⇒ t₁ ⋖ t₂ := eq_or_lt_of_le
 
 theorem ne_ofNat {n m : ℕ} : n ≠ m → ↑ᴳ^[k] PA ⊢ ~ n ≐ m := by
   intro h

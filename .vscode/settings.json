@@ -2,7 +2,7 @@
     "lean4.input.customTranslations": {
         "dotand": "⩑",
         "dotor": "⩒",
-        "dotle": "̇≤",
-        "dotlt": "̇<"
+        "dotle": "⪁",
+        "dotlt": "⋖"
     }
 }
