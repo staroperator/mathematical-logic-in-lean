@@ -1,5 +1,5 @@
 import MathematicalLogic.Notation
-import MathematicalLogic.Vector
+import MathematicalLogic.Vec
 import MathematicalLogic.ZFSet
 
 import MathematicalLogic.FirstOrder.Syntax

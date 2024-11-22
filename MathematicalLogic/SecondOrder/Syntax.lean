@@ -1,4 +1,4 @@
-import MathematicalLogic.Vector
+import MathematicalLogic.Vec
 import MathematicalLogic.Notation
 
 namespace SecondOrder

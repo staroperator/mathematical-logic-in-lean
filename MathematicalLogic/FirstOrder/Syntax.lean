@@ -1,5 +1,5 @@
 import Mathlib.Data.Set.Lattice
-import MathematicalLogic.Vector
+import MathematicalLogic.Vec
 import MathematicalLogic.Notation
 
 namespace FirstOrder
