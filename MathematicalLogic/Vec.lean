@@ -24,11 +24,11 @@ namespace Fin
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
 @[elab_as_elim] def cases2 {motive : Fin 2 → Sort _}
   (zero : motive 0) (one : motive 1) (i : Fin 2) : motive i :=
-  i.cases zero (λ i => i.cases one (·.elim0))
+  i.cases zero λ i => i.cases one (·.elim0)
 @[elab_as_elim] def cases3 {motive : Fin 3 → Sort _}
   (zero : motive 0) (one : motive 1) (two : motive 2)
   (i : Fin 3) : motive i :=
-  i.cases zero (λ i => i.cases one (λ j => j.cases two (·.elim0)))
+  i.cases zero λ i => i.cases one λ j => j.cases two (·.elim0)
 
 @[simp] theorem forall_fin1 {p : Fin 1 → Prop} : (∀ (i : Fin 1), p i) ↔ p 0 :=
   ⟨λ h => h 0, λ h i => i.cases1 h⟩
@@ -69,7 +69,7 @@ macro_rules
     match tail with
     | `([]ᵥ)      => `([$x]ᵥ)
     | `([$xs,*]ᵥ) => `([$x, $xs,*]ᵥ)
-    | `(⋯)       => `([$x, $tail]ᵥ)
+    | `(⋯)       => `($x ∷ᵥ $tail)
     | _          => throw ()
   | _ => throw ()
 
@@ -82,7 +82,7 @@ def tail (v : Vec α (n + 1)) : Vec α n := v ∘ Fin.succ
 @[simp] theorem tail_app {v : Vec α (n + 1)} : v.tail x = v x.succ := rfl
 @[simp] theorem tail_cons : (a ∷ᵥ v).tail = v := rfl
 
-theorem cons_eq_iff : a₁ ∷ᵥ v₁ = a₂ ∷ᵥ v₂ ↔ a₁ = a₂ ∧ v₁ = v₂ := by
+@[simp] theorem cons_eq_iff : a₁ ∷ᵥ v₁ = a₂ ∷ᵥ v₂ ↔ a₁ = a₂ ∧ v₁ = v₂ := by
   constructor
   · intro h
     rw [←head_cons (a := a₁), ←tail_cons (v := v₁), h]; simp
@@ -117,7 +117,7 @@ variable {motive : {n : ℕ} → Vec α n → Sort v}
   (nil : motive []ᵥ)
   (cons : {n : ℕ} → (a : α) → (v : Vec α n) → motive v → motive (a ∷ᵥ v))
 
-@[elab_as_elim] def rec : {n : ℕ} → (v : Vec α n) → motive v
+@[elab_as_elim, induction_eliminator] def rec : {n : ℕ} → (v : Vec α n) → motive v
 | 0, v => eq_nil v ▸ nil
 | (_ + 1), v => eq_cons v ▸ cons v.head v.tail (rec v.tail)
 @[simp] theorem rec_nil : rec nil cons []ᵥ = nil := rfl
@@ -249,7 +249,7 @@ instance encodable : Encodable (Vec α n) where
 
 @[simp] theorem encode_nil {v : Vec α 0} : Encodable.encode v = 0 := rfl
 @[simp] theorem encode_cons {v : Vec α n} : Encodable.encode (a ∷ᵥ v) = (Encodable.encode a).pair (Encodable.encode v) := rfl
-theorem encode_eq {v : Vec α n} : Encodable.encode v = Vec.paired (λ i => Encodable.encode (v i)) := rfl
+theorem encode_eq {v : Vec α n} : Encodable.encode v = Vec.paired λ i => Encodable.encode (v i) := rfl
 end
 
 instance [Countable α] : Countable (Vec α n) :=

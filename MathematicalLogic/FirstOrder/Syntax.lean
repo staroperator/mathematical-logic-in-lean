@@ -17,41 +17,46 @@ abbrev Const (𝓛 : Language) := 𝓛.Func 0
 inductive Term (𝓛 : Language) (n : ℕ) : Type where
 | var : Fin n → 𝓛.Term n
 | func : 𝓛.Func m → (Fin m → 𝓛.Term n) → 𝓛.Term n
-prefix:max "#" => Term.var
-infix:70 " ⬝ₜ " => Term.func
-instance : Coe 𝓛.Const (𝓛.Term n) := ⟨λ c => c ⬝ₜ []ᵥ⟩
 
-instance Term.decEq [∀ n, DecidableEq (𝓛.Func n)] : DecidableEq (𝓛.Term n) := by
+namespace Term
+
+prefix:max "#" => var
+infix:70 " ⬝ᶠ " => func
+instance : Coe 𝓛.Const (𝓛.Term n) := ⟨λ c => c ⬝ᶠ []ᵥ⟩
+
+instance decEq [∀ n, DecidableEq (𝓛.Func n)] : DecidableEq (𝓛.Term n) := by
   intro t₁ t₂
   cases t₁ <;> cases t₂
   case var.var n m =>
-    rw [Term.var.injEq]
+    rw [var.injEq]
     by_cases h : n = m
     · exact isTrue h
     · exact isFalse h
   case func.func n f v₁ m g v₂ =>
     by_cases h : n = m
-    · subst h; simp [Term.func.injEq]; rw [Vec.ext_iff]
+    · subst h; simp [func.injEq]; rw [Vec.ext_iff]
       have := λ i => decEq (v₁ i) (v₂ i)
       infer_instance
     · simp [h]; exact isFalse not_false
   all_goals exact isFalse Term.noConfusion
 
-@[simp] def Term.size : 𝓛.Term n → ℕ
+@[simp] def size : 𝓛.Term n → ℕ
 | #_ => 0
-| _ ⬝ₜ v => (Vec.max λ i => (v i).size) + 1
-instance : SizeOf (𝓛.Term n) := ⟨Term.size⟩
-@[simp] theorem Term.sizeOf_lt_func : sizeOf (v i) < sizeOf (f ⬝ₜ v) :=
+| _ ⬝ᶠ v => (Vec.max λ i => (v i).size) + 1
+instance : SizeOf (𝓛.Term n) := ⟨size⟩
+@[simp] theorem sizeOf_lt_func : sizeOf (v i) < sizeOf (f ⬝ᶠ v) :=
   Nat.lt_succ_of_le (Vec.le_max (v := λ i => (v i).size))
 
-def Subst (𝓛 : Language) (n m : ℕ) := Vec (𝓛.Term m) n
+end Term
+
+abbrev Subst (𝓛 : Language) (n m : ℕ) := Vec (𝓛.Term m) n
 
 def Term.subst : 𝓛.Term n → 𝓛.Subst n m → 𝓛.Term m
 | #x, σ => σ x
-| f ⬝ₜ v, σ => f ⬝ₜ λ i => (v i).subst σ
+| f ⬝ᶠ v, σ => f ⬝ᶠ λ i => (v i).subst σ
 notation:80 t "[" σ "]ₜ" => Term.subst t σ
 @[simp] theorem Term.subst_var : (#x)[σ]ₜ = σ x := rfl
-@[simp] theorem Term.subst_func : (f ⬝ₜ v)[σ]ₜ = f ⬝ₜ λ i => (v i)[σ]ₜ := rfl
+@[simp] theorem Term.subst_func : (f ⬝ᶠ v)[σ]ₜ = f ⬝ᶠ λ i => (v i)[σ]ₜ := rfl
 theorem Term.subst_const {c : 𝓛.Const} : (c : 𝓛.Term n)[σ]ₜ = c := by simp; apply Vec.eq_nil
 
 def Subst.id : 𝓛.Subst n n := λ x => #x
@@ -108,7 +113,7 @@ theorem Term.subst_swap_single : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ 
 
 def Term.vars : 𝓛.Term n → Set (Fin n)
 | #x => {x}
-| _ ⬝ₜ v => ⋃i, (v i).vars
+| _ ⬝ᶠ v => ⋃i, (v i).vars
 
 theorem Term.subst_ext_vars {t : 𝓛.Term n} (h : ∀ x ∈ t.vars, σ₁ x = σ₂ x) :
   t[σ₁]ₜ = t[σ₂]ₜ := by
@@ -127,46 +132,50 @@ inductive Formula (𝓛 : Language) : ℕ → Type where
 | false : 𝓛.Formula n
 | imp : 𝓛.Formula n → 𝓛.Formula n → 𝓛.Formula n
 | all : 𝓛.Formula (n + 1) → 𝓛.Formula n
-infix:70 " ⬝ᵣ " => Formula.rel
-infix:60 " ≐ " => Formula.eq
-instance : PropNotation (𝓛.Formula n) := ⟨Formula.false, Formula.imp⟩
-prefix:59 "∀' " => Formula.all
-def Formula.exist (p : 𝓛.Formula (n + 1)) := ~ ∀' (~ p)
-prefix:59 "∃' " => Formula.exist
 
-def Formula.andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
+namespace Formula
+
+infix:70 " ⬝ʳ " => rel
+infix:60 " ≐ " => eq
+instance : PropNotation (𝓛.Formula n) := ⟨false, imp⟩
+prefix:max "∀' " => all
+def ex (p : 𝓛.Formula (n + 1)) := ~ ∀' (~ p)
+prefix:max "∃' " => ex
+
+def andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | 0, _ => ⊤
 | _ + 1, v => v.head ⩑ andN v.tail
-notation3:57 "⋀"(...)", " r:(scoped r => Formula.andN r) => r
+notation3:57 "⋀ "(...)", " r:(scoped r => andN r) => r
 
-def Formula.allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
+def allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
 | 0, p => p
 | m + 1, p => allN m (∀' p)
-notation "∀^[" n "]" => Formula.allN n
+notation "∀^[" n "]" => allN n
 
-def Formula.existsN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
+def exN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
 | 0, p => p
-| m + 1, p => existsN m (∃' p)
-notation "∃^[" n "]" => Formula.existsN n
+| m + 1, p => exN m (∃' p)
+notation "∃^[" n "]" => exN n
 
-@[simp] theorem Formula.false_eq : Formula.false = (⊥ : 𝓛.Formula n) := rfl
-@[simp] theorem Formula.imp_eq : Formula.imp p q = p ⇒ q := rfl
-@[simp] theorem Formula.imp_inj {p₁ q₁ p₂ q₂ : 𝓛.Formula n} : (p₁ ⇒ q₁) = p₂ ⇒ q₂ ↔ p₁ = p₂ ∧ q₁ = q₂ :=
+@[simp] theorem false_eq : false = (⊥ : 𝓛.Formula n) := rfl
+@[simp] theorem imp_eq : imp p q = p ⇒ q := rfl
+@[simp] theorem neg_eq {p : 𝓛.Formula n} : (p ⇒ ⊥) = ~ p := rfl
+@[simp] theorem imp_inj {p₁ q₁ p₂ q₂ : 𝓛.Formula n} : (p₁ ⇒ q₁) = p₂ ⇒ q₂ ↔ p₁ = p₂ ∧ q₁ = q₂ :=
   iff_of_eq (imp.injEq _ _ _ _)
 
-@[simp] def Formula.size : 𝓛.Formula n → ℕ
-| _ ⬝ᵣ _ | _ ≐ _ | ⊥ => 0
+@[simp] def size : 𝓛.Formula n → ℕ
+| _ ⬝ʳ _ | _ ≐ _ | ⊥ => 0
 | p ⇒ q => p.size + q.size + 1
 | ∀' p => p.size + 1
-instance : SizeOf (𝓛.Formula n) := ⟨Formula.size⟩
-@[simp] theorem Formula.sizeOf_lt_imp_left {p q : 𝓛.Formula n} : sizeOf p < sizeOf (p ⇒ q) :=
+instance : SizeOf (𝓛.Formula n) := ⟨size⟩
+@[simp] theorem sizeOf_lt_imp_left {p q : 𝓛.Formula n} : sizeOf p < sizeOf (p ⇒ q) :=
   Nat.lt_succ_of_le (Nat.le_add_right _ _)
-@[simp] theorem Formula.sizeOf_lt_imp_right {p q : 𝓛.Formula n} : sizeOf q < sizeOf (p ⇒ q) :=
+@[simp] theorem sizeOf_lt_imp_right {p q : 𝓛.Formula n} : sizeOf q < sizeOf (p ⇒ q) :=
   Nat.lt_succ_of_le (Nat.le_add_left _ _)
-@[simp] theorem Formula.sizeOf_lt_all {p : 𝓛.Formula (n + 1)} : sizeOf p < sizeOf (∀' p) :=
+@[simp] theorem sizeOf_lt_all {p : 𝓛.Formula (n + 1)} : sizeOf p < sizeOf (∀' p) :=
   Nat.lt_succ_self _
 
-instance Formula.decEq [∀ n, DecidableEq (𝓛.Func n)] [∀ n, DecidableEq (𝓛.Rel n)] : DecidableEq (𝓛.Formula n) := by
+instance decEq [∀ n, DecidableEq (𝓛.Func n)] [∀ n, DecidableEq (𝓛.Rel n)] : DecidableEq (𝓛.Formula n) := by
   intro p q
   cases p <;> cases q
   case rel.rel n r₁ v₁ m r₂ v₂ =>
@@ -186,66 +195,69 @@ instance Formula.decEq [∀ n, DecidableEq (𝓛.Func n)] [∀ n, DecidableEq (�
     exact decEq p q
   all_goals exact isFalse Formula.noConfusion
 
-def Formula.subst : 𝓛.Formula n → 𝓛.Subst n m → 𝓛.Formula m
-| r ⬝ᵣ v, σ => r ⬝ᵣ λ i => (v i)[σ]ₜ
+def subst : 𝓛.Formula n → 𝓛.Subst n m → 𝓛.Formula m
+| r ⬝ʳ v, σ => r ⬝ʳ λ i => (v i)[σ]ₜ
 | t₁ ≐ t₂, σ => t₁.subst σ ≐ t₂.subst σ
 | ⊥, _ => ⊥
 | p ⇒ q, σ => p.subst σ ⇒ q.subst σ
 | ∀' p, σ => ∀' (p.subst ⇑ₛσ)
-notation:80 p "[" σ "]ₚ" => Formula.subst p σ
-@[simp] theorem Formula.subst_rel : (r ⬝ᵣ ts)[σ]ₚ = r ⬝ᵣ (λ i => (ts i)[σ]ₜ) := rfl
-@[simp] theorem Formula.subst_eq : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
-@[simp] theorem Formula.subst_false : ⊥[σ]ₚ = ⊥ := rfl
-@[simp] theorem Formula.subst_imp : (p ⇒ q)[σ]ₚ = p[σ]ₚ ⇒ q[σ]ₚ := rfl
-@[simp] theorem Formula.subst_all : (∀' p)[σ]ₚ = ∀' (p[⇑ₛσ]ₚ) := rfl
-@[simp] theorem Formula.subst_and : (p ⩑ q)[σ]ₚ = p[σ]ₚ ⩑ q[σ]ₚ := rfl
-@[simp] theorem Formula.subst_or : (p ⩒ q)[σ]ₚ = p[σ]ₚ ⩒ q[σ]ₚ := rfl
-@[simp] theorem Formula.subst_exist : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
+notation:80 p "[" σ "]ₚ" => subst p σ
+@[simp] theorem subst_rel : (r ⬝ʳ ts)[σ]ₚ = r ⬝ʳ λ i => (ts i)[σ]ₜ := rfl
+@[simp] theorem subst_eq : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
+@[simp] theorem subst_false : ⊥[σ]ₚ = ⊥ := rfl
+@[simp] theorem subst_imp : (p ⇒ q)[σ]ₚ = p[σ]ₚ ⇒ q[σ]ₚ := rfl
+@[simp] theorem subst_true : ⊤[σ]ₚ = ⊤ := rfl
+@[simp] theorem subst_neg : (~ p)[σ]ₚ = ~ p[σ]ₚ := rfl
+@[simp] theorem subst_and : (p ⩑ q)[σ]ₚ = p[σ]ₚ ⩑ q[σ]ₚ := rfl
+@[simp] theorem subst_or : (p ⩒ q)[σ]ₚ = p[σ]ₚ ⩒ q[σ]ₚ := rfl
+@[simp] theorem subst_iff : (p ⇔ q)[σ]ₚ = p[σ]ₚ ⇔ q[σ]ₚ := rfl
+@[simp] theorem subst_all : (∀' p)[σ]ₚ = ∀' (p[⇑ₛσ]ₚ) := rfl
+@[simp] theorem subst_ex : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
 
-theorem Formula.subst_andN {v : Vec (𝓛.Formula n) m} : (⋀i, v i)[σ]ₚ = ⋀i, (v i)[σ]ₚ := by
+theorem subst_andN {v : Vec (𝓛.Formula n) m} : (⋀ i, v i)[σ]ₚ = ⋀ i, (v i)[σ]ₚ := by
   induction m with
   | zero => rfl
-  | succ n ih => simp [andN, Vec.head, Vec.tail, PropNotation.and]; apply ih
+  | succ n ih => simp [andN, Vec.head, Vec.tail, Function.comp_def, ih]
 
-def Formula.shift (p : 𝓛.Formula n) : 𝓛.Formula (n + 1) := p[Subst.shift]ₚ
-prefix:max "↑ₚ" => Formula.shift
-@[simp] theorem Formula.shift_eq : ↑ₚ(t₁ ≐ t₂) = ↑ₜt₁ ≐ ↑ₜt₂ := rfl
-@[simp] theorem Formula.shift_false : ↑ₚ(⊥ : 𝓛.Formula n) = ⊥ := rfl
-@[simp] theorem Formula.shift_imp : ↑ₚ(p ⇒ q) = ↑ₚp ⇒ ↑ₚq := rfl
-@[simp] theorem Formula.shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
-@[simp] theorem Formula.shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
+def shift (p : 𝓛.Formula n) : 𝓛.Formula (n + 1) := p[Subst.shift]ₚ
+prefix:max "↑ₚ" => shift
+@[simp] theorem shift_eq : ↑ₚ(t₁ ≐ t₂) = ↑ₜt₁ ≐ ↑ₜt₂ := rfl
+@[simp] theorem shift_false : ↑ₚ(⊥ : 𝓛.Formula n) = ⊥ := rfl
+@[simp] theorem shift_imp : ↑ₚ(p ⇒ q) = ↑ₚp ⇒ ↑ₚq := rfl
+@[simp] theorem shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
+@[simp] theorem shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
 
-abbrev Formula.existUnique (p : 𝓛.Formula (n + 1)) :=
+abbrev exUnique (p : 𝓛.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
-prefix:59 "∃!' " => Formula.existUnique
+prefix:59 "∃!' " => exUnique
 
-theorem Formula.subst_id : p[Subst.id]ₚ = p := by
+theorem subst_id : p[Subst.id]ₚ = p := by
   induction p with simp
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_id, ih]
 
-theorem Formula.subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ ∘ₛ σ₂]ₚ = p[σ₁]ₚ[σ₂]ₚ := by
+theorem subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ ∘ₛ σ₂]ₚ = p[σ₁]ₚ[σ₂]ₚ := by
   induction p generalizing m k with simp [Term.subst_comp]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_comp, ih]
 
-theorem Formula.shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
+theorem shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
   rw [shift, ←subst_comp]; nth_rw 2 [←subst_id (p := p)]; rfl
 
-theorem Formula.shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
+theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
   simp_rw [shift, ←subst_comp]; congr
 
-theorem Formula.subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ (t[σ]ₜ)]ₚ := by
+theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ (t[σ]ₜ)]ₚ := by
   simp_rw [←subst_comp]; congr; funext i; cases i using Fin.cases <;> simp [Term.shift_subst_single]
 
-def Formula.free : 𝓛.Formula n → Set (Fin n)
-| _ ⬝ᵣ v => ⋃i, (v i).vars
+def free : 𝓛.Formula n → Set (Fin n)
+| _ ⬝ʳ v => ⋃i, (v i).vars
 | t₁ ≐ t₂ => t₁.vars ∪ t₂.vars
 | ⊥ => ∅
 | p ⇒ q => p.free ∪ q.free
 | ∀' p => { x | x.succ ∈ p.free }
 
-theorem Formula.subst_ext_free {p : 𝓛.Formula n} {σ₁ σ₂ : 𝓛.Subst n m} :
+theorem subst_ext_free {p : 𝓛.Formula n} {σ₁ σ₂ : 𝓛.Subst n m} :
   (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
   intro h
   induction p generalizing m with simp
@@ -262,7 +274,7 @@ theorem Formula.subst_ext_free {p : 𝓛.Formula n} {σ₁ σ₂ : 𝓛.Subst n 
     cases x using Fin.cases with simp
     | succ x => congr; apply h; simp [free]; exact h₁
 
-theorem Formula.free_of_subst {σ : 𝓛.Subst n m} :
+theorem free_of_subst {σ : 𝓛.Subst n m} :
   p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
   induction p generalizing m with simp_rw [free]
   | rel => simp [Term.vars_of_subst]; rw [Set.iUnion_comm]
@@ -288,6 +300,8 @@ theorem Formula.free_of_subst {σ : 𝓛.Subst n m} :
       · simp [Subst.lift, Term.shift, Term.vars_of_subst]
         exists x
 
+end Formula
+
 abbrev Sentence (𝓛 : Language) := 𝓛.Formula 0
 
 def Formula.alls : {n : ℕ} → 𝓛.Formula n → 𝓛.Sentence
@@ -297,14 +311,14 @@ prefix:59 "∀*" => Formula.alls
 
 abbrev FormulaSet (𝓛 : Language) (n : ℕ) := Set (𝓛.Formula n)
 
-abbrev FormulaSet.append (Γ : 𝓛.FormulaSet n) (p : 𝓛.Formula n) := insert p Γ
+def FormulaSet.append (Γ : 𝓛.FormulaSet n) (p : 𝓛.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
 theorem FormulaSet.mem_append : p ∈ Γ,' p := Set.mem_insert _ _
 theorem FormulaSet.subset_append : Γ ⊆ Γ,' p := Set.subset_insert _ _
 theorem FormulaSet.append_subset_append : Γ ⊆ Δ → Γ,' p ⊆ Δ,' p := Set.insert_subset_insert
 
-abbrev FormulaSet.shift (Γ : 𝓛.FormulaSet n) : 𝓛.FormulaSet (n + 1) := (↑ₚ ·) '' Γ
+def FormulaSet.shift (Γ : 𝓛.FormulaSet n) : 𝓛.FormulaSet (n + 1) := (↑ₚ ·) '' Γ
 prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : 𝓛.FormulaSet n) = ∅ := Set.image_empty _
 @[simp] theorem FormulaSet.shift_append : ↑ᴳ(Γ,' p) = ↑ᴳΓ,' ↑ₚp := Set.image_insert_eq

@@ -11,7 +11,7 @@ attribute [match_pattern] imp
 
 instance : Bot α := ⟨false⟩
 infixr:55 (priority := high) " ⇒ " => imp
-abbrev neg (p : α) := p ⇒ ⊥
+def neg (p : α) := p ⇒ ⊥
 prefix:58 "~ " => neg
 instance : Top α := ⟨~ ⊥⟩
 def or (p q : α) := ~ p ⇒ q

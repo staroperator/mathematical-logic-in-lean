@@ -23,10 +23,10 @@ def TermSetoid (Γ : 𝓛.FormulaSet n) : Setoid (𝓛.Term n) where
 @[simps] def TermModel (Γ : 𝓛.FormulaSet n) : 𝓛.Structure where
   Dom := Quotient (TermSetoid Γ)
   interpFunc f v :=
-    Quotient.liftOnVec v (⟦f ⬝ₜ ·⟧)
+    Quotient.liftOnVec v (⟦f ⬝ᶠ ·⟧)
       (by intros v₁ v₂ h; simp; papply Proof.eq_congr_func; exact Proof.andN_intro h)
   interpRel r v :=
-    Quotient.liftOnVec v (Γ ⊢ r ⬝ᵣ ·)
+    Quotient.liftOnVec v (Γ ⊢ r ⬝ʳ ·)
       (by intros v₁ v₂ h; simp; apply Proof.iff_iff; papply Proof.eq_congr_rel_iff; exact Proof.andN_intro h)
 
 namespace TermModel
@@ -34,14 +34,14 @@ namespace TermModel
 variable {Γ : 𝓛.FormulaSet n} {σ : 𝓛.Subst m n}
 
 theorem interp_term : ⟦ t ⟧ₜ Γ.TermModel, (⟦σ ·⟧) = ⟦t[σ]ₜ⟧ := by
-  induction t with simp [Structure.interpTerm]
+  induction t with simp
   | func f v ih => simp [ih, Quotient.liftOnVec_mk]
 
 variable (h₁ : Consistent Γ) (h₂ : Complete Γ) (h₃ : Henkin Γ)
 include h₁ h₂ h₃
 
 theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ := by
-  induction p generalizing n with simp [Structure.interpFormula]
+  induction p generalizing n with simp
   | rel r v => simp [interp_term, Quotient.liftOnVec_mk]
   | eq t₁ t₂ => simp [interp_term]; rfl
   | false => exact h₁
@@ -56,7 +56,7 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
   | all p ih =>
     constructor
     · intro h₁'
-      rcases h₂ (∀' p[⇑ₛσ]ₚ) with h₂' | h₂'
+      rcases h₂ (∀' (p[⇑ₛσ]ₚ)) with h₂' | h₂'
       · exact h₂'
       · exfalso
         apply Proof.iff_mp.mp₂ Proof.not_forall_iff at h₂'
@@ -71,7 +71,7 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
         rw [this]
         apply h₁'
     · rintro h ⟨t⟩
-      apply (Proof.forall_elim (t := t)).mp at h
+      apply (Proof.forall_elim t).mp at h
       rw [←Formula.subst_comp, ←ih h₁ h₂ h₃] at h
       have : (λ x => ⟦(⇑ₛσ ∘ₛ ↦ₛ t) x⟧) = (⟦t⟧ : Quotient (TermSetoid Γ)) ∷ᵥ (⟦σ ·⟧) := by
         funext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]

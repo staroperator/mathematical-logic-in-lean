@@ -39,7 +39,7 @@ def Term.consts : 𝓛.Term n → Set 𝓛.Const
 | .func (m := _ + 1) _ v => ⋃i, (v i).consts
 
 def Formula.consts : 𝓛.Formula n → Set 𝓛.Const
-| _ ⬝ᵣ v => ⋃i, (v i).consts
+| _ ⬝ʳ v => ⋃i, (v i).consts
 | t₁ ≐ t₂ => t₁.consts ∪ t₂.consts
 | ⊥ => {}
 | p ⇒ q => p.consts ∪ q.consts
@@ -119,8 +119,8 @@ theorem Subst.insertAt_app_insertAt : insertAt k σ t (Fin.insertAt k x) = σ x 
 open Classical in
 noncomputable def Term.invConst (k : ℕ) : 𝓛.Term (n + k) → 𝓛.Const → 𝓛.Term (n + k + 1)
 | #x, _ => #(Fin.insertAt k x)
-| func (m := 0) f _, c => if f = c then #(Fin.embedAt k) else f ⬝ₜ []ᵥ
-| func (m := _ + 1) f v, c => f ⬝ₜ λ i => (v i).invConst k c
+| func (m := 0) f _, c => if f = c then #(Fin.embedAt k) else f ⬝ᶠ []ᵥ
+| func (m := _ + 1) f v, c => f ⬝ᶠ λ i => (v i).invConst k c
 
 theorem Term.subst_singleAt_invConst {t : 𝓛.Term (n + k + 1)} (h : c ∉ t.consts) :
   (t[k ↦ₛ c]ₜ).invConst k c = t := by
@@ -158,11 +158,10 @@ theorem Term.invConst_shift {t : 𝓛.Term (n + k)} :
   congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt]
-    induction k <;> aesop
+  · simp [h, Subst.insertAt_app_insertAt, invConst, Fin.insertAt]
 
 noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Const → 𝓛.Formula (n + k + 1)
-| r ⬝ᵣ v, c => r ⬝ᵣ λ i => (v i).invConst k c
+| r ⬝ʳ v, c => r ⬝ʳ λ i => (v i).invConst k c
 | t₁ ≐ t₂, c => t₁.invConst k c ≐ t₂.invConst k c
 | ⊥, _ => ⊥
 | p ⇒ q, c => p.invConst k c ⇒ q.invConst k c
@@ -171,6 +170,8 @@ noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Con
   rw [←false_eq]; simp only [invConst]
 @[simp] theorem Formula.invConst_imp : (p ⇒ q : 𝓛.Formula (n + k)).invConst k c = p.invConst k c ⇒ q.invConst k c := by
   rw [←imp_eq]; simp only [invConst]
+@[simp] theorem Formula.invConst_neg : (~ p : 𝓛.Formula (n + k)).invConst k c = ~ p.invConst k c := by
+  rw [←neg_eq, invConst_imp, invConst_false]; rfl
 
 theorem Formula.subst_singleAt_invConst {p : 𝓛.Formula (n + k + 1)} (h : c ∉ p.consts) :
   (p[k ↦ₛ c]ₚ).invConst k c = p := by
@@ -210,8 +211,7 @@ theorem Formula.invConst_shift {p : 𝓛.Formula (n + k)} :
   congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt]
-    induction k <;> aesop
+  · simp [h, Subst.insertAt_app_insertAt, Term.invConst, Fin.insertAt]
 
 theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.Term (n + k)} :
   (p[↦ₛ t]ₚ).invConst k c = (p.invConst (k + 1) c)[↦ₛ (t.invConst k c)]ₚ := by
@@ -225,8 +225,8 @@ theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.T
     · simp [h, Subst.insertAt_app_embedAt]
     · simp [h, Subst.insertAt_app_insertAt, Term.invConst]
 
-lemma Axioms.inv_const {p : 𝓛.Formula (n + k)} :
-  p ∈ 𝓛.Axioms → p.invConst k c ∈ 𝓛.Axioms := by
+lemma Axiom.inv_const {p : 𝓛.Formula (n + k)} :
+  p ∈ 𝓛.Axiom → p.invConst k c ∈ 𝓛.Axiom := by
   intro h
   cases h with simp [Formula.invConst, Formula.invConst_shift, Formula.invConst_subst_single]
   | all h => exact all (inv_const h)
@@ -283,8 +283,8 @@ theorem wit_not_in_homFormula : wit p ∉ (hom.onFormula q).consts := by
 
 def invTerm : (k : ℕ) → (𝓛.henkinStep n).Term (m + k) → 𝓛.Term (m + k + 1)
 | k, #x => #(Fin.insertAt k x)
-| k, (.inj f) ⬝ₜ v => f ⬝ₜ λ i => invTerm k (v i)
-| k, (.wit _) ⬝ₜ _ => #(Fin.embedAt k)
+| k, (.inj f) ⬝ᶠ v => f ⬝ᶠ λ i => invTerm k (v i)
+| k, (.wit _) ⬝ᶠ _ => #(Fin.embedAt k)
 
 theorem invTerm_homTerm : invTerm k (hom.onTerm t : (𝓛.henkinStep n).Term _) = t[Subst.shiftAt k]ₜ := by
   induction t with simp [Hom.onTerm, invTerm]
@@ -305,11 +305,10 @@ theorem invTerm_shift : invTerm (k + 1) (↑ₜt) = ↑ₜ(invTerm k t) := by
   congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt, invTerm]
-    induction k <;> aesop 
+  · simp [h, Subst.insertAt_app_insertAt, invTerm, Fin.insertAt]
 
 def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Formula (m + k + 1)
-| k, r ⬝ᵣ v => r ⬝ᵣ λ i => invTerm k (v i)
+| k, r ⬝ʳ v => r ⬝ʳ λ i => invTerm k (v i)
 | k, t₁ ≐ t₂ => invTerm k t₁ ≐ invTerm k t₂
 | k, ⊥ => ⊥
 | k, p ⇒ q => invFormula k p ⇒ invFormula k q
@@ -319,6 +318,8 @@ def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Form
 @[simp] theorem invFormula_imp {p q : (𝓛.henkinStep n).Formula (m + k)} :
   invFormula k (p ⇒ q) = invFormula k p ⇒ invFormula k q := by
   rw [←Formula.imp_eq]; simp only [invFormula]
+@[simp] theorem invFormula_neg : invFormula k (~ p) = ~ invFormula k p := by
+  rw [←Formula.neg_eq, invFormula_imp, invFormula_false]; rfl
 
 theorem invFormula_homFormula : invFormula k (hom.onFormula p : (𝓛.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
@@ -346,8 +347,7 @@ theorem invFormula_shift : invFormula (k + 1) (↑ₚp) = ↑ₚ(invFormula k p)
   congr; funext x; simp [Function.comp, invTerm, Fin.embedAt]
   rcases Fin.embedAt_or_insertAt x with h | ⟨y, h⟩
   · simp [h, Subst.insertAt_app_embedAt]
-  · simp [h, Subst.insertAt_app_insertAt, invTerm]
-    induction k <;> aesop
+  · simp [h, Subst.insertAt_app_insertAt, invTerm, Fin.insertAt]
 
 theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k + 1) p)[↦ₛ (invTerm k t)]ₚ := by
   rw [invFormula_subst (k := k + 1)]
@@ -360,7 +360,7 @@ theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k
     · simp [h, Subst.insertAt_app_embedAt]
     · simp [h, Subst.insertAt_app_insertAt, invTerm]
 
-theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axioms → invFormula k p ∈ 𝓛.Axioms := by
+theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axiom → invFormula k p ∈ 𝓛.Axiom := by
   intro h
   cases h with simp [invFormula, invFormula_shift, invFormula_subst_single]
   | all h => exact .all (inv_axiom h)
@@ -402,7 +402,7 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
     apply Proof.weaken h₅ at h₄
     exact henkinStep.hom_consistent h h₁ h₄
   · intro a A' h₆ h₆' h₆'' h₄ h₄'
-    simp [←Proof.deduction] at h₄'
+    simp at h₄'; apply Proof.deduction.mpr at h₄'
     rcases h₅' h₆ with ⟨p⟩
     apply h₄
     apply (Proof.not_imp_left.mp h₄').mp

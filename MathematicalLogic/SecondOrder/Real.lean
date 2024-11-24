@@ -18,6 +18,8 @@ def OrderedField : Language where
   Func := OrderedField.Func
   Rel := OrderedField.Rel
 
+namespace OrderedField
+
 instance : Zero (OrderedField.Term Γ) := ⟨.zero ⬝ᶠ []ᵥ⟩
 instance : One (OrderedField.Term Γ) := ⟨.one ⬝ᶠ []ᵥ⟩
 instance : Add (OrderedField.Term Γ) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
@@ -25,10 +27,14 @@ instance : Neg (OrderedField.Term Γ) := ⟨(.neg ⬝ᶠ [·]ᵥ)⟩
 instance : Sub (OrderedField.Term Γ) := ⟨(· + -·)⟩
 instance : Mul (OrderedField.Term Γ) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 
-def Formula.le (t₁ t₂ : OrderedField.Term Γ) : OrderedField.Formula Γ := .le ⬝ʳ [t₁, t₂]ᵥ
-infix:60 " ⪁ " => Formula.le
+def le (t₁ t₂ : OrderedField.Term Γ) : OrderedField.Formula Γ := .le ⬝ʳ [t₁, t₂]ᵥ
+scoped infix:60 " ⪁ " => le
+
+end OrderedField
 
 namespace Theory
+
+open OrderedField
 
 inductive Real : OrderedField.Theory where
 | ax_add_assoc : Real (∀' (∀' (∀' (#2 + #1 + #0 ≐ #2 + (#1 + #0)))))
@@ -51,8 +57,7 @@ inductive Real : OrderedField.Theory where
 
 namespace Real
 
-attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
-  Vec.eq_two Vec.eq_one Vec.eq_nil
+attribute [local simp] Structure.interp Structure.satisfy Structure.satisfySentence Structure.Assignment.cons Vec.eq_nil Vec.eq_one Vec.eq_two
 
 noncomputable def 𝓡 : Real.Model where
   Dom := ℝ
@@ -555,8 +560,8 @@ theorem ofReal_inv : @ofReal 𝓜 x⁻¹ = (ofReal x)⁻¹ := by
 noncomputable def model_iso_𝓡 (𝓜 : Real.Model) : 𝓡 ≃ᴹ 𝓜.toStructure where
   toEquiv := Equiv.ofBijective ofReal ⟨ofReal_injective, ofReal_surjective⟩
   on_func
-  | .zero, v => by simp [Vec.eq_nil]; apply ofReal_zero
-  | .one, v => by simp [Vec.eq_nil]; apply ofReal_one
+  | .zero, v => by simp; apply ofReal_zero
+  | .one, v => by simp; apply ofReal_one
   | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_add
   | .neg, v => by rw [Vec.eq_one (_ ∘ _)]; apply ofReal_neg
   | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_mul

@@ -34,27 +34,16 @@ open Cardinal
 
 def card (x : PSet.{u}) : Cardinal.{u} := #x.Type'
 
-theorem card_eq {x : PSet} :
-  Cardinal.lift.{u+1, u} (card x) = #((ZFSet.mk x).toSet) := by
-  rw [←lift_id #(ZFSet.mk x).toSet, card, Cardinal.lift_mk_eq.{u,u+1,u+1}]
+theorem card_eq : lift.{u+1, u} (card x) = #(ZFSet.mk x).toSet := by
+  rw [←lift_id #(ZFSet.mk x).toSet, card, lift_mk_eq.{u,u+1,u+1}]
   refine ⟨_root_.Equiv.ofBijective (λ a => ⟨x.Func' a, func'_mem_mk a⟩) ⟨?_, ?_⟩⟩
   · intro _ _ h; simp at h; exact func'_inj h
   · intro ⟨_, h⟩; simp; exact (mem_mk_of_func' _ h).imp λ _ => Eq.symm
 
 theorem card_congr {x y : PSet.{u}} : Equiv x y → card x = card y := by
-  suffices ∀ {x y}, Equiv x y → card x ≤ card y by
-    intro h
-    exact (this h).antisymm (this h.symm)
-  rintro ⟨_, A⟩ ⟨_, B⟩ ⟨h, _⟩
-  simp [card, Cardinal.le_def]
-  refine ⟨λ a => ⟦Classical.choose (h a.out)⟧, ?_⟩
-  intro a₁ a₂ h
-  apply Quotient.exact (s := typeSetoid _) at h
-  simp at h
-  rw [←Quotient.out_equiv_out]
-  refine Equiv.trans ?_ (h.trans ?_)
-  · apply Classical.choose_spec (p := λ x => (A (a₁.out)).Equiv (B x))
-  · symm; apply Classical.choose_spec (p := λ x => (A (a₂.out)).Equiv (B x))
+  intro h
+  apply ZFSet.sound at h
+  rw [←lift_inj, card_eq, card_eq, h]
 
 end PSet
 
@@ -71,6 +60,9 @@ theorem mem_omega_iff : x ∈ omega ↔ ∃ n, x = ofNat n := by
   · intro ⟨⟨n⟩, h⟩; simp at h; exists n; exact Quotient.sound h
   · intro ⟨_, h⟩; exact ⟨_, ZFSet.exact h⟩
 
+@[simp] theorem sep_subset : ZFSet.sep p x ⊆ x := by
+  intro; simp; intro h _; exact h
+
 open Cardinal
 
 def card : ZFSet.{u} → Cardinal.{u} := Quotient.lift PSet.card λ _ _ => PSet.card_congr
@@ -80,26 +72,26 @@ theorem card_eq {x : ZFSet.{u}} : lift.{u+1, u} (card x) = #x.toSet :=
 
 theorem card_mono : x ⊆ y → card x ≤ card y := by
   intro h
-  rw [←lift_le, card_eq, card_eq, Cardinal.le_def]
+  rw [←lift_le, card_eq, card_eq, le_def]
   refine ⟨⟨λ ⟨z, h₁⟩ => ⟨z, h h₁⟩, ?_⟩⟩
   intro ⟨z₁, h₁⟩ ⟨z₂, h₂⟩; simp
 
 theorem card_empty : card ∅ = 0 := by
-  rw [←lift_inj, card_eq, lift_zero, Cardinal.mk_eq_zero_iff]; simp
+  rw [←lift_inj, card_eq, lift_zero, mk_eq_zero_iff]; simp
 
 theorem card_powerset : card (powerset x) = 2 ^ card x := by
   rw [←lift_inj, card_eq, lift_power, lift_two, card_eq, ←mk_powerset, Cardinal.eq]
   refine ⟨⟨
-    λ ⟨y, h⟩ => ⟨{ z | z ∈ y }, λ z h' => by simp at *; exact h h'⟩,
-    λ ⟨s, _⟩ => ⟨x.sep s, by simp; intro; aesop⟩,
+    λ ⟨y, h⟩ => ⟨{ z | z ∈ y }, λ _ h' => by simp at *; exact h h'⟩,
+    λ ⟨s, _⟩ => ⟨x.sep (· ∈ s), by simp⟩,
     ?_, ?_⟩⟩
-  · intro ⟨y, h⟩; ext z; aesop
-  · intro ⟨s, h⟩; ext z; aesop
+  · intro ⟨y, h⟩; simp at h; ext; simp; apply h
+  · intro ⟨s, h⟩; ext; simp; apply h
 
 theorem card_sUnion_range_le : card (sUnion (range f)) ≤ sum λ i => (f i).card := by
   rw [←lift_le, card_eq, lift_sum]
   simp_rw [card_eq]
-  rw [←Cardinal.mk_sigma, Cardinal.le_def]
+  rw [←mk_sigma, le_def]
   simp [toSet]
   refine ⟨⟨
     λ ⟨y, h⟩ =>
@@ -192,7 +184,7 @@ theorem V_mono : α ≤ β → V α ⊆ V β := by
   intro h
   rcases lt_or_eq_of_le h with h | h
   · apply V_transitive; exact V_strict_mono h
-  · simp [h, subset_refl]
+  · simp [h]
 
 theorem mem_V_rank {x : ZFSet} : x ∈ V (x.rank + 1) := by
   induction' x using inductionOn with x ih
@@ -224,8 +216,8 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
   induction' α using Ordinal.induction with α ih
   rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
   · simp [h₁, V_zero, card_empty]
-    have := (Cardinal.isLimit_ord (le_of_lt hκ.1)).pos
-    simp [Cardinal.lt_ord] at this
+    have := (isLimit_ord (le_of_lt hκ.1)).pos
+    simp [lt_ord] at this
     exact this
   · subst h₁; simp [V_succ, card_powerset] at *
     apply hκ.2.2.2
@@ -236,8 +228,8 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
       · exact h
   · simp [V_limit h₁]
     apply lt_of_le_of_lt (card_sUnion_range_le)
-    apply Cardinal.sum_lt_of_isRegular hκ.2.1
-    · simp [Cardinal.lt_ord] at h; simp [h]
+    apply sum_lt_of_isRegular hκ.2.1
+    · simp [lt_ord] at h; simp [h]
     · intro i
       simp [Ordinal.familyOfBFamily, Ordinal.familyOfBFamily']
       apply ih
@@ -249,7 +241,7 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   intro h
   apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
   apply card_V_lt_of_inaccessible hκ
-  apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
+  apply (isLimit_ord (le_of_lt hκ.1)).succ_lt
   rw [←mem_V_iff]
   exact h
 
@@ -257,7 +249,7 @@ theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible
   x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
   intro h₁ h₂
   rw [mem_V_iff, rank_image]
-  apply Cardinal.lsub_lt_ord_of_isRegular hκ.2.1
+  apply lsub_lt_ord_of_isRegular hκ.2.1
   · rw [←PSet.card]
     rw [←mk_out x] at h₁
     exact card_lt_of_mem_V_inaccessible hκ h₁

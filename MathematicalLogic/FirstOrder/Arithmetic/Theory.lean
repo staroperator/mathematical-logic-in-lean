@@ -14,22 +14,22 @@ def Peano : Language where
 
 namespace Peano
 
-def succ (t : Peano.Term n) : Peano.Term n := .succ ⬝ₜ [t]ᵥ
+def succ (t : Peano.Term n) : Peano.Term n := .succ ⬝ᶠ [t]ᵥ
 scoped notation "S" => succ
 
-instance : Add (Peano.Term n) := ⟨(.add ⬝ₜ [·, ·]ᵥ)⟩
-instance : Mul (Peano.Term n) := ⟨(.mul ⬝ₜ [·, ·]ᵥ)⟩
+instance : Add (Peano.Term n) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
+instance : Mul (Peano.Term n) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 
 def ofNat : ℕ → Peano.Term n
-| 0 => .zero ⬝ₜ []ᵥ
+| 0 => .zero ⬝ᶠ []ᵥ
 | n + 1 => S (ofNat n)
 instance : OfNat (Peano.Term m) n := ⟨ofNat n⟩
 instance : Coe ℕ (Peano.Term m) := ⟨ofNat⟩
 
-@[simp] theorem zero_eq : Func.zero ⬝ₜ []ᵥ = (0 : Peano.Term n) := rfl
-@[simp] theorem succ_eq : Func.succ ⬝ₜ [t₁]ᵥ = S t₁ := rfl
-@[simp] theorem add_eq {t₁ t₂ : Peano.Term n} : Func.add ⬝ₜ [t₁, t₂]ᵥ = t₁ + t₂ := rfl
-@[simp] theorem mul_eq {t₁ t₂ : Peano.Term n} : Func.mul ⬝ₜ [t₁, t₂]ᵥ = t₁ * t₂ := rfl
+@[simp] theorem zero_eq : Func.zero ⬝ᶠ []ᵥ = (0 : Peano.Term n) := rfl
+@[simp] theorem succ_eq : Func.succ ⬝ᶠ [t₁]ᵥ = S t₁ := rfl
+@[simp] theorem add_eq {t₁ t₂ : Peano.Term n} : Func.add ⬝ᶠ [t₁, t₂]ᵥ = t₁ + t₂ := rfl
+@[simp] theorem mul_eq {t₁ t₂ : Peano.Term n} : Func.mul ⬝ᶠ [t₁, t₂]ᵥ = t₁ * t₂ := rfl
 
 scoped notation "⌜" x "⌝" => ofNat (Encodable.encode x)
 @[simp] theorem ofNat_eq [Encodable α] {a : α} : (⌜a⌝ : Peano.Term n) = Encodable.encode a := rfl
@@ -85,10 +85,10 @@ instance : Encodable (Peano.Rel n) := IsEmpty.toEncodable (α := Empty)
 open Lean.Parser Std in
 def reprTerm : Peano.Term n → ℕ → Format
 | #x, _ => "#" ++ repr x
-| .zero ⬝ₜ _, _ => "0"
-| .succ ⬝ₜ v, p => Repr.addAppParen ("S" ++ reprTerm (v 0) argPrec) p
-| .add ⬝ₜ v, p => (if p ≥ 65 then Format.paren else id) (reprTerm (v 0) 65 ++ " + " ++ reprTerm (v 1) 65)
-| .mul ⬝ₜ v, p => (if p ≥ 70 then Format.paren else id) (reprTerm (v 0) 70 ++ " * " ++ reprTerm (v 1) 70)
+| .zero ⬝ᶠ _, _ => "0"
+| .succ ⬝ᶠ v, p => Repr.addAppParen ("S" ++ reprTerm (v 0) argPrec) p
+| .add ⬝ᶠ v, p => (if p ≥ 65 then Format.paren else id) (reprTerm (v 0) 65 ++ " + " ++ reprTerm (v 1) 65)
+| .mul ⬝ᶠ v, p => (if p ≥ 70 then Format.paren else id) (reprTerm (v 0) 70 ++ " * " ++ reprTerm (v 1) 70)
 
 instance : Repr (Peano.Term n) := ⟨reprTerm⟩
 
@@ -110,10 +110,10 @@ open Peano
 inductive PA : Peano.Theory where
 | ax_succ_ne_zero : PA (∀' (~ S #0 ≐ 0))
 | ax_succ_inj : PA (∀' ∀' ((S #0 ≐ S #1) ⇒ #0 ≐ #1))
-| ax_add_zero : PA (∀' #0 + 0 ≐ #0)
-| ax_add_succ : PA (∀' ∀' #0 + S #1 ≐ S (#0 + #1))
-| ax_mul_zero : PA (∀' #0 * 0 ≐ 0)
-| ax_mul_succ : PA (∀' ∀' #0 * S #1 ≐ #0 * #1 + #0)
+| ax_add_zero : PA (∀' (#0 + 0 ≐ #0))
+| ax_add_succ : PA (∀' ∀' (#0 + S #1 ≐ S (#0 + #1)))
+| ax_mul_zero : PA (∀' (#0 * 0 ≐ 0))
+| ax_mul_succ : PA (∀' ∀' (#0 * S #1 ≐ #0 * #1 + #0))
 | ax_ind {p : Peano.Formula (n + 1)} :
   PA (∀* (p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ (S #0)]ₚ)) ⇒ ∀' p))
 
@@ -182,7 +182,7 @@ lemma zero_add (t) : ↑ᴳ^[k] PA ⊢ 0 + t ≐ t := by
 
 lemma succ_add (t₁ t₂) : ↑ᴳ^[k] PA ⊢ S t₁ + t₂ ≐ S (t₁ + t₂) := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (S ↑ₜt₁ + #0 ≐ S (↑ₜt₁ + #0)) by
-    apply Proof.mp (Proof.forall_elim (t := t₂)) at h
+    apply (Proof.forall_elim t₂).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [add_zero]; prefl
@@ -190,7 +190,7 @@ lemma succ_add (t₁ t₂) : ↑ᴳ^[k] PA ⊢ S t₁ + t₂ ≐ S (t₁ + t₂)
 
 theorem add_comm (t₁ t₂) : ↑ᴳ^[k] PA ⊢ t₁ + t₂ ≐ t₂ + t₁ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (↑ₜt₁ + #0 ≐ #0 + ↑ₜt₁) by
-    apply Proof.mp (Proof.forall_elim (t := t₂)) at h
+    apply (Proof.forall_elim t₂).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [zero_add, add_zero]; prefl
@@ -198,7 +198,7 @@ theorem add_comm (t₁ t₂) : ↑ᴳ^[k] PA ⊢ t₁ + t₂ ≐ t₂ + t₁ := 
 
 theorem add_assoc (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ t₁ + (t₂ + t₃) ≐ t₁ + t₂ + t₃ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (↑ₜt₁ + (↑ₜt₂ + #0) ≐ ↑ₜt₁ + ↑ₜt₂ + #0) by
-    apply Proof.mp (Proof.forall_elim (t := t₃)) at h
+    apply (Proof.forall_elim t₃).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [add_zero]; prefl
@@ -210,7 +210,7 @@ theorem add_right_comm (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ t₁ + t₂ + t₃ �
 
 theorem add_right_cancel : ↑ᴳ^[k] PA ⊢ t₁ + t ≐ t₂ + t ⇒ t₁ ≐ t₂ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (↑ₜt₁ + #0 ≐ ↑ₜt₂ + #0 ⇒ ↑ₜt₁ ≐ ↑ₜt₂) by
-    apply Proof.mp (Proof.forall_elim (t := t)) at h
+    apply (Proof.forall_elim t).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [add_zero]; pintro; passumption
@@ -226,7 +226,7 @@ theorem add_left_cancel : ↑ᴳ^[k] PA ⊢ t + t₁ ≐ t + t₂ ⇒ t₁ ≐ t
 
 theorem zero_mul (t) : ↑ᴳ^[k] PA ⊢ 0 * t ≐ 0 := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (0 * #0 ≐ 0) by
-    apply Proof.mp (Proof.forall_elim (t := t)) at h
+    apply (Proof.forall_elim t).mp at h
     simp at h; exact h
   papply ind <;> simp
   · apply mul_zero
@@ -234,7 +234,7 @@ theorem zero_mul (t) : ↑ᴳ^[k] PA ⊢ 0 * t ≐ 0 := by
 
 theorem succ_mul (t₁ t₂) : ↑ᴳ^[k] PA ⊢ S t₁ * t₂ ≐ t₁ * t₂ + t₂ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (S ↑ₜt₁ * #0 ≐ ↑ₜt₁ * #0 + #0) by
-    apply Proof.mp (Proof.forall_elim (t := t₂)) at h
+    apply (Proof.forall_elim t₂).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_assign]
   · prw [mul_zero, add_zero]; prefl
@@ -244,7 +244,7 @@ theorem succ_mul (t₁ t₂) : ↑ᴳ^[k] PA ⊢ S t₁ * t₂ ≐ t₁ * t₂ +
 
 theorem mul_comm : ↑ᴳ^[k] PA ⊢ t₁ * t₂ ≐ t₂ * t₁ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (↑ₜt₁ * #0 ≐ #0 * ↑ₜt₁) by
-    apply Proof.mp (Proof.forall_elim (t := t₂)) at h
+    apply (Proof.forall_elim t₂).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_assign]
   · prw [mul_zero, zero_mul]; prefl
@@ -252,7 +252,7 @@ theorem mul_comm : ↑ᴳ^[k] PA ⊢ t₁ * t₂ ≐ t₂ * t₁ := by
 
 theorem right_distrib (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ (t₁ + t₂) * t₃ ≐ t₁ * t₃ + t₂ * t₃ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' ((↑ₜt₁ + ↑ₜt₂) * #0 ≐ ↑ₜt₁ * #0 + ↑ₜt₂ * #0) by
-    apply Proof.mp (Proof.forall_elim (t := t₃)) at h
+    apply (Proof.forall_elim t₃).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [mul_zero, add_zero]; prefl
@@ -265,7 +265,7 @@ theorem left_distrib (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ t₁ * (t₂ + t₃) �
 
 theorem mul_assoc (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ t₁ * (t₂ * t₃) ≐ t₁ * t₂ * t₃ := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (↑ₜt₁ * (↑ₜt₂ * #0) ≐ ↑ₜt₁ * ↑ₜt₂ * #0) by
-    apply Proof.mp (Proof.forall_elim (t := t₃)) at h
+    apply (Proof.forall_elim t₃).mp at h
     simp [Term.shift_subst_single] at h; exact h
   papply ind <;> simp [Term.shift_subst_single, Term.shift_subst_assign]
   · prw [mul_zero, mul_zero]; prefl
@@ -273,7 +273,7 @@ theorem mul_assoc (t₁ t₂ t₃) : ↑ᴳ^[k] PA ⊢ t₁ * (t₂ * t₃) ≐ 
 
 theorem zero_or_succ (t) : ↑ᴳ^[k] PA ⊢ t ≐ 0 ⩒ ∃' (↑ₜt ≐ S #0) := by
   suffices h : ↑ᴳ^[k] PA ⊢ ∀' (#0 ≐ 0 ⩒ ∃' (#1 ≐ S #0)) by
-    apply Proof.mp (Proof.forall_elim (t := t)) at h
+    apply (Proof.forall_elim t).mp at h
     simp at h; exact h
   papply ind <;> simp
   · papply Proof.or_inl; prefl

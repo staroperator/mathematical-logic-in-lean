@@ -58,7 +58,7 @@ theorem comp_assoc : φ₃ ∘ᴸ φ₂ ∘ᴸ φ₁ = φ₃ ∘ᴸ (φ₂ ∘�
 
 def onTerm (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Term n → 𝓛₂.Term n
 | #x => #x
-| f ⬝ₜ v => φ.onFunc f ⬝ₜ λ i => φ.onTerm (v i)
+| f ⬝ᶠ v => φ.onFunc f ⬝ᶠ λ i => φ.onTerm (v i)
 
 theorem id_onTerm : id.onTerm t = t := by
   induction t with simp [onTerm]
@@ -76,7 +76,7 @@ theorem onTerm_shift : φ.onTerm (↑ₜt) = ↑ₜ(φ.onTerm t) := by
   simp [Term.shift, onTerm_subst]; rfl
 
 def onFormula (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Formula n → 𝓛₂.Formula n
-| r ⬝ᵣ v => φ.onRel r ⬝ᵣ λ i => φ.onTerm (v i)
+| r ⬝ʳ v => φ.onRel r ⬝ʳ λ i => φ.onTerm (v i)
 | t₁ ≐ t₂ => φ.onTerm t₁ ≐ φ.onTerm t₂
 | ⊥ => ⊥
 | p ⇒ q => φ.onFormula p ⇒ φ.onFormula q
@@ -110,7 +110,7 @@ theorem onFormula_shift : φ.onFormula (↑ₚp) = ↑ₚ(φ.onFormula p) := by
 theorem onFormula_subst_single : φ.onFormula (p[↦ₛ t]ₚ) = (φ.onFormula p)[↦ₛ (φ.onTerm t)]ₚ := by
   simp [onFormula_subst]; congr; funext x; cases x using Fin.cases <;> rfl
 
-theorem on_axiom : p ∈ 𝓛₁.Axioms → φ.onFormula p ∈ 𝓛₂.Axioms := by
+theorem on_axiom : p ∈ 𝓛₁.Axiom → φ.onFormula p ∈ 𝓛₂.Axiom := by
   intro h
   induction h <;> simp [onFormula, onFormula_subst_single, onFormula_shift]
   case all ih => exact .all ih
@@ -129,11 +129,11 @@ theorem on_proof : Γ ⊢ p → φ.onFormula '' Γ ⊢ φ.onFormula p := by
   interpRel r v := 𝓜.interpRel (φ.onRel r) v
 
 theorem interp_onTerm : ⟦ φ.onTerm t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ φ.reduct 𝓜, ρ := by
-  induction t with simp [onTerm, Structure.interpTerm]
+  induction t with simp [onTerm]
   | func f v ih => congr; funext; apply ih
 
-theorem interp_onFormula : 𝓜 ⊨[ρ] φ.onFormula p ↔ φ.reduct 𝓜 ⊨[ρ] p := by
-  induction p with simp [onFormula, Structure.interpFormula]
+theorem satisfy_onFormula : 𝓜 ⊨[ρ] φ.onFormula p ↔ φ.reduct 𝓜 ⊨[ρ] p := by
+  induction p with simp [onFormula]
   | rel | eq => simp [interp_onTerm]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [ih]
@@ -142,7 +142,7 @@ theorem on_satisfiable : Satisfiable.{u} (φ.onFormula '' Γ) → Satisfiable.{u
   intro ⟨𝓜, ρ, h₁⟩
   exists φ.reduct 𝓜, ρ
   intro p h₂
-  rw [←interp_onFormula]
+  rw [←satisfy_onFormula]
   apply h₁
   exists p   
 
@@ -282,7 +282,7 @@ theorem term_of_homLimit [h : Nonempty ι] (t : φ.directLimit.Term n) :
     choose u w ih using ih
     rcases directed_of_vec (α := ι) (· ≤ ·) u with ⟨j, h₁⟩
     rcases directed_of (· ≤ ·) i j with ⟨k, h₂, h₃⟩
-    exists k, (φ.hom i k h₂).onFunc f ⬝ₜ λ x => (φ.hom (u x) k (le_trans (h₁ x) h₃)).onTerm (w x)
+    exists k, (φ.hom i k h₂).onFunc f ⬝ᶠ λ x => (φ.hom (u x) k (le_trans (h₁ x) h₃)).onTerm (w x)
     simp [Hom.onTerm]; constructor
     · simp [homLimit]; apply Quotient.sound
       exists k, h₂, le_refl k
@@ -298,7 +298,7 @@ theorem formula_of_homLimit [h : Nonempty ι] (p : φ.directLimit.Formula n) :
     choose u w h using h
     rcases directed_of_vec (α := ι) (· ≤ ·) u with ⟨j, h₁⟩
     rcases directed_of (· ≤ ·) i j with ⟨k, h₂, h₃⟩
-    exists k, (φ.hom i k h₂).onRel r ⬝ᵣ λ x => (φ.hom (u x) k (le_trans (h₁ x) h₃)).onTerm (w x)
+    exists k, (φ.hom i k h₂).onRel r ⬝ʳ λ x => (φ.hom (u x) k (le_trans (h₁ x) h₃)).onTerm (w x)
     simp [Hom.onFormula]; constructor
     · simp [homLimit]; apply Quotient.sound
       exists k, h₂, le_refl k
@@ -321,8 +321,8 @@ theorem formula_of_homLimit [h : Nonempty ι] (p : φ.directLimit.Formula n) :
     constructor <;> rw [←Hom.comp_onFormula, homLimit_comp_hom] <;> assumption
   | all p ih => rcases ih with ⟨i, q, h⟩; exists i, ∀' q; simp [Hom.onFormula, h]
 
-theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axioms) :
-  ∃ i q, p = (φ.homLimit i).onFormula q ∧ q ∈ (𝓛 i).Axioms := by
+theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
+  ∃ i q, p = (φ.homLimit i).onFormula q ∧ q ∈ (𝓛 i).Axiom := by
   induction h with
   | @imp_self _ p₁ p₂ =>
     rcases formula_of_homLimit p₁ with ⟨i₁, q₁, h₁⟩

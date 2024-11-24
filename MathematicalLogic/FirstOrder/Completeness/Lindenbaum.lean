@@ -53,6 +53,6 @@ theorem lindenbaum (Γ : 𝓛.FormulaSet n) (h : Consistent Γ) :
   rw [←Consistent.append] at h'
   apply h
   apply Proof.hyp
-  apply h₃ h' <;> simp
+  apply h₃ h' <;> simp [FormulaSet.mem_append, FormulaSet.subset_append]
 
 end FirstOrder.Language.FormulaSet

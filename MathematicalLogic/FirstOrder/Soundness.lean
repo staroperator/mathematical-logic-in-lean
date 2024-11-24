@@ -5,20 +5,20 @@ namespace FirstOrder.Language
 
 variable {𝓛 : Language}
 
-theorem Entails.axioms : p ∈ 𝓛.Axioms → Γ ⊨ p := by
+theorem Entails.axiom : p ∈ 𝓛.Axiom → Γ ⊨ p := by
   intro h 𝓜 ρ _
-  induction h <;> simp [Structure.interpFormula] <;> try tauto
+  induction h <;> simp <;> try tauto
   case forall_elim =>
     intro h
-    simp [Structure.interpFormula_subst_single]
+    simp [Structure.satisfy_subst_single]
     apply h
   case forall_self =>
     intro h _
-    simp [Structure.interpFormula_shift]
+    simp [Structure.satisfy_shift]
     exact h
   case eq_subst =>
     intro h₁ h₂
-    simp [Structure.interpFormula_subst_single] at *
+    simp [Structure.satisfy_subst_single] at *
     rw [←h₁]; exact h₂
 
 theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
@@ -31,7 +31,7 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
   intro h
   induction h with
   | hyp h => intros _ _ h₁; apply h₁; exact h
-  | ax h => exact Entails.axioms h
+  | ax h => exact Entails.axiom h
   | mp _ _ ih₁ ih₂ => exact Entails.mp ih₁ ih₂
 
 theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by

@@ -12,13 +12,20 @@ def Peano : Language where
   Func := Peano.Func
   Rel _ := Empty
 
+namespace Peano
+
 instance : Zero (Peano.Term Γ) := ⟨.zero ⬝ᶠ []ᵥ⟩
-def Term.succ (t : Peano.Term Γ) : Peano.Term Γ := .succ ⬝ᶠ [t]ᵥ
 instance : Add (Peano.Term Γ) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
 instance : Mul (Peano.Term Γ) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
-local prefix:max "S " => Term.succ
+
+def succ (t : Peano.Term Γ) : Peano.Term Γ := .succ ⬝ᶠ [t]ᵥ
+scoped prefix:max "S " => succ
+
+end Peano
 
 namespace Theory
+
+open Peano
 
 inductive PA₂ : Peano.Theory where
 | ax_succ_ne_zero : PA₂ (∀' (~ S #0 ≐ 0))
@@ -32,8 +39,7 @@ inductive PA₂ : Peano.Theory where
 
 namespace PA₂
 
-attribute [local simp] Structure.satisfy Structure.interpFormula Structure.interpTerm Structure.Assignment.cons
-  Vec.eq_two Vec.eq_one Vec.eq_nil
+attribute [local simp] Structure.interp Structure.satisfy Structure.satisfySentence Structure.Assignment.cons Vec.eq_nil Vec.eq_one Vec.eq_two
 
 def 𝓝 : PA₂.Model where
   Dom := ℕ
@@ -78,7 +84,8 @@ theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
   induction n generalizing m with
   | zero =>
     have := 𝓜.satisfy_theory _ .ax_succ_ne_zero
-    simp at this; apply this; symm; exact h₁
+    simp at this
+    exact this _ h₁.symm
   | succ n ih =>
     have := 𝓜.satisfy_theory _ .ax_succ_inj
     simp at this; apply this at h₁
@@ -105,9 +112,8 @@ theorem ofNat_add : @ofNat 𝓜 (n + m) = ofNat n + ofNat m := by
   | succ m ih =>
     have := 𝓜.satisfy_theory _ .ax_add_succ
     simp at this
-    trans
-    · apply this
-    · simp_rw [Nat.add_succ, ofNat, ←ih]; rfl
+    apply (this _ _).trans
+    simp_rw [Nat.add_succ, ofNat, ←ih]; rfl
 
 theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
   symm
@@ -118,14 +124,13 @@ theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
   | succ m ih =>
     have := 𝓜.satisfy_theory _ .ax_mul_succ
     simp at this
-    trans
-    · apply this
-    · simp [Nat.mul_succ, ofNat_add, ←ih]; rfl
+    apply (this _ _).trans
+    simp [Nat.mul_succ, ofNat_add, ←ih]; rfl
 
 noncomputable def model_iso_𝓝 (𝓜 : PA₂.Model) : 𝓝 ≃ᴹ 𝓜.toStructure where
   toEquiv := Equiv.ofBijective ofNat ⟨ofNat_injective, ofNat_surjective⟩
   on_func
-  | .zero, v => by simp [Vec.eq_nil]; rfl
+  | .zero, v => by simp; rfl
   | .succ, v => by rw [Vec.eq_one (_ ∘ _)]; rfl
   | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofNat_add
   | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofNat_mul

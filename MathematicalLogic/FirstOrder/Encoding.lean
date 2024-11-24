@@ -19,7 +19,7 @@ def Term.decode (n k : ℕ) : Option (𝓛.Term n) :=
     match @Encodable.decode (𝓛.Func m) _ k.div2.unpair.2.unpair.1 with
     | some f => do
       let v ← decodeVec n k.div2.unpair.2.unpair.2 m
-      some (f ⬝ₜ v)
+      some (f ⬝ᶠ v)
     | _ => none
   else
     if h : k.div2 < n then
@@ -27,7 +27,7 @@ def Term.decode (n k : ℕ) : Option (𝓛.Term n) :=
     else none
 termination_by (k, 0)
 decreasing_by
-  simp_wf; simp [Prod.lex_def]
+  simp [Prod.lex_def]
   apply Nat.lt_of_le_of_lt (Nat.unpair_right_le _)
   apply Nat.lt_of_le_of_lt (Nat.unpair_right_le _)
   apply Nat.binaryRec_decreasing
@@ -42,8 +42,8 @@ def Term.decodeVec (n k : ℕ) : (m : ℕ) → Option (Vec (𝓛.Term n) m)
 termination_by m => (k, m)
 decreasing_by
   all_goals simp_wf; simp [Prod.lex_def]
-  · exact Nat.lt_or_eq_of_le (Nat.unpair_left_le k)
-  · exact Nat.lt_or_eq_of_le (Nat.unpair_right_le k)
+  · exact Nat.lt_or_eq_of_le (Nat.unpair_left_le _)
+  · exact Nat.lt_or_eq_of_le (Nat.unpair_right_le _)
 end
 
 theorem Term.encode_decode {t : 𝓛.Term n} : decode n t.encode = some t := by
@@ -54,7 +54,7 @@ theorem Term.encode_decode {t : 𝓛.Term n} : decode n t.encode = some t := by
       induction m with simp [decodeVec, Vec.paired]
       | zero => simp [Vec.eq_nil]
       | succ m ih' =>
-        simp [Vec.head, Vec.tail, ih, Function.comp]
+        simp [Vec.head, Vec.tail, ih, Function.comp_def]
         rw [ih']
         · simp; nth_rw 3 [Vec.eq_cons v]; rfl
         · intro; apply ih
@@ -67,10 +67,7 @@ instance : Encodable (𝓛.Term n) where
 
 @[simp] theorem Term.encode_var : Encodable.encode (#x : 𝓛.Term n) = 2 * x := rfl
 @[simp] theorem Term.encode_func {v : Vec (𝓛.Term n) m} :
-  Encodable.encode (f ⬝ₜ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 := rfl
-
-instance : Encodable (𝓛.Subst n m) := Vec.encodable
-theorem Subst.encode_eq {σ : 𝓛.Subst n m} : Encodable.encode σ = @Encodable.encode (Vec _ _) _ σ := rfl
+  Encodable.encode (f ⬝ᶠ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 := rfl
 
 variable [∀ n, Encodable (𝓛.Rel n)]
 
@@ -91,7 +88,7 @@ def Formula.decode (n k : ℕ) : Option (𝓛.Formula n) :=
       match @Encodable.decode (𝓛.Rel m) _ (k / 4).unpair.2.unpair.1 with
       | some r => do
         let v ← Term.decodeVec n (k / 4).unpair.2.unpair.2 m
-        some (r ⬝ᵣ v)
+        some (r ⬝ʳ v)
       | _ => none
     | 1 => do
       let t₁ ← Term.decode n (k / 4).unpair.1
@@ -121,7 +118,7 @@ theorem Formula.encode_decode {p : 𝓛.Formula n} : decode n p.encode = some p 
       induction m with simp [Term.decodeVec, Vec.paired]
       | zero => simp [Vec.eq_nil]
       | succ m ih =>
-      simp [Vec.head, Vec.tail, Term.encode_decode, Function.comp, ih]
+      simp [Vec.head, Vec.tail, Term.encode_decode, Function.comp_def, ih]
       nth_rw 3 [Vec.eq_cons v]; rfl
     · simp
   | eq t₁ t₂ =>
@@ -137,7 +134,7 @@ instance : Encodable (𝓛.Formula n) where
   encodek _ := Formula.encode_decode
 
 @[simp] theorem Formula.encode_rel {v : Vec (𝓛.Term n) m} :
-  Encodable.encode (r ⬝ᵣ v) = 4 * m.pair ((Encodable.encode r).pair (Encodable.encode v)) + 1 := rfl
+  Encodable.encode (r ⬝ʳ v) = 4 * m.pair ((Encodable.encode r).pair (Encodable.encode v)) + 1 := rfl
 @[simp] theorem Formula.encode_eq {t₁ t₂ : 𝓛.Term n} :
   Encodable.encode (t₁ ≐ t₂) = 4 * (Encodable.encode t₁).pair (Encodable.encode t₂) + 2 := rfl
 @[simp] theorem Formula.encode_false :
