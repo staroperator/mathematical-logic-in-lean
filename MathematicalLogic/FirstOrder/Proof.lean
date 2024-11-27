@@ -71,6 +71,12 @@ theorem subst : Γ ⊢ p → (·[σ]ₚ) '' Γ ⊢ p[σ]ₚ := by
 
 theorem shift : Γ ⊢ p → ↑ᴳΓ ⊢ ↑ₚp := subst
 
+theorem shiftN : Γ ⊢ p → ↑ᴳ^[m] Γ ⊢ ↑ₚ^[m] p := by
+  intro h
+  induction m with
+  | zero => exact h
+  | succ m ih => exact shift ih
+
 theorem forall_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q := ax .forall_imp
 theorem forall_elim (t) : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := ax .forall_elim
 theorem forall_self : Γ ⊢ p ⇒ ∀' ↑ₚp := ax .forall_self
@@ -89,9 +95,8 @@ theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
     apply shift at h
     simp [Formula.shift] at h
     apply (forall_elim #0).mp at h
-    rw [←Formula.subst_comp] at h
-    rw [←Formula.subst_id (p := p)]
-    convert h; ext x; cases x using Fin.cases <;> simp
+    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id] at h
+    exact h
 
 theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
 
@@ -424,16 +429,84 @@ theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
     · apply forall_intro
       pintros 2
       papply exists_intro #0
-      suffices _ ⊢ q by
-        convert this
-        rw [←Formula.subst_comp]; nth_rw 2 [←Formula.subst_id (p := q)]
-        congr; funext x; cases x using Fin.cases <;> simp
+      rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id]
       papplya 1
       passumption 0
     · passumption
 
+theorem forallN_intro : ↑ᴳ^[m] Γ ⊢ p → Γ ⊢ ∀^[m] p := by
+  intro h
+  induction m with simp [FormulaSet.shiftN, Formula.allN] at *
+  | zero => exact h
+  | succ m ih => apply ih; pintro; exact h
+
+theorem forallN_elim' (σ₁) : Γ ⊢ (∀^[m] p)[σ₂]ₚ ⇒ p[σ₁ ++ᵥ σ₂]ₚ := by
+  induction m with simp [Formula.allN]
+  | zero =>
+    simp [Vec.eq_nil]; exact identity
+  | succ m ih =>
+    rw [Vec.eq_cons σ₁]; simp
+    pintro
+    rw [←Subst.lift_comp_single, Formula.subst_comp]
+    papply forall_elim σ₁.head
+    rw [←Formula.subst_all]
+    papply ih (σ₁.tail)
+    passumption
+
+theorem forallN_elim  (σ) : Γ ⊢ ∀^[m] p ⇒ p[σ ++ᵥ Subst.id]ₚ := by
+  rw [←Formula.subst_id (∀^[m] p)]
+  apply forallN_elim'
+
+theorem forallN_imp : Γ ⊢ ∀^[m] p ⇒ ∀^[m] (p ⇒ q) ⇒ ∀^[m] q := by
+  pintros
+  apply forallN_intro
+  simp [Formula.shiftN_eq_subst]
+  apply mp (p := p)
+  · nth_rw 2 [←Formula.subst_id (p ⇒ q)]
+    rw [←Subst.castAdd'_append_addNat]
+    papply forallN_elim'
+    passumption
+  · nth_rw 3 [←Formula.subst_id p]
+    rw [←Subst.castAdd'_append_addNat]
+    papply forallN_elim'
+    passumption
+
+theorem existsN_intro' {p : 𝓛.Formula (k + m)} (σ₁) : Γ ⊢ p[σ₁ ++ᵥ σ₂]ₚ ⇒ (∃^[m] p)[σ₂]ₚ := by
+  induction m with simp [Formula.exN]
+  | zero =>
+    simp [Vec.eq_nil]; exact identity
+  | succ m ih =>
+    rw [Vec.eq_cons σ₁]; simp
+    pintro
+    papply ih σ₁.tail
+    papply exists_intro σ₁.head
+    rw [←Formula.subst_comp, Subst.lift_comp_single]
+    passumption
+
+theorem existsN_intro {p : 𝓛.Formula (n + m)} (σ) :
+  Γ ⊢ p[σ ++ᵥ Subst.id]ₚ ⇒ ∃^[m] p := by
+  rw [←Formula.subst_id (∃^[m] p)]
+  apply existsN_intro'
+
+theorem existsN_elim {p : 𝓛.Formula (n + m)} :
+  Γ ⊢ ∃^[m] p ⇒ ∀^[m] (p ⇒ ↑ₚ^[m] q) ⇒ q := by
+  induction m with simp [Formula.exN, Formula.allN]
+  | zero =>
+    pintros; papplya 0; passumption
+  | succ m ih =>
+    pintros
+    papply ih (p := ∃' p)
+    · passumption
+    · papply forallN_imp
+      · passumption 0
+      · apply forallN_intro
+        pintros
+        papply exists_elim <;> passumption
+
 theorem eq_refl : Γ ⊢ t ≐ t := ax .eq_refl
-macro "prefl" : tactic => `(tactic| pexact eq_refl)
+
+/-- Close the proof goal `t ≐ t` or `p ⇔ p` using reflexitivity. -/
+macro "prefl" : tactic => `(tactic| first | pexact eq_refl | pexact iff_refl)
 
 theorem eq_subst : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ := ax .eq_subst
 
@@ -444,7 +517,9 @@ theorem eq_symm : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₁ := by
   papply h
   · passumption
   · prefl
-macro "psymm" : tactic => `(tactic| papply eq_symm)
+
+/-- If the proof goal is `t₁ ≐ t₂` or `p ⇔ q`, replace it with `t₂ ≐ t₁` or `q ⇔ p` using symmetry. -/
+macro "psymm" : tactic => `(tactic| first | papply eq_symm | papply iff_symm)
 
 theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := by
   have h := @eq_subst _ _ Γ t₂ t₁ (#0 ≐ ↑ₜt₃)
@@ -453,10 +528,16 @@ theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := b
   papply h
   · psymm; passumption
   · passumption
+
+/--
+  If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals,
+  `t₁ ≐ t` and `t ≐ t` (or `p ⇔ r` and `r ⇔ q`) using transtivity.
+  
+  A meta variable is generated for `t` or `r` if it is not given. -/
 macro "ptrans" t:(ppSpace colGt term)? : tactic =>
   match t with
-  | some t => `(tactic| papply eq_trans (t₂ := $t))
-  | none => `(tactic| papply eq_trans)
+  | some t => `(tactic| first | papply eq_trans (t₂ := $t) | papply iff_trans (q := $t))
+  | none => `(tactic| first | papply eq_trans | papply iff_trans)
 
 theorem eq_subst_iff : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇔ p[↦ₛ t₂]ₚ := by
   pintro
@@ -584,11 +665,11 @@ namespace Rewrite
 
 mutual
 inductive Term (Γ : 𝓛.FormulaSet n) : 𝓛.Term n → 𝓛.Term n → Prop
-| matched {t₁ t₂} : Γ ⊢ t₁ ≐ t₂ → Term Γ t₁ t₂
+| matched : Γ ⊢ t₁ ≐ t₂ → Term Γ t₁ t₂
 | func : Terms Γ v₁ v₂ → Term Γ (f ⬝ᶠ v₁) (f ⬝ᶠ v₂)
-| refl {t} : Term Γ t t
+| refl : Term Γ t t
 inductive Terms (Γ : 𝓛.FormulaSet n) : Vec (𝓛.Term n) m → Vec (𝓛.Term n) m → Prop
-| cons {t₁ t₂} : Term Γ t₁ t₂ → Terms Γ v₁ v₂ → Terms Γ (t₁ ∷ᵥ v₁) (t₂ ∷ᵥ v₂)
+| cons : Term Γ t₁ t₂ → Terms Γ v₁ v₂ → Terms Γ (t₁ ∷ᵥ v₁) (t₂ ∷ᵥ v₂)
 | refl : Terms Γ v v
 end
 
@@ -603,14 +684,27 @@ theorem Term.sound : ∀ {t₁ t₂}, Term Γ t₁ t₂ → Γ ⊢ t₁ ≐ t₂
 | _, _, refl => by prefl
 
 inductive Formula (Γ : 𝓛.FormulaSet n) : 𝓛.Formula n → 𝓛.Formula n → Prop
-| rel {r v₁ v₂} : Terms Γ v₁ v₂ → Formula Γ (r ⬝ʳ v₁) (r ⬝ʳ v₂)
-| eq {t₁ t₁' t₂ t₂'} : Term Γ t₁ t₁' → Term Γ t₂ t₂' → Formula Γ (t₁ ≐ t₂) (t₁' ≐ t₂')
-| imp {p₁ q₁ p₂ q₂} : Formula Γ p₁ q₁ → Formula Γ p₂ q₂ → Formula Γ (p₁ ⇒ p₂) (q₁ ⇒ q₂)
-| refl {p} : Formula Γ p p
+| matched : Γ ⊢ p ⇔ q → Formula Γ p q
+| rel : Terms Γ v₁ v₂ → Formula Γ (r ⬝ʳ v₁) (r ⬝ʳ v₂)
+| eq : Term Γ t₁ t₁' → Term Γ t₂ t₂' → Formula Γ (t₁ ≐ t₂) (t₁' ≐ t₂')
+| imp : Formula Γ p₁ q₁ → Formula Γ p₂ q₂ → Formula Γ (p₁ ⇒ p₂) (q₁ ⇒ q₂)
+| refl : Formula Γ p p
+ 
+theorem Formula.neg : Formula Γ p q → Formula Γ (~ p) (~ q) := (imp · refl)
+
+theorem Formula.and : Formula Γ p₁ q₁ → Formula Γ p₂ q₂ → Formula Γ (p₁ ⩑ p₂) (q₁ ⩑ q₂) :=
+  λ h₁ h₂ => neg (imp h₁ (neg h₂))
+
+theorem Formula.or : Formula Γ p₁ q₁ → Formula Γ p₂ q₂ → Formula Γ (p₁ ⩒ p₂) (q₁ ⩒ q₂) :=
+  λ h₁ h₂ => imp (neg h₁) h₂
+
+theorem Formula.iff : Formula Γ p₁ q₁ → Formula Γ p₂ q₂ → Formula Γ (p₁ ⇔ p₂) (q₁ ⇔ q₂) :=
+  λ h₁ h₂ => and (imp h₁ h₂) (imp h₂ h₁)
 
 theorem Formula.sound : Formula Γ p q → Γ ⊢ p ⇔ q := by
   intro h
   induction h with
+  | matched h => exact h
   | rel h => papply eq_congr_rel_iff; apply andN_intro; intro i; exact (h.term i).sound
   | eq => papply eq_congr_eq_iff <;> apply Term.sound <;> assumption
   | imp => papply iff_congr_imp <;> assumption
@@ -639,6 +733,8 @@ elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
       apply mp₂ iff_mpr
       · apply Formula.sound
         repeat' first
+        | exact Formula.matched (by $t)
+        | apply Formula.iff | apply Formula.and | apply Formula.or | apply Formula.neg
         | apply Formula.rel | apply Formula.eq | apply Formula.imp | exact Formula.refl
         | apply Terms.cons | exact Terms.refl
         | exact Term.matched (by $t) | apply Term.func | exact Term.refl
@@ -673,13 +769,16 @@ end Proof
 
 namespace Theory
 
-theorem generalization_alls : ↑ᴳ^[n] 𝓣 ⊢ p ↔ 𝓣 ⊢ ∀* p := by
-  induction n with simp [Theory.shiftN, Formula.alls]
-  | succ n ih => rw [Proof.generalization, ih]
+variable {𝓣 : 𝓛.Theory}
 
-theorem foralls_intro : ↑ᴳ^[n] 𝓣 ⊢ p → 𝓣 ⊢ ∀* p := generalization_alls.mp
+theorem generalization_alls : ↑ᵀ^[n] 𝓣 ⊢ p ↔ 𝓣 ⊢ ∀* p := by
+  induction n with simp [Formula.alls]
+  | zero => rfl
+  | succ n ih => rw [←Theory.shift_shiftN, Proof.generalization, ih]
 
-theorem foralls_elim {σ : 𝓛.Subst n m} : 𝓣 ⊢ ∀* p → ↑ᴳ^[m] 𝓣 ⊢ p[σ]ₚ := by
+theorem foralls_intro : ↑ᵀ^[n] 𝓣 ⊢ p → 𝓣 ⊢ ∀* p := generalization_alls.mp
+
+theorem foralls_elim (σ : 𝓛.Subst n m) : 𝓣 ⊢ ∀* p → ↑ᵀ^[m] 𝓣 ⊢ p[σ]ₚ := by
   intro h
   induction n with simp [Formula.alls] at h
   | zero =>
@@ -694,9 +793,8 @@ theorem foralls_elim {σ : 𝓛.Subst n m} : 𝓣 ⊢ ∀* p → ↑ᴳ^[m] 𝓣
     apply ih (σ := σ.tail) at h
     simp at h
     apply (Proof.forall_elim σ.head).mp at h
-    rw [←Formula.subst_comp] at h
-    convert h
-    funext x; cases x using Fin.cases <;> simp [Vec.head, Term.shift_subst_single]
+    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Vec.eq_cons] at h
+    exact h
 
 theorem foralls_imp : 𝓣 ⊢ ∀* (p ⇒ q) ⇒ ∀* p ⇒ ∀* q := by
   pintros

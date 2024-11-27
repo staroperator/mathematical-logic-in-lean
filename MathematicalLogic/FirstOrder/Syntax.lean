@@ -61,7 +61,7 @@ theorem Term.subst_const {c : 𝓛.Const} : (c : 𝓛.Term n)[σ]ₜ = c := by s
 
 def Subst.id : 𝓛.Subst n n := λ x => #x
 @[simp] theorem Subst.id_app : (id x : 𝓛.Term n) = #x := rfl
-@[simp] theorem Term.subst_id : t[Subst.id]ₜ = t := by
+@[simp] theorem Term.subst_id (t : 𝓛.Term n) : t[Subst.id]ₜ = t := by
   induction t with simp
   | func f v ih => ext; apply ih
 
@@ -88,6 +88,8 @@ def Subst.assign (t : 𝓛.Term (n + 1)) : 𝓛.Subst (n + 1) (n + 1) := t ∷�
 prefix:max "≔ₛ " => Subst.assign
 @[simp] theorem Subst.assign_app_zero : (≔ₛ t) 0 = t := rfl
 @[simp] theorem Subst.assign_app_succ {x : Fin n} : (≔ₛ t) x.succ = #x.succ := rfl
+theorem Subst.assign_zero : ≔ₛ #0 = @id 𝓛 (n + 1) := by
+  ext x; cases x using Fin.cases <;> simp
 
 theorem Term.shift_subst_cons : (↑ₜt₁)[t₂ ∷ᵥ σ]ₜ = t₁[σ]ₜ := by
   rw [shift, ←subst_comp]; rfl
@@ -108,8 +110,44 @@ theorem Subst.lift_id : ⇑ₛ(id : 𝓛.Subst n n) = id := by
 theorem Subst.lift_comp : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛσ₂ := by
   funext x; cases x using Fin.cases <;> simp [Term.shift_subst_lift]
 
+theorem Subst.lift_comp_single : ⇑ₛσ ∘ₛ ↦ₛ t = t ∷ᵥ σ := by
+  ext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]
+theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
+  ext x; cases x using Fin.cases <;> simp
+theorem Subst.single_comp : ↦ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ σ := cons_comp
+
 theorem Term.subst_swap_single : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ (t'[σ]ₜ)]ₜ := by
-  simp_rw [←subst_comp]; congr; funext i; cases i using Fin.cases <;> simp [shift_subst_single]
+  simp [←subst_comp, Subst.lift_comp_single, Subst.single_comp]
+
+def Term.shiftN : (m : ℕ) → 𝓛.Term n → 𝓛.Term (n + m)
+| 0, t => t
+| m + 1, t => ↑ₜ(shiftN m t)
+notation "↑ₜ^[" m "]" => Term.shiftN m
+theorem Term.shiftN_eq_subst : ↑ₜ^[m] t = t[λ i => #(i.addNat m)]ₜ := by
+  induction m with simp [shiftN]
+  | zero => nth_rw 1 [←subst_id t]; rfl
+  | succ m ih => rw [ih, shift, ←subst_comp]; rfl
+@[simp] theorem Term.shiftN_var : ↑ₜ^[m] (#x : 𝓛.Term n) = #(x.addNat m) := by
+  simp [Term.shiftN_eq_subst]
+
+def Subst.liftN : (m : ℕ) → 𝓛.Subst n k → 𝓛.Subst (n + m) (k + m)
+| 0, σ => σ
+| m + 1, σ => ⇑ₛ(liftN m σ)
+notation "⇑ₛ^[" m "]" => Subst.liftN m
+theorem Subst.liftN_app_addNat {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.addNat x m) = ↑ₜ^[m] (σ x) := by
+  induction m with simp [liftN, Term.shiftN]
+  | succ m ih => simp [ih]
+theorem Subst.liftN_app_castAdd' {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.castAdd' x n) = #(Fin.castAdd' x k) := by
+  induction m with simp [liftN]
+  | zero => exact x.elim0
+  | succ m ih => cases x using Fin.cases <;> simp [ih]
+
+theorem Term.shiftN_subst_liftN : (↑ₜ^[m] t)[⇑ₛ^[m] σ]ₜ = ↑ₜ^[m] (t[σ]ₜ) := by
+  induction m with simp [shiftN, Subst.liftN]
+  | succ m ih => simp [shift_subst_lift, ih]
+
+theorem Subst.castAdd'_append_addNat : (λ i => #(i.castAdd' n)) ++ᵥ (λ i => #(i.addNat m)) = @Subst.id 𝓛 (n + m) := by
+  ext x; rcases x.castAdd'_or_addNat with (⟨x, rfl⟩ | ⟨x, rfl⟩) <;> simp [Vec.append_left, Vec.append_right]
 
 def Term.vars : 𝓛.Term n → Set (Fin n)
 | #x => {x}
@@ -231,7 +269,7 @@ abbrev exUnique (p : 𝓛.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
 prefix:59 "∃!' " => exUnique
 
-theorem subst_id : p[Subst.id]ₚ = p := by
+theorem subst_id (p : 𝓛.Formula n) : p[Subst.id]ₚ = p := by
   induction p with simp
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_id, ih]
@@ -242,13 +280,37 @@ theorem subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ �
   | all p ih => simp [Subst.lift_comp, ih]
 
 theorem shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
-  rw [shift, ←subst_comp]; nth_rw 2 [←subst_id (p := p)]; rfl
+  rw [shift, ←subst_comp]; nth_rw 2 [←subst_id p]; rfl
 
 theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
   simp_rw [shift, ←subst_comp]; congr
 
 theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ (t[σ]ₜ)]ₚ := by
   simp_rw [←subst_comp]; congr; funext i; cases i using Fin.cases <;> simp [Term.shift_subst_single]
+
+def shiftN : (m : ℕ) → 𝓛.Formula n → 𝓛.Formula (n + m)
+| 0, p => p
+| m + 1, p => ↑ₚ(shiftN m p)
+notation "↑ₚ^[" m "]" => shiftN m
+theorem shiftN_eq_subst : ↑ₚ^[m] p = p[λ i => #(i.addNat m)]ₚ := by
+  induction m with simp [shiftN]
+  | zero => nth_rw 1 [←subst_id p]; rfl
+  | succ m ih => rw [ih, shift, ←subst_comp]; rfl
+@[simp] theorem shiftN_eq : ↑ₚ^[m] (t₁ ≐ t₂) = ↑ₜ^[m] t₁ ≐ ↑ₜ^[m] t₂ := by
+  induction m with simp [shiftN, Term.shiftN]
+  | succ m ih => simp [ih]
+
+theorem subst_allN : (∀^[m] p)[σ]ₚ = ∀^[m] (p[⇑ₛ^[m] σ]ₚ) := by
+  induction m with simp [allN, Subst.liftN]
+  | succ m ih => simp [ih]
+
+theorem subst_exN : (∃^[m] p)[σ]ₚ = ∃^[m] (p[⇑ₛ^[m] σ]ₚ) := by
+  induction m with simp [exN, Subst.liftN]
+  | succ m ih => simp [ih]
+
+theorem shiftN_subst_liftN : (↑ₚ^[m] p)[⇑ₛ^[m] σ]ₚ = ↑ₚ^[m] (p[σ]ₚ) := by
+  induction m with simp [shiftN, Subst.liftN]
+  | succ m ih => simp [shift_subst_lift, ih]
 
 def free : 𝓛.Formula n → Set (Fin n)
 | _ ⬝ʳ v => ⋃i, (v i).vars
@@ -323,11 +385,27 @@ prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : 𝓛.FormulaSet n) = ∅ := Set.image_empty _
 @[simp] theorem FormulaSet.shift_append : ↑ᴳ(Γ,' p) = ↑ᴳΓ,' ↑ₚp := Set.image_insert_eq
 
+def FormulaSet.shiftN : (m : ℕ) → 𝓛.FormulaSet n → 𝓛.FormulaSet (n + m)
+| 0, Γ => Γ
+| m + 1, Γ => ↑ᴳ(Γ.shiftN m)
+notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
+@[simp] theorem FormulaSet.shiftN_empty : ↑ᴳ^[m] (∅ : 𝓛.FormulaSet n) = ∅ := by
+  induction m with simp [shiftN]
+  | succ m ih => simp [ih]
+@[simp] theorem FormulaSet.shiftN_append {Γ : 𝓛.FormulaSet n} :
+  ↑ᴳ^[m] (Γ,' p) = ↑ᴳ^[m] Γ,' ↑ₚ^[m] p := by
+  induction m with simp [shiftN, Formula.shiftN]
+  | succ m ih => simp [ih]
+
 abbrev Theory (𝓛 : Language) := 𝓛.FormulaSet 0
 
 def Theory.shiftN : (n : ℕ) → 𝓛.Theory → 𝓛.FormulaSet n
 | 0, 𝓣 => 𝓣
 | n + 1, 𝓣 => ↑ᴳ(𝓣.shiftN n)
-notation "↑ᴳ^[" n "]" => Theory.shiftN n
+notation "↑ᵀ^[" n "]" => Theory.shiftN n
+@[simp] theorem Theory.shift_shiftN : ↑ᴳ (↑ᵀ^[n] 𝓣) = ↑ᵀ^[n + 1] 𝓣 := rfl
+@[simp] theorem Theory.shiftN_shiftN : ↑ᴳ^[m] (↑ᵀ^[n] 𝓣) = ↑ᵀ^[n + m] 𝓣 := by
+  induction m with simp [FormulaSet.shiftN]
+  | succ m ih => simp [ih]; rfl
 
 end FirstOrder.Language

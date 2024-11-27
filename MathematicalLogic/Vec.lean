@@ -36,6 +36,19 @@ namespace Fin
   ⟨λ h => ⟨h 0, h 1⟩, λ h i => i.cases2 h.left h.right⟩
 @[simp] theorem forall_fin3 {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 :=
   ⟨λ h => ⟨h 0, h 1, h 2⟩, λ h i => i.cases3 h.left h.right.left h.right.right⟩
+
+def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
+@[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
+@[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl
+
+@[simp] theorem addNat_succ : addNat x (m + 1) = succ (addNat x m) := rfl
+
+theorem castAdd'_or_addNat (x : Fin (n + m)) : (∃ y, x = castAdd' y n) ∨ ∃ y, x = addNat y m := by
+  by_cases h : x < m
+  · left; exists ⟨x, h⟩
+  · right; simp at h
+    exists ⟨x - m, by simp [Nat.sub_lt_iff_lt_add h, Nat.add_comm m n]⟩
+    simp [←val_inj, Nat.sub_add_cancel h]
 end Fin
 
 abbrev Vec (α : Type u) (n : ℕ) := Fin n → α
@@ -136,6 +149,23 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
   ext i; cases i using Fin.cases1; simp
 @[simp] theorem rcons_cons : rcons (x ∷ᵥ v) y = x ∷ᵥ rcons v y := by
   simp [rcons, Vec.cons, Fin.cons_snoc_eq_snoc_cons]
+
+def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
+  match n with
+  | 0 => v₂
+  | _ + 1 => v₁.head ∷ᵥ v₁.tail.append v₂
+infixl:65 " ++ᵥ " => append
+@[simp] theorem nil_append : []ᵥ ++ᵥ v = v := rfl
+@[simp] theorem cons_append : a ∷ᵥ v₁ ++ᵥ v₂ = a ∷ᵥ (v₁ ++ᵥ v₂) := rfl
+
+theorem append_left {v₂ : Vec α m} : (v₁ ++ᵥ v₂) (Fin.castAdd' x m) = v₁ x := by
+  induction v₁ with
+  | nil => exact x.elim0
+  | cons a v₁ ih => cases x using Fin.cases <;> simp [ih]
+theorem append_right {v₁ : Vec α n} : (v₁ ++ᵥ v₂) (Fin.addNat x n) = v₂ x := by
+  induction v₁ with
+  | nil => simp
+  | cons a v₁ ih => simp [ih]
 
 instance decEq [DecidableEq α] : DecidableEq (Vec α n) := by
   intro v₁ v₂
