@@ -173,6 +173,11 @@ noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Con
 @[simp] theorem Formula.invConst_neg : (~ p : 𝓛.Formula (n + k)).invConst k c = ~ p.invConst k c := by
   rw [←neg_eq, invConst_imp, invConst_false]; rfl
 
+theorem Formula.invConst_andN {v : Vec (𝓛.Formula (n + k)) m} : invConst k (⋀ i, v i) c = ⋀ i, invConst k (v i) c := by
+  induction m with simp [andN]
+  | zero => simp [Top.top]
+  | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
+
 theorem Formula.subst_singleAt_invConst {p : 𝓛.Formula (n + k + 1)} (h : c ∉ p.consts) :
   (p[k ↦ₛ c]ₚ).invConst k c = p := by
   cases p with (simp [invConst] <;> simp [consts] at h)
@@ -226,18 +231,22 @@ theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.T
     · simp [h, Subst.insertAt_app_insertAt, Term.invConst]
 
 lemma Axiom.inv_const {p : 𝓛.Formula (n + k)} :
-  p ∈ 𝓛.Axiom → p.invConst k c ∈ 𝓛.Axiom := by
+  p ∈ 𝓛.Axiom → Γ ⊢ p.invConst k c := by
   intro h
-  cases h with simp [Formula.invConst, Formula.invConst_shift, Formula.invConst_subst_single]
-  | all h => exact all (inv_const h)
-  | _ => constructor
+  cases h with simp [Formula.invConst, Formula.invConst_andN, Formula.invConst_shift, Formula.invConst_subst_single]
+  | @eq_congr_func m _ v₁ v₂ f =>
+    cases m with
+    | zero => by_cases h : f = c <;> simp [Term.invConst, h] <;> pintro <;> prefl
+    | succ m => simp [Term.invConst]; exact Proof.ax eq_congr_func
+  | all h => pintro; exact inv_const (k := k + 1) h
+  | _ => apply Proof.ax; constructor
 
 lemma Proof.inv_const {p : 𝓛.Formula (n + k)} (h₁ : ∀ p ∈ Γ, c ∉ p.consts) :
   Γ ⊢ p → (·[Subst.shiftAt k]ₚ) '' Γ ⊢ p.invConst k c := by
   intro h
   induction h with
   | @hyp p h => apply hyp; exists p, h; rw [Formula.invConst_eq_shiftAt (h₁ p h)]
-  | ax h => exact ax (.inv_const h)
+  | ax h => exact Axiom.inv_const h
   | mp _ _ ih₁ ih₂ => simp at ih₁; exact mp ih₁ ih₂
 
 theorem Proof.const_generalization {Γ : 𝓛.FormulaSet n}
@@ -321,6 +330,12 @@ def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Form
 @[simp] theorem invFormula_neg : invFormula k (~ p) = ~ invFormula k p := by
   rw [←Formula.neg_eq, invFormula_imp, invFormula_false]; rfl
 
+theorem invFormula_andN {v : Vec ((𝓛.henkinStep n).Formula (m + k)) l} :
+  invFormula k (⋀ i, v i) = ⋀ i, invFormula k (v i) := by
+  induction l with simp [Formula.andN]
+  | zero => simp [Top.top]
+  | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
+
 theorem invFormula_homFormula : invFormula k (hom.onFormula p : (𝓛.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
   | rel | eq => simp [invTerm_homTerm]
@@ -360,17 +375,21 @@ theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k
     · simp [h, Subst.insertAt_app_embedAt]
     · simp [h, Subst.insertAt_app_insertAt, invTerm]
 
-theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axiom → invFormula k p ∈ 𝓛.Axiom := by
+theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axiom → Γ ⊢ invFormula k p := by
   intro h
-  cases h with simp [invFormula, invFormula_shift, invFormula_subst_single]
-  | all h => exact .all (inv_axiom h)
-  | _ => constructor
+  cases h with simp [invFormula, invFormula_andN, invFormula_shift, invFormula_subst_single]
+  | @eq_congr_func m _ v₁ v₂ f =>
+    cases m with
+    | zero => cases f <;> simp [Vec.eq_nil] <;> pintro <;> prefl
+    | succ m => cases f; simp [invTerm]; exact Proof.ax .eq_congr_func
+  | all h => pintro; exact inv_axiom (k := k + 1) h
+  | _ => apply Proof.ax; constructor
 
 theorem inv_proof : hom.onFormula '' Δ ⊢ p → Δ ⊢ ∀' (invFormula 0 p) := by
   intro h
   induction h with
   | hyp h => rcases h with ⟨p, h, h'⟩; subst h'; rw [invFormula_homFormula]; exact Proof.forall_self.mp (.hyp h)
-  | ax h => exact .ax (.all (inv_axiom h))
+  | ax h => pintro; exact inv_axiom (k := 0) h
   | mp _ _ ih₁ ih₂ => simp [invFormula_imp (k := 0)] at ih₁; exact (Proof.ax .forall_imp).mp₂ ih₁ ih₂
 
 theorem hom_consistent {Γ : 𝓛.FormulaSet m} (h : Γ ⊢ ∃' ⊤) :

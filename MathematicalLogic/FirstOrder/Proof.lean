@@ -4,21 +4,24 @@ import MathematicalLogic.FirstOrder.Syntax
 namespace FirstOrder.Language
 
 inductive Axiom (𝓛 : Language) : 𝓛.FormulaSet n where
-| imp_self {p q} : 𝓛.Axiom (p ⇒ q ⇒ p)
-| imp_distrib {p q r} : 𝓛.Axiom ((p ⇒ q ⇒ r) ⇒ (p ⇒ q) ⇒ p ⇒ r)
-| transpose {p q} : 𝓛.Axiom ((~ p ⇒ ~ q) ⇒ q ⇒ p)
-| forall_elim {t p} : 𝓛.Axiom (∀' p ⇒ p[↦ₛ t]ₚ)
-| forall_self {p} : 𝓛.Axiom (p ⇒ ∀' ↑ₚp)
-| forall_imp {p q} : 𝓛.Axiom (∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q)
-| eq_refl {t} : 𝓛.Axiom (t ≐ t)
-| eq_subst {t₁ t₂ p} : 𝓛.Axiom (t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ)
-| all {p} : 𝓛.Axiom p → 𝓛.Axiom (∀' p)
+| imp_self : 𝓛.Axiom (p ⇒ q ⇒ p)
+| imp_distrib : 𝓛.Axiom ((p ⇒ q ⇒ r) ⇒ (p ⇒ q) ⇒ p ⇒ r)
+| transpose : 𝓛.Axiom ((~ p ⇒ ~ q) ⇒ q ⇒ p)
+| forall_elim : 𝓛.Axiom (∀' p ⇒ p[↦ₛ t]ₚ)
+| forall_self : 𝓛.Axiom (p ⇒ ∀' ↑ₚp)
+| forall_imp : 𝓛.Axiom (∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q)
+| eq_refl : 𝓛.Axiom (t ≐ t)
+| eq_symm : 𝓛.Axiom (t₁ ≐ t₂ ⇒ t₂ ≐ t₁)
+| eq_trans : 𝓛.Axiom (t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃)
+| eq_congr_func : 𝓛.Axiom ((⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂)
+| eq_congr_rel : 𝓛.Axiom ((⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂)
+| all : 𝓛.Axiom p → 𝓛.Axiom (∀' p)
 
 variable {𝓛 : Language}
 
 theorem Axiom.subst {σ : 𝓛.Subst n m} : p ∈ 𝓛.Axiom → p[σ]ₚ ∈ 𝓛.Axiom := by
   intro h
-  induction h generalizing m <;> simp [Term.shift_subst_lift, Formula.shift_subst_lift, Formula.subst_swap_single]
+  induction h generalizing m <;> simp [Term.shift_subst_lift, Formula.shift_subst_lift, Formula.subst_swap_single, Formula.subst_andN]
   case all ih => exact all ih
   all_goals constructor
 
@@ -194,13 +197,15 @@ elab "papply" t:(ppSpace colGt term) d:((" with " num)?) : tactic =>
     let maxDepth := d.raw.getArgs[1]?.map (·.toNat)
     repeat do
       let proofType ← Lean.Meta.inferType proofTerm
-      if ← Lean.Meta.isDefEq goalType proofType then
-        goal.assign proofTerm
-        break
-      if let some d := maxDepth then
-        if newMVarIds.length >= d then
-          throwError "failed to apply {appType} at {goalType} within depth {d}"
-      else if let some (_, _, p, q) := (← Lean.Meta.whnf goalFormula).app4? ``Formula.imp then
+      if !maxDepth.any (λ d => newMVarIds.length < d) then
+        let s ← Lean.MonadBacktrack.saveState
+        if ← Lean.Meta.isDefEq goalType proofType then
+          goal.assign proofTerm
+          break
+        if maxDepth.any λ d => newMVarIds.length >= d then
+          throwError "failed to apply {appType} at {goalType} within depth {maxDepth.get!}"
+        Lean.MonadBacktrack.restoreState s
+      if let some (_, _, p, q) := (← Lean.Meta.whnf goalFormula).app4? ``Formula.imp then
         let mvarId ← Lean.mkFreshMVarId
         newMVarIds := newMVarIds ++ [mvarId]
         let mvar ← Lean.Meta.mkFreshExprMVarWithId mvarId (some (Lean.mkApp4 (.const ``Proof []) 𝓛 n Δ p))
@@ -508,26 +513,12 @@ theorem eq_refl : Γ ⊢ t ≐ t := ax .eq_refl
 /-- Close the proof goal `t ≐ t` or `p ⇔ p` using reflexitivity. -/
 macro "prefl" : tactic => `(tactic| first | pexact eq_refl | pexact iff_refl)
 
-theorem eq_subst : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ := ax .eq_subst
-
-theorem eq_symm : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₁ := by
-  have h := @eq_subst _ _ Γ t₁ t₂ (#0 ≐ ↑ₜt₁)
-  simp [Term.shift_subst_single] at h
-  pintro
-  papply h
-  · passumption
-  · prefl
+theorem eq_symm : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₁ := ax .eq_symm
 
 /-- If the proof goal is `t₁ ≐ t₂` or `p ⇔ q`, replace it with `t₂ ≐ t₁` or `q ⇔ p` using symmetry. -/
 macro "psymm" : tactic => `(tactic| first | papply eq_symm | papply iff_symm)
 
-theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := by
-  have h := @eq_subst _ _ Γ t₂ t₁ (#0 ≐ ↑ₜt₃)
-  simp [Term.shift_subst_single] at h
-  pintros
-  papply h
-  · psymm; passumption
-  · passumption
+theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := ax .eq_trans
 
 /--
   If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals,
@@ -539,95 +530,20 @@ macro "ptrans" t:(ppSpace colGt term)? : tactic =>
   | some t => `(tactic| first | papply eq_trans (t₂ := $t) | papply iff_trans (q := $t))
   | none => `(tactic| first | papply eq_trans | papply iff_trans)
 
-theorem eq_subst_iff : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇔ p[↦ₛ t₂]ₚ := by
-  pintro
-  papply iff_intro <;> papply eq_subst
-  · passumption
-  · psymm; passumption
+theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
 
-theorem eq_subst_term : Γ ⊢ t₁ ≐ t₂ ⇒ t[↦ₛ t₁]ₜ ≐ t[↦ₛ t₂]ₜ := by
-  pintro
-  have h := @eq_subst _ _ Γ t₁ t₂ (↑ₜ(t[↦ₛ t₁]ₜ) ≐ t)
-  simp [Term.shift_subst_single] at h
-  papply h
-  · passumption
-  · prefl
-
-theorem eq_congr_func {v₁ v₂ : Vec (𝓛.Term n) m} :
-  Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := by
-  pintro
-  suffices ∀ k ≤ m, _ ⊢ f ⬝ᶠ v₁ ≐ f ⬝ᶠ λ i => if i < k then v₂ i else v₁ i by
-    have := this m (by rfl)
-    simp at this; exact this
-  intros k h₁
-  induction k with
-  | zero => simp; prefl
-  | succ k ih =>
-    ptrans
-    · exact ih (Nat.le_of_succ_le h₁)
-    · let k' : Fin m := ⟨k, h₁⟩
-      let t := f ⬝ᶠ λ i => if i < k then ↑ₜ(v₂ i) else if i = k then #0 else ↑ₜ(v₁ i)
-      have h₂ : t[↦ₛ (v₁ k')]ₜ = f ⬝ᶠ λ i => if i < k then v₂ i else v₁ i := by
-        simp [t]; ext i
-        rcases Nat.lt_trichotomy i k with (h | h | h)
-        · simp [h, Term.shift_subst_single]
-        · simp [h]; congr; apply Fin.eq_of_val_eq; simp [k', h]
-        · simp [Nat.not_lt_of_gt h, Nat.ne_of_gt h, Term.shift_subst_single]
-      have h₃ : t[↦ₛ (v₂ k')]ₜ = f ⬝ᶠ λ i => if i < k.succ then v₂ i else v₁ i := by
-        simp [t]; ext i
-        rcases Nat.lt_trichotomy i k with (h | h | h)
-        · simp [h, Nat.lt_succ_of_lt h, Term.shift_subst_single]
-        · simp [h]; congr; apply Fin.eq_of_val_eq; simp [k', h]
-        · simp [Nat.not_lt_of_gt h, Nat.lt_succ, Nat.not_le_of_gt h,
-            Nat.ne_of_gt h, Term.shift_subst_single]
-      rw [←h₂, ←h₃]
-      papply eq_subst_term
-      apply andN_elim (v := λ i => v₁ i ≐ v₂ i)
-      passumption
-
-theorem eq_subst_term' (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
+theorem eq_subst_term (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
   induction t with simp
   | var => apply h
   | func f v ih => papply eq_congr_func; apply andN_intro; exact ih
 
-theorem eq_congr_rel_iff {v₁ v₂ : Vec (𝓛.Term n) m} :
-  Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
+theorem eq_subst_term_single : Γ ⊢ t₁ ≐ t₂ ⇒ t[↦ₛ t₁]ₜ ≐ t[↦ₛ t₂]ₜ := by
   pintro
-  suffices ∀ k ≤ m, _ ⊢ r ⬝ʳ v₁ ⇔ r ⬝ʳ λ i => if i < k then v₂ i else v₁ i by
-    have := this m (by rfl)
-    simp at this; exact this
-  intros k h₁
-  induction k with
-  | zero => simp; exact iff_refl
-  | succ k ih =>
-    papply iff_trans
-    · exact ih (Nat.le_of_succ_le h₁)
-    · let k' : Fin m := ⟨k, h₁⟩
-      let p := r ⬝ʳ λ i => if i < k then ↑ₜ(v₂ i) else if i = k then #0 else ↑ₜ(v₁ i)
-      have h₂ : p[↦ₛ (v₁ k')]ₚ = r ⬝ʳ λ i => if i < k then v₂ i else v₁ i := by
-        simp [p]; ext i
-        rcases Nat.lt_trichotomy i k with (h | h | h)
-        · simp [h, Term.shift_subst_single]
-        · simp [h]; congr; apply Fin.eq_of_val_eq; simp [k', h]
-        · simp [Nat.not_lt_of_gt h, Nat.ne_of_gt h, Term.shift_subst_single]
-      have h₃ : p[↦ₛ (v₂ k')]ₚ = r ⬝ʳ λ i => if i < k.succ then v₂ i else v₁ i := by
-        simp [p]; ext i
-        rcases Nat.lt_trichotomy i k with (h | h | h)
-        · simp [h, Nat.lt_succ_of_lt h, Term.shift_subst_single]
-        · simp [h]; congr; apply Fin.eq_of_val_eq; simp [k', h]
-        · simp [Nat.not_lt_of_gt h, Nat.lt_succ, Nat.not_le_of_gt h,
-            Nat.ne_of_gt h, Term.shift_subst_single]
-      rw [←h₂, ←h₃]
-      papply eq_subst_iff
-      apply andN_elim (v := λ i => v₁ i ≐ v₂ i)
-      passumption
-
-theorem eq_congr_rel {v₁ v₂ : Vec (𝓛.Term n) m} :
-  Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂ := by
-  pintro
-  papply iff_mp
-  papply eq_congr_rel_iff
-  passumption
+  apply eq_subst_term
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ i => prefl
 
 theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇒ t₁' ≐ t₂' := by
   pintros
@@ -641,12 +557,24 @@ theorem eq_congr_eq_iff : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ 
   · papply eq_congr_eq <;> passumption
   · papply eq_congr_eq <;> psymm <;> passumption
 
-theorem eq_subst_iff' (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
+theorem eq_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂ := ax .eq_congr_rel
+
+theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
+  pintro
+  papply iff_intro <;> papply eq_congr_rel
+  · passumption
+  · apply andN_intro
+    intro i
+    psymm
+    papply andN_elim (v := λ i => v₁ i ≐ v₂ i)
+    passumption
+
+theorem eq_subst_iff (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
   induction p generalizing n with simp
   | rel r v =>
-    papply eq_congr_rel_iff; apply andN_intro; intro; apply eq_subst_term'; exact h
+    papply eq_congr_rel_iff; apply andN_intro; intro; apply eq_subst_term; exact h
   | eq t₁ t₂ =>
-    papply eq_congr_eq_iff <;> apply eq_subst_term' <;> exact h
+    papply eq_congr_eq_iff <;> apply eq_subst_term <;> exact h
   | false =>
     exact iff_refl
   | imp p q ih₁ ih₂ =>
@@ -657,9 +585,23 @@ theorem eq_subst_iff' (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]�
     | zero => prefl
     | succ i => apply shift (p := σ₁ i ≐ σ₂ i); apply h
 
-theorem eq_subst' (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
+theorem eq_subst_single_iff : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇔ p[↦ₛ t₂]ₚ := by
+  pintro
+  apply eq_subst_iff
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ i => prefl
+
+theorem eq_subst (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
   papply iff_mp
-  exact eq_subst_iff' h
+  exact eq_subst_iff h
+
+theorem eq_subst_single : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ := by
+  pintro
+  papply iff_mp
+  papply eq_subst_single_iff
+  passumption
 
 namespace Rewrite
 

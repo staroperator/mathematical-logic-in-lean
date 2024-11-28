@@ -7,19 +7,20 @@ variable {𝓛 : Language}
 
 theorem Entails.axiom : p ∈ 𝓛.Axiom → Γ ⊨ p := by
   intro h 𝓜 ρ _
-  induction h <;> simp <;> try tauto
-  case forall_elim =>
+  induction h with simp [Structure.satisfy_andN]
+  | forall_elim =>
     intro h
     simp [Structure.satisfy_subst_single]
     apply h
-  case forall_self =>
+  | forall_self =>
     intro h _
     simp [Structure.satisfy_shift]
     exact h
-  case eq_subst =>
-    intro h₁ h₂
-    simp [Structure.satisfy_subst_single] at *
-    rw [←h₁]; exact h₂
+  | eq_trans =>
+    intro h₁ h₂; simp [h₁, h₂]
+  | eq_congr_func | eq_congr_rel =>
+    intro h; simp [h]
+  | _ => tauto
 
 theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
   intros h₁ h₂ 𝓜 ρ h

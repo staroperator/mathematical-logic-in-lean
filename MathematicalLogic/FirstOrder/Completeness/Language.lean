@@ -82,6 +82,11 @@ def onFormula (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Formula n → 𝓛₂.Form
 | p ⇒ q => φ.onFormula p ⇒ φ.onFormula q
 | ∀' p => ∀' (φ.onFormula p)
 
+theorem onFormula_andN {v : Vec (𝓛₁.Formula n) m} : φ.onFormula (⋀ i, v i) = ⋀ i, φ.onFormula (v i) := by
+  induction m with simp [onFormula]
+  | zero => rfl
+  | succ m ih => simp [ih]; rfl
+
 theorem id_onFormula : id.onFormula p = p := by
   induction p with simp [onFormula]
   | rel r v => ext; simp [id_onTerm]
@@ -112,7 +117,7 @@ theorem onFormula_subst_single : φ.onFormula (p[↦ₛ t]ₚ) = (φ.onFormula p
 
 theorem on_axiom : p ∈ 𝓛₁.Axiom → φ.onFormula p ∈ 𝓛₂.Axiom := by
   intro h
-  induction h <;> simp [onFormula, onFormula_subst_single, onFormula_shift]
+  induction h <;> simp [onFormula, onFormula_subst_single, onFormula_shift, onFormula_andN]
   case all ih => exact .all ih
   all_goals constructor
 
@@ -294,8 +299,7 @@ theorem formula_of_homLimit [h : Nonempty ι] (p : φ.directLimit.Formula n) :
   induction p with
   | rel r v =>
     rcases r with ⟨i, r⟩
-    have h := λ x => term_of_homLimit (v x)
-    choose u w h using h
+    choose u w h using λ x => term_of_homLimit (v x)
     rcases directed_of_vec (α := ι) (· ≤ ·) u with ⟨j, h₁⟩
     rcases directed_of (· ≤ ·) i j with ⟨k, h₂, h₃⟩
     exists k, (φ.hom i k h₂).onRel r ⬝ʳ λ x => (φ.hom (u x) k (le_trans (h₁ x) h₃)).onTerm (w x)
@@ -356,7 +360,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     constructor
     · simp [Hom.onFormula, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
     · exact .transpose
-  | @forall_elim _ t p =>
+  | @forall_elim _ p t =>
     rcases term_of_homLimit t with ⟨i₁, t', h₁⟩
     rcases formula_of_homLimit p with ⟨i₂, q, h₂⟩
     rcases directed_of (· ≤ ·) i₁ i₂ with ⟨i, h₃, h₄⟩
@@ -390,20 +394,70 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     constructor
     · simp [Hom.onFormula, h₁]
     · exact .eq_refl
-  | @eq_subst _ t₁ t₂ p =>
+  | @eq_symm _ t₁ t₂ =>
     rcases term_of_homLimit t₁ with ⟨i₁, t₁', h₁⟩
     rcases term_of_homLimit t₂ with ⟨i₂, t₂', h₂⟩
-    rcases formula_of_homLimit p with ⟨i₃, q, h₃⟩
+    rcases directed_of (· ≤ ·) i₁ i₂ with ⟨i, h₃, h₄⟩
+    let t₁'' := (φ.hom i₁ i h₃).onTerm t₁'
+    let t₂'' := (φ.hom i₂ i h₄).onTerm t₂'
+    exists i, t₁'' ≐ t₂'' ⇒ t₂'' ≐ t₁''
+    constructor
+    · simp [Hom.onFormula, t₁'', t₂'']
+      simp_rw [←Hom.comp_onTerm, homLimit_comp_hom]
+      simp [h₁, h₂]
+    · exact .eq_symm
+  | @eq_trans _ t₁ t₂ t₃ =>
+    rcases term_of_homLimit t₁ with ⟨i₁, t₁', h₁⟩
+    rcases term_of_homLimit t₂ with ⟨i₂, t₂', h₂⟩
+    rcases term_of_homLimit t₃ with ⟨i₃, t₃', h₃⟩
     rcases directed_of_three (α := ι) (· ≤ ·) i₁ i₂ i₃ with ⟨i, h₄, h₅, h₆⟩
     let t₁'' := (φ.hom i₁ i h₄).onTerm t₁'
     let t₂'' := (φ.hom i₂ i h₅).onTerm t₂'
-    let q' := (φ.hom i₃ i h₆).onFormula q
-    exists i, t₁'' ≐ t₂'' ⇒ q'[↦ₛ t₁'']ₚ ⇒ q'[↦ₛ t₂'']ₚ
+    let t₃'' := (φ.hom i₃ i h₆).onTerm t₃'
+    exists i, t₁'' ≐ t₂'' ⇒ t₂'' ≐ t₃'' ⇒ t₁'' ≐ t₃''
     constructor
-    · simp [Hom.onFormula, Hom.onFormula_subst_single, t₁'', t₂'', q']
-      simp_rw [←Hom.comp_onFormula, ←Hom.comp_onTerm, homLimit_comp_hom]
+    · simp [Hom.onFormula, t₁'', t₂'', t₃'']
+      simp_rw [←Hom.comp_onTerm, homLimit_comp_hom]
       simp [h₁, h₂, h₃]
-    · exact .eq_subst
+    · exact .eq_trans
+  | @eq_congr_func _ _ v₁ v₂ f =>
+    choose u₁ w₁ h₁ using λ i => term_of_homLimit (v₁ i)
+    rcases directed_of_vec (α := ι) (· ≤ ·) u₁ with ⟨i₁, h₁'⟩
+    choose u₂ w₂ h₂ using λ i => term_of_homLimit (v₂ i)
+    rcases directed_of_vec (α := ι) (· ≤ ·) u₂ with ⟨i₂, h₂'⟩
+    rcases f with ⟨i₃, f⟩
+    rcases directed_of_three (α := ι) (· ≤ ·) i₁ i₂ i₃ with ⟨i, h₃, h₄, h₅⟩
+    let v₁' := λ x => (φ.hom (u₁ x) i ((h₁' x).trans h₃)).onTerm (w₁ x)
+    let v₂' := λ x => (φ.hom (u₂ x) i ((h₂' x).trans h₄)).onTerm (w₂ x)
+    let f' := (φ.hom i₃ i h₅).onFunc f
+    exists i, (⋀ i, v₁' i ≐ v₂' i) ⇒ f' ⬝ᶠ v₁' ≐ f' ⬝ᶠ v₂'
+    constructor
+    · simp [Hom.onFormula, Hom.onTerm, Hom.onFormula_andN, v₁', v₂', f']
+      simp_rw [←Hom.comp_onTerm, homLimit_comp_hom]
+      simp [←h₁, ←h₂]
+      apply Quotient.sound
+      exists i, h₅, le_refl i
+      rw [←Hom.comp_onFunc, φ.hom_comp]
+    · exact .eq_congr_func
+  | @eq_congr_rel _ _ v₁ v₂ r =>
+    choose u₁ w₁ h₁ using λ i => term_of_homLimit (v₁ i)
+    rcases directed_of_vec (α := ι) (· ≤ ·) u₁ with ⟨i₁, h₁'⟩
+    choose u₂ w₂ h₂ using λ i => term_of_homLimit (v₂ i)
+    rcases directed_of_vec (α := ι) (· ≤ ·) u₂ with ⟨i₂, h₂'⟩
+    rcases r with ⟨i₃, r⟩
+    rcases directed_of_three (α := ι) (· ≤ ·) i₁ i₂ i₃ with ⟨i, h₃, h₄, h₅⟩
+    let v₁' := λ x => (φ.hom (u₁ x) i ((h₁' x).trans h₃)).onTerm (w₁ x)
+    let v₂' := λ x => (φ.hom (u₂ x) i ((h₂' x).trans h₄)).onTerm (w₂ x)
+    let r' := (φ.hom i₃ i h₅).onRel r
+    exists i, (⋀ i, v₁' i ≐ v₂' i) ⇒ r' ⬝ʳ v₁' ⇒ r' ⬝ʳ v₂'
+    constructor
+    · simp [Hom.onFormula, Hom.onTerm, Hom.onFormula_andN, v₁', v₂', r']
+      simp_rw [←Hom.comp_onTerm, homLimit_comp_hom]
+      simp [←h₁, ←h₂]
+      apply Quotient.sound
+      exists i, h₅, le_refl i
+      rw [←Hom.comp_onRel, φ.hom_comp]
+    · exact .eq_congr_rel
   | @all _ p _ ih =>
     rcases ih with ⟨i, q, h₁, h₂⟩
     exists i, ∀' q
