@@ -13,28 +13,31 @@ lemma consistent_chain_upper_bound (S : Set (𝓛.FormulaSet n))
   · intro h₄
     rcases Proof.compactness h₄ with ⟨Γ, h₁', h₂', h₃'⟩
     have h : ∃ Δ ∈ S, Γ ⊆ Δ := by
-      apply Set.Finite.induction_on' (C := _) h₂'
-      · rcases h₃ with ⟨Δ, h₃⟩
+      clear h₃'
+      induction Γ, h₂' using Set.Finite.induction_on_subset with
+      | empty =>
+        rcases h₃ with ⟨Δ, h₃⟩
         exists Δ
         constructor <;> simp [h₃]
-      · intro p Δ' h₁'' _ _ ⟨Δ, h₂'', h₃''⟩
-        apply h₁' at h₁''
-        simp at h₁''
-        rcases h₁'' with ⟨Γ, h₆'', h₇''⟩
+      | @insert p Δ h₂' _ _ h₃' =>
+        simp [Set.insert_subset_iff] at h₁'
+        rcases h₁' with ⟨⟨Δ₁, h₁'', h₂''⟩, h₁'⟩
+        apply h₃' at h₁'
+        rcases h₁' with ⟨Δ₂, h₃'', h₄''⟩
         have : ∀ {α}, IsRefl (Set α) Set.Subset := ⟨λ _ _ => id⟩
-        rcases h₂.total h₆'' h₂'' with (h | h)
-        · exists Δ
+        rcases h₂.total h₁'' h₃'' with (h | h)
+        · exists Δ₂
           constructor
-          · exact h₂''
+          · exact h₃''
           · apply Set.insert_subset
-            · exact h h₇''
-            · exact h₃''
-        · exists Γ
+            · exact h h₂''
+            · exact h₄''
+        · exists Δ₁
           constructor
-          · exact h₆''
+          · exact h₁''
           · apply Set.insert_subset
-            · exact h₇''
-            · exact Set.Subset.trans h₃'' h
+            · exact h₂''
+            · exact h₄''.trans h
     rcases h with ⟨Δ, h, h'⟩
     apply h₁ at h
     apply Consistent.weaken h' at h

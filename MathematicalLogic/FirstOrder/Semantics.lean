@@ -31,7 +31,7 @@ theorem interp_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, λ x =>
 theorem interp_shift : ⟦ ↑ₜt ⟧ₜ 𝓜, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ 𝓜, ρ := by
   simp [Term.shift, interp_subst]
 
-def satisfy (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
+@[simp] def satisfy (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
 | _, r ⬝ʳ v, ρ => 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
 | _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ
 | _, ⊥, _ => False
@@ -39,17 +39,12 @@ def satisfy (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assi
 | _, ∀' p, ρ => ∀ u, 𝓜.satisfy p (u ∷ᵥ ρ)
 notation:50 𝓜 " ⊨[" ρ "] " p:50 => satisfy 𝓜 p ρ
 
-@[simp] theorem satisfy_rel : 𝓜 ⊨[ρ] r ⬝ʳ v ↔ 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ := by rfl
-@[simp] theorem satisfy_eq : 𝓜 ⊨[ρ] t₁ ≐ t₂ ↔ ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ := by rfl
-@[simp] theorem satisfy_false : ¬ 𝓜 ⊨[ρ] ⊥ := not_false
-@[simp] theorem satisfy_imp : 𝓜 ⊨[ρ] p ⇒ q ↔ 𝓜 ⊨[ρ] p → 𝓜 ⊨[ρ] q := by rfl
-@[simp] theorem satisfy_true : 𝓜 ⊨[ρ] ⊤ := by simp [satisfy]
+@[simp] theorem satisfy_true : 𝓜 ⊨[ρ] ⊤ := by tauto
 @[simp] theorem satisfy_neg : 𝓜 ⊨[ρ] ~ p ↔ ¬ 𝓜 ⊨[ρ] p := by rfl
-@[simp] theorem satisfy_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [satisfy]
-@[simp] theorem satisfy_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [satisfy]; tauto
-@[simp] theorem satisfy_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [satisfy]; tauto
-@[simp] theorem satisfy_all : 𝓜 ⊨[ρ] ∀' p ↔ ∀ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by rfl
-@[simp] theorem satisfy_ex : 𝓜 ⊨[ρ] ∃' p ↔ ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by simp [satisfy]
+@[simp] theorem satisfy_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [PropNotation.and]
+@[simp] theorem satisfy_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [PropNotation.or]; tauto
+@[simp] theorem satisfy_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [PropNotation.iff]; tauto
+@[simp] theorem satisfy_ex : 𝓜 ⊨[ρ] ∃' p ↔ ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by simp [Formula.ex]
 
 theorem satisfy_andN {v : Vec (𝓛.Formula n) m} :
   𝓜 ⊨[ρ] (⋀ i, v i) ↔ ∀ i, 𝓜 ⊨[ρ] v i := by
@@ -67,6 +62,11 @@ theorem satisfy_subst {σ : 𝓛.Subst m n} : 𝓜 ⊨[ρ] p[σ]ₚ ↔ 𝓜 ⊨
     cases x using Fin.cases <;> simp [interp_shift]
 
 theorem satisfy_subst_single : 𝓜 ⊨[ρ] p[↦ₛ t]ₚ ↔ 𝓜 ⊨[ ⟦t⟧ₜ 𝓜, ρ ∷ᵥ ρ ] p := by
+  simp [satisfy_subst]
+  congr! with x
+  cases x using Fin.cases <;> simp
+
+theorem satisfy_subst_assign : 𝓜 ⊨[ρ] p[≔ₛ t]ₚ ↔ 𝓜 ⊨[ ⟦t⟧ₜ 𝓜, ρ ∷ᵥ ρ.tail ] p := by
   simp [satisfy_subst]
   congr! with x
   cases x using Fin.cases <;> simp
@@ -135,6 +135,9 @@ def Model.weaken {𝓣₁ 𝓣₂ : 𝓛.Theory} (𝓜 : 𝓣₁.Model) (h : �
   satisfy_theory p h' := 𝓜.satisfy_theory p (h h')
 
 end Theory
+
+def Satisfiable.of_model {𝓣 : 𝓛.Theory} (𝓜 : Theory.Model.{u} 𝓣) : Satisfiable.{u} 𝓣 :=
+  Theory.satisfiable_iff.mpr ⟨𝓜⟩
 
 namespace Structure
 

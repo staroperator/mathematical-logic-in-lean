@@ -82,8 +82,12 @@ def onFormula (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Formula n → 𝓛₂.Form
 | p ⇒ q => φ.onFormula p ⇒ φ.onFormula q
 | ∀' p => ∀' (φ.onFormula p)
 
+theorem onFormula_neg : φ.onFormula (~ p) = ~ φ.onFormula p := rfl
+
+theorem onFormula_and : φ.onFormula (p ⩑ q) = φ.onFormula p ⩑ φ.onFormula q := rfl
+
 theorem onFormula_andN {v : Vec (𝓛₁.Formula n) m} : φ.onFormula (⋀ i, v i) = ⋀ i, φ.onFormula (v i) := by
-  induction m with simp [onFormula]
+  induction m with try simp [onFormula, onFormula_and, Formula.andN]
   | zero => rfl
   | succ m ih => simp [ih]; rfl
 
@@ -358,7 +362,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     let q₂' := (φ.hom i₂ i h₄).onFormula q₂
     exists i, (~ q₁' ⇒ ~ q₂') ⇒ q₂' ⇒ q₁'
     constructor
-    · simp [Hom.onFormula, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
+    · simp [Hom.onFormula, Hom.onFormula_neg, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
     · exact .transpose
   | @forall_elim _ p t =>
     rcases term_of_homLimit t with ⟨i₁, t', h₁⟩
@@ -499,11 +503,14 @@ theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (𝓛 i).Formu
   (h₂ : (φ.homLimit i).onFormula '' Δ ⊆ ⋃i, (φ.homLimit i).onFormula '' Γ i)
   (h : Δ.Finite) :
   ∃ j h, (φ.hom i j h).onFormula '' Δ ⊆ Γ j := by
-  apply Set.Finite.induction_on' (C := _) h
-  · exists i, le_refl i; simp
-  · intro p Δ' h₃ _ _ ⟨j₁, h₄, h₅⟩
-    have := h₂ ⟨_, h₃, rfl⟩; simp at this
-    rcases this with ⟨j₂, q, h₆, h₇⟩
+  -- simp at h₂; rcases h₂ with ⟨
+  induction Δ, h using Set.Finite.induction_on_subset with
+  | empty => exists i, le_refl i; simp
+  | @insert p Δ' h₃ _ _ h₄ =>
+    simp only [Set.image_insert_eq, Set.insert_subset_iff, Set.mem_iUnion] at h₂
+    rcases h₂ with ⟨⟨j₂, q, h₆, h₇⟩, h₂'⟩
+    apply h₄ at h₂'
+    rcases h₂' with ⟨j₁, h₄, h₅⟩
     apply formula_hom_eq_of_homLimit_eq at h₇
     rcases h₇ with ⟨j₃, h₇, h₇', h₇''⟩
     rcases directed_of (· ≤ ·) j₁ j₃ with ⟨k, h₈, h₈'⟩

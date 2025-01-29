@@ -41,7 +41,7 @@ notation:80 "⟦ " t " ⟧ₜ " 𝓜 ", " ρ:80 => interp 𝓜 ρ t
 @[simp] theorem interp_fconst : ⟦ f ⬝ᶠ v ⟧ₜ 𝓜, ρ = 𝓜.interpFunc f λ i => ⟦ v i ⟧ₜ 𝓜, ρ := rfl
 @[simp] theorem interp_fvar : ⟦ f ⬝ᶠᵛ v ⟧ₜ 𝓜, ρ = ρ f λ i => ⟦ v i ⟧ₜ 𝓜, ρ := rfl
 
-def satisfy (𝓜 : 𝓛.Structure) (ρ : 𝓜.Assignment Γ) : 𝓛.Formula Γ → Prop
+@[simp] def satisfy (𝓜 : 𝓛.Structure) (ρ : 𝓜.Assignment Γ) : 𝓛.Formula Γ → Prop
 | r ⬝ʳ v => 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
 | r ⬝ʳᵛ v => ρ r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
 | t₁ ≐ t₂ => ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ
@@ -51,21 +51,15 @@ def satisfy (𝓜 : 𝓛.Structure) (ρ : 𝓜.Assignment Γ) : 𝓛.Formula Γ 
 | ∀ᶠ n p => ∀ (f : Vec 𝓜 n → 𝓜), 𝓜.satisfy (f ∷ₐ ρ) p
 | ∀ʳ n p => ∀ (r : Vec 𝓜 n → Prop), 𝓜.satisfy (r ∷ₐ ρ) p
 notation:50 𝓜 " ⊨[" ρ "] " p:50 => satisfy 𝓜 ρ p
-@[simp] theorem satisfy_rconst : 𝓜 ⊨[ρ] r ⬝ʳ v ↔ 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ := by rfl
-@[simp] theorem satisfy_rvar : 𝓜 ⊨[ρ] r ⬝ʳᵛ v ↔ ρ r λ i => ⟦ v i ⟧ₜ 𝓜, ρ := by rfl
-@[simp] theorem satisfy_eq : 𝓜 ⊨[ρ] t₁ ≐ t₂ ↔ ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ := by rfl
-@[simp] theorem satisfy_false : ¬ 𝓜 ⊨[ρ] ⊥ := by simp [satisfy]
-@[simp] theorem satisfy_imp : 𝓜 ⊨[ρ] p ⇒ q ↔ 𝓜 ⊨[ρ] p → 𝓜 ⊨[ρ] q := by rfl
-@[simp] theorem satisfy_true : 𝓜 ⊨[ρ] ⊤ := by simp [satisfy]
-@[simp] theorem satisfy_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [satisfy]
-@[simp] theorem satisfy_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [satisfy]; tauto
-@[simp] theorem satisfy_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [satisfy]; tauto
-@[simp] theorem satisfy_all : 𝓜 ⊨[ρ] ∀' p ↔ ∀ (u : 𝓜), 𝓜 ⊨[u ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_allf : 𝓜 ⊨[ρ] ∀ᶠ n p ↔ ∀ (f : Vec 𝓜 n → 𝓜), 𝓜 ⊨[f ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_allr : 𝓜 ⊨[ρ] ∀ʳ n p ↔ ∀ (r : Vec 𝓜 n → Prop), 𝓜 ⊨[r ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_ex : 𝓜 ⊨[ρ] ∃' p ↔ ∃ (u : 𝓜), 𝓜 ⊨[u ∷ₐ ρ] p := by simp [satisfy]
-@[simp] theorem satisfy_exf : 𝓜 ⊨[ρ] ∃ᶠ n p ↔ ∃ (f : Vec 𝓜 n → 𝓜), 𝓜 ⊨[f ∷ₐ ρ] p := by simp [satisfy]
-@[simp] theorem satisfy_exr : 𝓜 ⊨[ρ] ∃ʳ n p ↔ ∃ (r : Vec 𝓜 n → Prop), 𝓜 ⊨[r ∷ₐ ρ] p := by simp [satisfy]
+
+@[simp] theorem satisfy_true : 𝓜 ⊨[ρ] ⊤ := by tauto
+@[simp] theorem satisfy_neg : 𝓜 ⊨[ρ] ~ p ↔ ¬ 𝓜 ⊨[ρ] p := by rfl
+@[simp] theorem satisfy_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [PropNotation.and]
+@[simp] theorem satisfy_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [PropNotation.or]; tauto
+@[simp] theorem satisfy_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [PropNotation.iff]; tauto
+@[simp] theorem satisfy_ex : 𝓜 ⊨[ρ] ∃' p ↔ ∃ (u : 𝓜), 𝓜 ⊨[u ∷ₐ ρ] p := by simp [Formula.ex]
+@[simp] theorem satisfy_exf : 𝓜 ⊨[ρ] ∃ᶠ n p ↔ ∃ (f : Vec 𝓜 n → 𝓜), 𝓜 ⊨[f ∷ₐ ρ] p := by simp [Formula.exf]
+@[simp] theorem satisfy_exr : 𝓜 ⊨[ρ] ∃ʳ n p ↔ ∃ (r : Vec 𝓜 n → Prop), 𝓜 ⊨[r ∷ₐ ρ] p := by simp [Formula.exr]
 
 abbrev satisfySentence (𝓜 : 𝓛.Structure) (p : 𝓛.Sentence) :=
   𝓜 ⊨[[]ₐ] p

@@ -88,7 +88,8 @@ theorem card_powerset : card (powerset x) = 2 ^ card x := by
   · intro ⟨y, h⟩; simp at h; ext; simp; apply h
   · intro ⟨s, h⟩; ext; simp; apply h
 
-theorem card_sUnion_range_le : card (sUnion (range f)) ≤ sum λ i => (f i).card := by
+theorem card_sUnion_range_le [Small.{u} α] {f : α → ZFSet.{u}} :
+  card (sUnion (range f)) ≤ sum λ i => (f i).card := by
   rw [←lift_le, card_eq, lift_sum]
   simp_rw [card_eq]
   rw [←mk_sigma, le_def]
@@ -120,7 +121,7 @@ theorem rank_omega : rank omega = Ordinal.omega0 := by
     apply le_of_lt; apply rank_lt_of_mem
     simp [mem_omega_iff]
 
-theorem rank_image {f : ZFSet.{u} → ZFSet.{u}} [PSet.Definable 1 f] :
+theorem rank_image {f : ZFSet.{u} → ZFSet.{u}} [Definable₁ f] :
   rank (image f x) = Ordinal.lsub λ a => rank (f (x.out.Func' a)) := by
   apply le_antisymm
   · simp [rank_le_iff]
@@ -177,7 +178,7 @@ theorem V_strict_mono : α < β → V α ∈ V β := by
     · simp [h, subset_refl]
   · simp [mem_V_limit h₁]
     exists Order.succ α; constructor
-    · exact h₁.right _ h
+    · exact h₁.succ_lt h
     · simp [V_succ, subset_refl]
 
 theorem V_mono : α ≤ β → V α ⊆ V β := by
@@ -231,7 +232,6 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
     apply sum_lt_of_isRegular hκ.2.1
     · simp [lt_ord] at h; simp [h]
     · intro i
-      simp [Ordinal.familyOfBFamily, Ordinal.familyOfBFamily']
       apply ih
       · apply Ordinal.typein_lt_self
       · trans; apply Ordinal.typein_lt_self; exact h
@@ -245,7 +245,7 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   rw [←mem_V_iff]
   exact h
 
-theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [PSet.Definable 1 f] :
+theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [Definable₁ f] :
   x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
   intro h₁ h₂
   rw [mem_V_iff, rank_image]

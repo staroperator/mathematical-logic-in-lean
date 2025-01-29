@@ -70,7 +70,7 @@ noncomputable def 𝓡 : Real.Model where
   interpRel
   | .le, v => v 0 ≤ v 1
   satisfy_theory p h := by
-    cases h with simp
+    cases h with simp [OrderedField.le]
     | ax_add_assoc => apply add_assoc
     | ax_add_comm => apply add_comm
     | ax_mul_assoc => apply mul_assoc
@@ -79,7 +79,7 @@ noncomputable def 𝓡 : Real.Model where
     | ax_left_distrib => apply left_distrib
     | ax_le_antisymm => apply le_antisymm
     | ax_le_trans => apply le_trans
-    | ax_le_total => intro a b; apply le_of_lt
+    | ax_le_total => apply le_total
     | ax_mul_le_mul => intro a b c; apply mul_le_mul_of_nonneg_right
     | ax_exists_lub =>
       intro R a h₁ b h₂
@@ -172,21 +172,21 @@ instance : LE 𝓜 := ⟨(𝓜.interpRel .le [·, ·]ᵥ)⟩
 noncomputable instance : LinearOrder 𝓜 where
   le_refl a := by
     have := 𝓜.satisfy_theory _ .ax_le_refl a
-    simp at this; exact this
+    simp [OrderedField.le] at this; exact this
   le_antisymm a b := by
     have := 𝓜.satisfy_theory _ .ax_le_antisymm a b
-    simp at this; exact this
+    simp [OrderedField.le] at this; exact this
   le_trans a b := by
     have := 𝓜.satisfy_theory _ .ax_le_trans a b
-    simp at this; exact this
+    simp [OrderedField.le] at this; exact this
   le_total a b := by
     have := 𝓜.satisfy_theory _ .ax_le_total a b
-    simp at this; rw [or_iff_not_imp_left]; exact this
+    simp [OrderedField.le] at this; exact this
   decidableLE := _
 
 theorem add_le_add_right (a b c : 𝓜) : a ≤ b → a + c ≤ b + c := by
   have := 𝓜.satisfy_theory _ .ax_add_le_add a b c
-  simp at this; exact this
+  simp [OrderedField.le] at this; exact this
 
 lemma zero_le_neg_iff (a : 𝓜) : 0 ≤ -a ↔ a ≤ 0 := by
   constructor
@@ -201,7 +201,7 @@ lemma zero_le_neg_iff (a : 𝓜) : 0 ≤ -a ↔ a ≤ 0 := by
 
 theorem mul_le_mul_right (a b c : 𝓜) : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
   have := 𝓜.satisfy_theory _ .ax_mul_le_mul a b c
-  simp at this; exact this
+  simp [OrderedField.le] at this; exact this
 
 noncomputable instance : LinearOrderedField 𝓜 where
   mul_comm := mul_comm
@@ -234,7 +234,7 @@ noncomputable instance : LinearOrderedField 𝓜 where
 theorem exists_lub (s : Set 𝓜) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
   intro ⟨x, h₁⟩ ⟨y, h₂⟩
   have := 𝓜.satisfy_theory _ .ax_exists_lub
-  simp at this
+  simp [OrderedField.le] at this
   exact this (·.head ∈ s) x h₁ y h₂
 
 noncomputable def ofReal (x : ℝ) : 𝓜 :=
@@ -394,7 +394,7 @@ lemma exists_sqrt (a : 𝓜) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
       simp at this; exact this
     exists n
     intro b ⟨h₄, h₅⟩
-    rw [←pow_le_pow_iff_left (n := 2)]
+    rw [←pow_le_pow_iff_left₀ (n := 2)]
     · apply h₅.trans; apply (le_of_lt h₂).trans
       apply le_self_pow₀
       · rw [←ofReal_one, ←Rat.cast_natCast, ←ofReal_rat, ofReal_le]
@@ -445,7 +445,7 @@ lemma exists_sqrt (a : 𝓜) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     have h₉ : b - δ ∈ upperBounds s := by
       intro c ⟨h', h''⟩
       apply le_trans' h₈ at h''
-      rw [pow_le_pow_iff_left] at h''
+      rw [pow_le_pow_iff_left₀] at h''
       · exact h''
       · exact h'
       · simp [δ]; rw [div_le_iff₀]
@@ -493,7 +493,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
           (div_nonneg (le_of_lt h') (le_trans zero_le_one (le_of_lt h₄)))
         rw [←mul_div_mul_comm] at this
         simp [δ] at this
-        rw [←Real.sqrt_mul, Real.sqrt_mul_self, div_div_cancel'] at this
+        rw [←Real.sqrt_mul, Real.sqrt_mul_self, div_div_cancel₀] at this
         · simp [←Rat.cast_mul] at this
           rw [←Rat.cast_mul, Rat.cast_le]
           exact le_of_lt this
@@ -523,7 +523,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
           · apply mul_nonneg <;> rw [←ofReal_zero, ofReal_le] <;> apply le_of_lt <;> assumption
           · simp; exact le_of_lt h₃) with ⟨δ, h₄, h₅⟩
       have h₆ : 1 < δ := by
-        rw [←pow_lt_pow_iff_left (n := 2) (by simp) h₄ (by simp)]
+        rw [←pow_lt_pow_iff_left₀ (n := 2) (by simp) h₄ (by simp)]
         rw [h₅, lt_div_iff₀]
         · simp; exact h₂
         · simp; exact h₃
@@ -533,7 +533,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
       · have := mul_lt_mul'' h₇ h₉
           (div_nonneg (by rw [←ofReal_zero, ofReal_le]; exact le_of_lt h) (le_trans zero_le_one (le_of_lt h₆)))
           (div_nonneg (by rw [←ofReal_zero, ofReal_le]; exact le_of_lt h') (le_trans zero_le_one (le_of_lt h₆)))
-        rw [←mul_div_mul_comm, ←pow_two, h₅, div_div_cancel'] at this
+        rw [←mul_div_mul_comm, ←pow_two, h₅, div_div_cancel₀] at this
         · exact le_of_lt this
         · apply ne_of_gt; apply mul_pos <;> rw [←ofReal_zero, ofReal_lt] <;> assumption
       · rw [←Rat.cast_mul]; apply h₁; simp

@@ -23,7 +23,7 @@ theorem Fin.embedAt_or_insertAt (x : Fin (n + k + 1)) : x = embedAt k ∨ ∃ y,
     | succ x => right; exists x
   | succ k ih =>
     cases x using Fin.cases with
-    | zero => right; exists Fin.ofNat 0
+    | zero => right; exists Fin.ofNat' (n + k + 1) 0
     | succ x =>
       rcases ih x with h | ⟨y, h⟩
       · left; simp [h, embedAt]
@@ -45,6 +45,12 @@ def Formula.consts : 𝓛.Formula n → Set 𝓛.Const
 | p ⇒ q => p.consts ∪ q.consts
 | ∀' p => p.consts
 
+theorem Formula.consts_neg {p : 𝓛.Formula n} : (~ p).consts = p.consts := by
+  unfold PropNotation.neg; simp [Formula.consts]
+
+theorem Formula.consts_ex : (∃' p).consts = p.consts := by
+  simp [Formula.ex, Formula.consts_neg, Formula.consts]
+
 lemma Term.consts_of_subst :
   t[σ]ₜ.consts = t.consts ∪ ⋃ x ∈ t.vars, (σ x).consts := by
   induction t with
@@ -55,11 +61,10 @@ lemma Term.consts_of_subst :
 
 lemma Formula.consts_of_subst {σ : 𝓛.Subst n m} :
   p[σ]ₚ.consts = p.consts ∪ ⋃ x ∈ p.free, (σ x).consts := by
-  induction p generalizing m with simp_rw [free, consts]
-  | rel r v => simp_rw [Set.biUnion_iUnion, ←Set.iUnion_union_distrib, Term.consts_of_subst]
-  | eq t₁ t₂ => simp_rw [Set.biUnion_union, Term.consts_of_subst]; aesop
-  | false => simp
-  | imp p q ih₁ ih₂ => rw [ih₁, ih₂, Set.biUnion_union]; aesop
+  induction p generalizing m with simp [free, consts]
+  | rel r v => simp [Term.consts_of_subst]; rw [Set.iUnion_comm, Set.iUnion_union_distrib]
+  | eq t₁ t₂ => simp [Term.consts_of_subst]; simp_rw [Set.iUnion_or]; rw [Set.iUnion_union_distrib]; aesop
+  | imp p q ih₁ ih₂ => simp_rw [Set.iUnion_or]; rw [ih₁, ih₂, Set.iUnion_union_distrib]; aesop
   | all p ih =>
     ext c; simp [ih]; apply or_congr_right
     constructor
@@ -416,27 +421,33 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
   apply Set.decompose_subset_union at h₂
   rcases h₂ with ⟨Γ', A, h₂, h₅, h₅'⟩
   subst h₂; simp at h₃; rcases h₃ with ⟨_, h₃⟩
-  revert h₄; apply Set.Finite.induction_on' (C := _) h₃
-  · intro h₄; simp at h₄
+  induction A, h₃ using Set.Finite.induction_on_subset with
+  | empty =>
+    simp at h₄
     apply Proof.weaken h₅ at h₄
     exact henkinStep.hom_consistent h h₁ h₄
-  · intro a A' h₆ h₆' h₆'' h₄ h₄'
-    simp at h₄'; apply Proof.deduction.mpr at h₄'
-    rcases h₅' h₆ with ⟨p⟩
-    apply h₄
-    apply (Proof.not_imp_left.mp h₄').mp
+  | @insert a A' h₆ h₆' h₆'' h₇ =>
+    simp at h₄; apply Proof.deduction.mpr at h₄
+    simp [Set.insert_subset_iff] at h₅'
+    rcases h₅' with ⟨⟨p⟩, h₅'⟩
+    apply h₇ h₅'
+    apply (Proof.not_imp_left.mp h₄).mp
     apply Proof.const_generalization (c := henkinStep.wit p)
     · intro q h; simp at h; rcases h with h | h
       · rcases h₅ h with ⟨q', _, h⟩; subst h; apply henkinStep.wit_not_in_homFormula
-      · rcases h₅' (h₆' h) with ⟨q⟩
-        simp [Formula.consts, Formula.consts_of_subst]
+      · rcases h₅' h with ⟨q'⟩
+        simp [Formula.consts, Formula.consts_ex, Formula.consts_of_subst]
         constructor
         · apply henkinStep.wit_not_in_homFormula
         · intro x h
           cases x using Fin.cases with simp [Formula.consts, Term.consts]
-          | zero => intro h; apply henkinStep.Func.wit.inj at h; subst h; contradiction
-    · simp [Formula.consts]; apply henkinStep.wit_not_in_homFormula
-    · exact Proof.not_imp_right.mp h₄'
+          | zero =>
+            intro h'
+            apply henkinStep.Func.wit.inj at h'
+            subst h'
+            contradiction
+    · simp [Formula.consts_neg]; apply henkinStep.wit_not_in_homFormula
+    · exact Proof.not_imp_right.mp h₄
 
 def henkinChain (𝓛 : Language) (n : ℕ) : ℕ → Language
 | 0 => 𝓛

@@ -50,7 +50,7 @@ def 𝓝 : PA₂.Model where
   | .mul, v => v 0 * v 1
   interpRel r := nomatch r
   satisfy_theory p h := by
-    cases h with simp
+    cases h with simp [Peano.succ]
     | ax_add_succ => intro n m; rfl
     | ax_mul_succ => intro n m; rfl
     | ax_ind =>
@@ -84,18 +84,18 @@ theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
   induction n generalizing m with
   | zero =>
     have := 𝓜.satisfy_theory _ .ax_succ_ne_zero
-    simp at this
+    simp [Peano.succ] at this
     exact this _ h₁.symm
   | succ n ih =>
     have := 𝓜.satisfy_theory _ .ax_succ_inj
-    simp at this; apply this at h₁
+    simp [Peano.succ] at this; apply this at h₁
     cases' m with m <;> simp at h₃
     exact ih _ h₁ h₃
 
 theorem ofNat_surjective : Function.Surjective (@ofNat 𝓜) := by
   intro u
   have := 𝓜.satisfy_theory _ .ax_ind
-  simp at this
+  simp [Peano.succ] at this
   apply this (r := λ v => ∃ n, ofNat n = v 0)
   · exists 0
   · intro u ⟨n, h₁⟩
@@ -111,7 +111,7 @@ theorem ofNat_add : @ofNat 𝓜 (n + m) = ofNat n + ofNat m := by
     simp at this; apply this
   | succ m ih =>
     have := 𝓜.satisfy_theory _ .ax_add_succ
-    simp at this
+    simp [Peano.succ] at this
     apply (this _ _).trans
     simp_rw [Nat.add_succ, ofNat, ←ih]; rfl
 
@@ -123,7 +123,7 @@ theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
     simp at this; apply this
   | succ m ih =>
     have := 𝓜.satisfy_theory _ .ax_mul_succ
-    simp at this
+    simp [Peano.succ] at this
     apply (this _ _).trans
     simp [Nat.mul_succ, ofNat_add, ←ih]; rfl
 

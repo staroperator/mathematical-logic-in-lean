@@ -338,11 +338,10 @@ theorem subst_ext_free {p : 𝓛.Formula n} {σ₁ σ₂ : 𝓛.Subst n m} :
 
 theorem free_of_subst {σ : 𝓛.Subst n m} :
   p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
-  induction p generalizing m with simp_rw [free]
+  induction p generalizing m with simp [free]
   | rel => simp [Term.vars_of_subst]; rw [Set.iUnion_comm]
   | eq => simp [Set.iUnion_or, Set.iUnion_union_distrib, Term.vars_of_subst]
-  | false => simp
-  | imp p q ih₁ ih₂ => rw [ih₁, ih₂, Set.biUnion_union]
+  | imp p q ih₁ ih₂ => simp_rw [Set.iUnion_or]; rw [ih₁, ih₂, Set.iUnion_union_distrib]
   | all p ih =>
     ext x; simp [ih]
     constructor

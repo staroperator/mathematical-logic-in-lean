@@ -1,4 +1,4 @@
-import Mathlib.Data.Set.Finite
+import Mathlib.Data.Set.Finite.Basic
 import MathematicalLogic.FirstOrder.Syntax
 
 namespace FirstOrder.Language

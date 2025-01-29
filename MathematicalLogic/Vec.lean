@@ -73,6 +73,7 @@ macro_rules
 @[simp] theorem cons_3 {v : Vec α (n + 3)} : (a ∷ᵥ v) 3 = v 2 := rfl
 @[simp] theorem cons_4 {v : Vec α (n + 4)} : (a ∷ᵥ v) 4 = v 3 := rfl
 @[simp] theorem cons_5 {v : Vec α (n + 5)} : (a ∷ᵥ v) 5 = v 4 := rfl
+@[simp] theorem cons_6 {v : Vec α (n + 6)} : (a ∷ᵥ v) 6 = v 5 := rfl
 
 @[app_unexpander nil] def unexpandNil : Lean.PrettyPrinter.Unexpander
 | `($(_)) => `([]ᵥ)
