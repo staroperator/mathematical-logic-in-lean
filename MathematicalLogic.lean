@@ -7,6 +7,7 @@ import MathematicalLogic.Computability.Partrec
 
 import MathematicalLogic.FirstOrder.Syntax
 import MathematicalLogic.FirstOrder.Semantics
+import MathematicalLogic.FirstOrder.Proof.Init
 import MathematicalLogic.FirstOrder.Proof
 import MathematicalLogic.FirstOrder.Soundness
 import MathematicalLogic.FirstOrder.Completeness.Language
