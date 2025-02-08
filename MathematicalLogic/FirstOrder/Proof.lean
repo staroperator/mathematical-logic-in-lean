@@ -686,18 +686,17 @@ elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
       | `(rwRule | ← $t:term) => `(tacticSeq | psymm; pexact $t)
       | _ => throwError "unreachable"
     evalTactic (←`(tactic| apply mp₂ iff_mpr))
-    focus do
       let arr := (prwExt.getState (← MonadEnv.getEnv)).reverse
-      let remained ← repeat' (λ goal => do
-        evalTacticAt (←`(tactic| first | exact RwTerm.matched (by $t) | exact RwFormula.matched (by $t))) goal
+    let newGoals ← repeat'
+      λ goal => do
+        evalTacticAt (←`(tactic| first | apply RwTerm.matched; ($t) | apply RwFormula.matched; ($t))) goal
           <|> arr.foldl
             (λ tac e => tac <|> do (evalTacticAt (←`(tactic| apply $(mkIdent e))) goal))
             failure
           <|> evalTacticAt (←`(tactic| first
             | exact RwTerm.refl | exact RwTermVec.refl | exact RwFormula.refl)) goal
-      ) (← getGoals)
-      if !remained.isEmpty then
-        logInfo m!"prw failed on goals {remained}"
+      ([← getMainGoal])
+    appendGoals newGoals
 
 end Tactics
 

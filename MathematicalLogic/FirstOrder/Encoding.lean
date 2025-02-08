@@ -147,15 +147,15 @@ instance : Encodable (𝓛.Formula n) where
 lemma Formula.encode_lt_imp_left {p q : 𝓛.Formula n} :
   Encodable.encode p < Encodable.encode (p ⇒ q) := by
   simp [Nat.lt_succ]
-  apply le_trans' (Nat.le_add_right _ _)
-  apply le_trans' (Nat.le_mul_of_pos_left _ (by simp))
+  apply (Nat.le_add_right _ _).trans'
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
   apply Nat.left_le_pair
 
 lemma Formula.encode_lt_imp_right {p q : 𝓛.Formula n} :
   Encodable.encode q < Encodable.encode (p ⇒ q) := by
   simp [encode, Nat.lt_succ]
-  apply le_trans' (Nat.le_add_right _ _)
-  apply le_trans' (Nat.le_mul_of_pos_left _ (by simp))
+  apply (Nat.le_add_right _ _).trans'
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
   apply Nat.right_le_pair
 
 end

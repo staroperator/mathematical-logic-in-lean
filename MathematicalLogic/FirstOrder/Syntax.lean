@@ -279,7 +279,7 @@ theorem subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ �
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_comp, ih]
 
-theorem shift_subst_single : (↑ₚp)[↦ₛ t₂]ₚ = p := by
+theorem shift_subst_single : (↑ₚp)[↦ₛ t]ₚ = p := by
   rw [shift, ←subst_comp]; nth_rw 2 [←subst_id p]; rfl
 
 theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by

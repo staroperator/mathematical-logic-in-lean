@@ -3,6 +3,7 @@ import Mathlib.Data.Nat.Pairing
 import Mathlib.Logic.Encodable.Basic
 
 namespace Nat
+
 lemma pair_le_pair_left (h : a₁ ≤ a₂) : pair a₁ b ≤ pair a₂ b := by
   cases lt_or_eq_of_le h with
   | inl h => apply le_of_lt; apply pair_lt_pair_left; exact h
@@ -17,9 +18,11 @@ lemma pair_lt_pair_right' (h₁ : a₁ ≤ a₂) (h₂ : b₁ < b₂) : pair a�
   lt_of_le_of_lt (pair_le_pair_left h₁) (pair_lt_pair_right _ h₂)
 lemma pair_le_pair (h₁ : a₁ ≤ a₂) (h₂ : b₁ ≤ b₂) : pair a₁ b₁ ≤ pair a₂ b₂ :=
   le_trans (pair_le_pair_left h₁) (pair_le_pair_right h₂)
+
 end Nat
 
 namespace Fin
+
 @[elab_as_elim] def cases1 {motive : Fin 1 → Sort _}
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
 @[elab_as_elim] def cases2 {motive : Fin 2 → Sort _}
@@ -49,6 +52,7 @@ theorem castAdd'_or_addNat (x : Fin (n + m)) : (∃ y, x = castAdd' y n) ∨ ∃
   · right; simp at h
     exists ⟨x - m, by simp [Nat.sub_lt_iff_lt_add h, Nat.add_comm m n]⟩
     simp [←val_inj, Nat.sub_add_cancel h]
+
 end Fin
 
 abbrev Vec (α : Type u) (n : ℕ) := Fin n → α

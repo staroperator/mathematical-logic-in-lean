@@ -96,6 +96,11 @@ instance : Repr (Peano.Term n) := ⟨reprTerm⟩
 open Lean.Parser Std in
 def reprFormula : Peano.Formula n → ℕ → Format
 | t₁ ≐ t₂, prec => (if prec ≥ 25 then Format.paren else id) (reprTerm t₁ 25 ++ " = " ++ reprTerm t₂ 25)
+| (∀' (p ⇒ ⊥)) ⇒ ⊥, prec => Repr.addAppParen ("∃ " ++ reprFormula p argPrec) prec
+| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ⩑ " ++ reprFormula q 57)
+| (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ⩒ " ++ reprFormula q 56)
+| ⊥ ⇒ ⊥, _ => "⊤"
+| p ⇒ ⊥, prec => (if prec ≥ 58 then Format.paren else id) ("~ " ++ reprFormula p 58)
 | ⊥, _ => "⊥"
 | p ⇒ q, prec => (if prec ≥ 55 then Format.paren else id) (reprFormula p 55 ++ " ⇒ " ++ reprFormula q 55)
 | ∀' p, prec => Repr.addAppParen ("∀ " ++ reprFormula p argPrec) prec
@@ -498,7 +503,7 @@ theorem ne_of_lt : ↑ᵀ^[n] PA ⊢ t₁ ⋖ t₂ ⇒ ~ t₁ ≐ t₂ := by
     prw [add_zero, ←1, add_succ, ←succ_add, 0, 1]
     prefl
 
-theorem le_iff_eq_or_lt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇔ t₁ ≐ t₂ ⩒ t₁ ⋖ t₂ := by
+theorem le_iff_lt_or_eq : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇔ t₁ ⋖ t₂ ⩒ t₁ ≐ t₂ := by
   papply iff_intro
   · pintro
     papply exists_elim
@@ -507,11 +512,11 @@ theorem le_iff_eq_or_lt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇔ t₁ ≐ t₂ ⩒ 
       papply or_elim
       · pexact zero_or_succ #0
       · pintro
-        papply or_inl
+        papply or_inr
         prw [←1, 0, add_zero]
         prefl
       · pintro
-        papply or_inr
+        papply or_inl
         papply exists_elim
         · passumption 0
         pintros 2; simp
@@ -522,19 +527,19 @@ theorem le_iff_eq_or_lt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇔ t₁ ≐ t₂ ⩒ 
     papply or_elim
     · passumption 0
     · pintro
-      papply le_of_eq
-      passumption
-    · pintro
       papply le_of_lt
       passumption
+    · pintro
+      papply le_of_eq
+      passumption
 
-theorem eq_or_lt_of_le : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇒ t₁ ≐ t₂ ⩒ t₁ ⋖ t₂ := by
+theorem lt_or_eq_of_le : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇒ t₁ ⋖ t₂ ⩒ t₁ ≐ t₂ := by
   papply iff_mp
-  pexact le_iff_eq_or_lt
-
-theorem lt_of_le_of_ne : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇒ ~ t₁ ≐ t₂ ⇒ t₁ ⋖ t₂ := eq_or_lt_of_le
+  pexact le_iff_lt_or_eq
 
 theorem lt_succ_iff : ↑ᵀ^[n] PA ⊢ t₁ ⋖ S t₂ ⇔ t₁ ⪁ t₂ := succ_le_succ_iff
+
+theorem succ_lt_succ_iff : ↑ᵀ^[n] PA ⊢ S t₁ ⋖ S t₂ ⇔ t₁ ⋖ t₂ := succ_le_succ_iff
 
 theorem lt_of_le_of_lt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇒ t₂ ⋖ t₃ ⇒ t₁ ⋖ t₃ := by
   pintros 2
@@ -543,12 +548,11 @@ theorem lt_of_le_of_lt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⇒ t₂ ⋖ t₃ ⇒ t
     passumption 1
   · passumption 0
 
-theorem lt_of_eq_of_lt : ↑ᵀ^[n] PA ⊢ t₁ ≐ t₂ ⇒ t₂ ⋖ t₃ ⇒ t₁ ⋖ t₃ := by
-  pintros 2
-  papply lt_of_le_of_lt
-  · papply le_of_eq
-    passumption 1
+theorem not_lt_zero : ↑ᵀ^[n] PA ⊢ ~ t ⋖ 0 := by
+  pintro
+  papply exists_elim
   · passumption 0
+  · simp; pintro; prw [succ_add]; pexact succ_ne_zero
 
 theorem lt_succ_self : ↑ᵀ^[n] PA ⊢ t ⋖ S t := by
   prw [lt_succ_iff]; pexact le_refl
@@ -565,19 +569,18 @@ theorem le_or_gt : ↑ᵀ^[n] PA ⊢ t₁ ⪁ t₂ ⩒ t₂ ⋖ t₁ := by
     · passumption 0
     · pintro
       papply or_elim
-      · papply eq_or_lt_of_le with 1
+      · papply lt_or_eq_of_le with 1
         passumption 0
-      · pintro
-        papply or_inr
-        papply lt_of_eq_of_lt
-        · psymm; passumption
-        · pexact lt_succ_self
       · pintro
         papply or_inl
         prw [←lt_succ_iff]
         papply lt_of_le_of_lt
         · passumption 0
         · pexact lt_succ_self
+      · pintro
+        papply or_inr
+        prw [0]
+        pexact lt_succ_self
     · pintro
       papply or_inr
       papply lt_of_le_of_lt
