@@ -54,7 +54,7 @@ abbrev Subst (𝓛 : Language) (n m : ℕ) := Vec (𝓛.Term m) n
 def Term.subst : 𝓛.Term n → 𝓛.Subst n m → 𝓛.Term m
 | #x, σ => σ x
 | f ⬝ᶠ v, σ => f ⬝ᶠ λ i => (v i).subst σ
-notation:80 t "[" σ "]ₜ" => Term.subst t σ
+notation:lead t "[" σ "]ₜ" => Term.subst t σ
 @[simp] theorem Term.subst_var : (#x)[σ]ₜ = σ x := rfl
 @[simp] theorem Term.subst_func : (f ⬝ᶠ v)[σ]ₜ = f ⬝ᶠ λ i => (v i)[σ]ₜ := rfl
 theorem Term.subst_const {c : 𝓛.Const} : (c : 𝓛.Term n)[σ]ₜ = c := by simp; apply Vec.eq_nil
@@ -73,7 +73,7 @@ theorem Term.subst_comp : t[σ₁ ∘ₛ σ₂]ₜ = t[σ₁]ₜ[σ₂]ₜ := by
   | func f v ih => ext; apply ih
 
 def Subst.single (t : 𝓛.Term n) : 𝓛.Subst (n + 1) n := t ∷ᵥ id
-prefix:max "↦ₛ " => Subst.single
+prefix:lead "↦ₛ " => Subst.single
 @[simp] theorem Subst.single_app_zero : (↦ₛ t) 0 = t := rfl
 @[simp] theorem Subst.single_app_succ : (↦ₛ t) x.succ = #x := rfl
 @[simp] theorem Subst.single_app_one {t : 𝓛.Term (n + 1)} : (↦ₛ t) 1 = #0 := rfl
@@ -85,7 +85,7 @@ prefix:max "↑ₜ" => Term.shift
 @[simp] theorem Term.shift_var : ↑ₜ(#x : 𝓛.Term n) = #x.succ := rfl
 
 def Subst.assign (t : 𝓛.Term (n + 1)) : 𝓛.Subst (n + 1) (n + 1) := t ∷ᵥ shift
-prefix:max "≔ₛ " => Subst.assign
+prefix:lead "≔ₛ " => Subst.assign
 @[simp] theorem Subst.assign_app_zero : (≔ₛ t) 0 = t := rfl
 @[simp] theorem Subst.assign_app_succ {x : Fin n} : (≔ₛ t) x.succ = #x.succ := rfl
 theorem Subst.assign_zero : ≔ₛ #0 = @id 𝓛 (n + 1) := by
@@ -116,7 +116,7 @@ theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ�
   ext x; cases x using Fin.cases <;> simp
 theorem Subst.single_comp : ↦ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ σ := cons_comp
 
-theorem Term.subst_swap_single : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ (t'[σ]ₜ)]ₜ := by
+theorem Term.subst_swap_single : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ t'[σ]ₜ]ₜ := by
   simp [←subst_comp, Subst.lift_comp_single, Subst.single_comp]
 
 def Term.shiftN : (m : ℕ) → 𝓛.Term n → 𝓛.Term (n + m)
@@ -239,7 +239,7 @@ def subst : 𝓛.Formula n → 𝓛.Subst n m → 𝓛.Formula m
 | ⊥, _ => ⊥
 | p ⇒ q, σ => p.subst σ ⇒ q.subst σ
 | ∀' p, σ => ∀' (p.subst ⇑ₛσ)
-notation:80 p "[" σ "]ₚ" => subst p σ
+notation:lead p "[" σ "]ₚ" => subst p σ
 @[simp] theorem subst_rel : (r ⬝ʳ ts)[σ]ₚ = r ⬝ʳ λ i => (ts i)[σ]ₜ := rfl
 @[simp] theorem subst_eq : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
 @[simp] theorem subst_false : ⊥[σ]ₚ = ⊥ := rfl
@@ -257,6 +257,14 @@ theorem subst_andN {v : Vec (𝓛.Formula n) m} : (⋀ i, v i)[σ]ₚ = ⋀ i, (
   | zero => rfl
   | succ n ih => simp [andN, Vec.head, Vec.tail, Function.comp_def, ih]
 
+theorem subst_allN : (∀^[m] p)[σ]ₚ = ∀^[m] (p[⇑ₛ^[m] σ]ₚ) := by
+  induction m with simp [allN, Subst.liftN]
+  | succ m ih => simp [ih]
+
+theorem subst_exN : (∃^[m] p)[σ]ₚ = ∃^[m] (p[⇑ₛ^[m] σ]ₚ) := by
+  induction m with simp [exN, Subst.liftN]
+  | succ m ih => simp [ih]
+
 def shift (p : 𝓛.Formula n) : 𝓛.Formula (n + 1) := p[Subst.shift]ₚ
 prefix:max "↑ₚ" => shift
 @[simp] theorem shift_eq : ↑ₚ(t₁ ≐ t₂) = ↑ₜt₁ ≐ ↑ₜt₂ := rfl
@@ -264,10 +272,6 @@ prefix:max "↑ₚ" => shift
 @[simp] theorem shift_imp : ↑ₚ(p ⇒ q) = ↑ₚp ⇒ ↑ₚq := rfl
 @[simp] theorem shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
 @[simp] theorem shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
-
-abbrev exUnique (p : 𝓛.Formula (n + 1)) :=
-  ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
-prefix:59 "∃!' " => exUnique
 
 theorem subst_id (p : 𝓛.Formula n) : p[Subst.id]ₚ = p := by
   induction p with simp
@@ -285,8 +289,12 @@ theorem shift_subst_single : (↑ₚp)[↦ₛ t]ₚ = p := by
 theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
   simp_rw [shift, ←subst_comp]; congr
 
-theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ (t[σ]ₜ)]ₚ := by
+theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ t[σ]ₜ]ₚ := by
   simp_rw [←subst_comp]; congr; funext i; cases i using Fin.cases <;> simp [Term.shift_subst_single]
+
+def exUnique (p : 𝓛.Formula (n + 1)) :=
+  ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
+prefix:max "∃!' " => exUnique
 
 def shiftN : (m : ℕ) → 𝓛.Formula n → 𝓛.Formula (n + m)
 | 0, p => p
@@ -298,14 +306,6 @@ theorem shiftN_eq_subst : ↑ₚ^[m] p = p[λ i => #(i.addNat m)]ₚ := by
   | succ m ih => rw [ih, shift, ←subst_comp]; rfl
 @[simp] theorem shiftN_eq : ↑ₚ^[m] (t₁ ≐ t₂) = ↑ₜ^[m] t₁ ≐ ↑ₜ^[m] t₂ := by
   induction m with simp [shiftN, Term.shiftN]
-  | succ m ih => simp [ih]
-
-theorem subst_allN : (∀^[m] p)[σ]ₚ = ∀^[m] (p[⇑ₛ^[m] σ]ₚ) := by
-  induction m with simp [allN, Subst.liftN]
-  | succ m ih => simp [ih]
-
-theorem subst_exN : (∃^[m] p)[σ]ₚ = ∃^[m] (p[⇑ₛ^[m] σ]ₚ) := by
-  induction m with simp [exN, Subst.liftN]
   | succ m ih => simp [ih]
 
 theorem shiftN_subst_liftN : (↑ₚ^[m] p)[⇑ₛ^[m] σ]ₚ = ↑ₚ^[m] (p[σ]ₚ) := by
@@ -368,7 +368,7 @@ abbrev Sentence (𝓛 : Language) := 𝓛.Formula 0
 def Formula.alls : {n : ℕ} → 𝓛.Formula n → 𝓛.Sentence
 | 0, p => p
 | _ + 1, p => alls (∀' p)
-prefix:59 "∀*" => Formula.alls
+prefix:max "∀* " => Formula.alls
 
 abbrev FormulaSet (𝓛 : Language) (n : ℕ) := Set (𝓛.Formula n)
 

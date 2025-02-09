@@ -31,19 +31,23 @@ theorem interp_subst : ⟦ t[σ]ₜ ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ 𝓜, λ x =>
 theorem interp_shift : ⟦ ↑ₜt ⟧ₜ 𝓜, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ 𝓜, ρ := by
   simp [Term.shift, interp_subst]
 
-@[simp] def satisfy (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
+def satisfy (𝓜 : 𝓛.Structure) : {n : ℕ} → 𝓛.Formula n → 𝓜.Assignment n → Prop
 | _, r ⬝ʳ v, ρ => 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ
 | _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ
 | _, ⊥, _ => False
 | _, p ⇒ q, ρ => 𝓜.satisfy p ρ → 𝓜.satisfy q ρ
 | _, ∀' p, ρ => ∀ u, 𝓜.satisfy p (u ∷ᵥ ρ)
 notation:50 𝓜 " ⊨[" ρ "] " p:50 => satisfy 𝓜 p ρ
-
+@[simp] theorem satisfy_rel : 𝓜 ⊨[ρ] r ⬝ʳ v ↔ 𝓜.interpRel r λ i => ⟦ v i ⟧ₜ 𝓜, ρ := by rfl
+@[simp] theorem satisfy_eq : 𝓜 ⊨[ρ] t₁ ≐ t₂ ↔ ⟦ t₁ ⟧ₜ 𝓜, ρ = ⟦ t₂ ⟧ₜ 𝓜, ρ := by rfl
+@[simp] theorem satisfy_false : ¬ 𝓜 ⊨[ρ] ⊥ := by tauto
+@[simp] theorem satisfy_imp : 𝓜 ⊨[ρ] p ⇒ q ↔ 𝓜 ⊨[ρ] p → 𝓜 ⊨[ρ] q := by rfl
 @[simp] theorem satisfy_true : 𝓜 ⊨[ρ] ⊤ := by tauto
 @[simp] theorem satisfy_neg : 𝓜 ⊨[ρ] ~ p ↔ ¬ 𝓜 ⊨[ρ] p := by rfl
 @[simp] theorem satisfy_and : 𝓜 ⊨[ρ] p ⩑ q ↔ 𝓜 ⊨[ρ] p ∧ 𝓜 ⊨[ρ] q := by simp [PropNotation.and]
 @[simp] theorem satisfy_or : 𝓜 ⊨[ρ] p ⩒ q ↔ 𝓜 ⊨[ρ] p ∨ 𝓜 ⊨[ρ] q := by simp [PropNotation.or]; tauto
 @[simp] theorem satisfy_iff : 𝓜 ⊨[ρ] p ⇔ q ↔ (𝓜 ⊨[ρ] p ↔ 𝓜 ⊨[ρ] q) := by simp [PropNotation.iff]; tauto
+@[simp] theorem satisfy_all : 𝓜 ⊨[ρ] ∀' p ↔ ∀ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by rfl
 @[simp] theorem satisfy_ex : 𝓜 ⊨[ρ] ∃' p ↔ ∃ u, 𝓜 ⊨[u ∷ᵥ ρ] p := by simp [Formula.ex]
 
 theorem satisfy_andN {v : Vec (𝓛.Formula n) m} :

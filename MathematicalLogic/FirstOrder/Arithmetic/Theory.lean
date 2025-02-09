@@ -31,9 +31,6 @@ instance : Coe ℕ (Peano.Term m) := ⟨ofNat⟩
 @[simp] theorem add_eq {t₁ t₂ : Peano.Term n} : Func.add ⬝ᶠ [t₁, t₂]ᵥ = t₁ + t₂ := rfl
 @[simp] theorem mul_eq {t₁ t₂ : Peano.Term n} : Func.mul ⬝ᶠ [t₁, t₂]ᵥ = t₁ * t₂ := rfl
 
-scoped notation "⌜" x "⌝" => ofNat (Encodable.encode x)
-@[simp] theorem ofNat_eq [Encodable α] {a : α} : (⌜a⌝ : Peano.Term n) = Encodable.encode a := rfl
-
 @[simp] theorem subst_succ :
   (S t)[σ]ₜ = S (t[σ]ₜ) := by simp [←succ_eq, Vec.eq_one]
 @[simp] theorem subst_ofNat :
@@ -61,27 +58,6 @@ def lt (t₁ t₂ : Peano.Term n) := S t₁ ⪁ t₂
 scoped infix:60 " ⋖ " => lt
 @[simp] theorem subst_lt : (t₁ ⋖ t₂)[σ]ₚ = t₁[σ]ₜ ⋖ t₂[σ]ₜ := by simp [lt]
 @[simp] theorem shift_lt : ↑ₚ(t₁ ⋖ t₂) = ↑ₜt₁ ⋖ ↑ₜt₂ := subst_lt
-
-@[simp] theorem Term.subst_le : (t₁ ⪁ t₂)[σ]ₚ = t₁[σ]ₜ ⪁ t₂[σ]ₜ := by
-  simp [le, Term.shift_subst_lift]
-@[simp] theorem Term.shift_le : ↑ₚ(t₁ ⪁ t₂) = ↑ₜt₁ ⪁ ↑ₜt₂ := Term.subst_le
-
-instance : Encodable (Language.Func Peano n) where
-  encode
-  | .zero => 0
-  | .succ => 0
-  | .add => 0
-  | .mul => 1
-  decode m :=
-    match n, m with
-    | 0, 0 => some .zero
-    | 1, 0 => some .succ
-    | 2, 0 => some .add
-    | 2, 1 => some .mul
-    | _, _ => none
-  encodek f := by cases f <;> rfl
-
-instance : Encodable (Peano.Rel n) := IsEmpty.toEncodable (α := Empty)
 
 open Lean.Parser Std in
 def reprTerm : Peano.Term n → ℕ → Format
@@ -149,7 +125,7 @@ inductive PA : Peano.Theory where
 | ax_mul_zero : PA (∀' (#0 * 0 ≐ 0))
 | ax_mul_succ : PA (∀' ∀' (#0 * S #1 ≐ #0 * #1 + #0))
 | ax_ind {p : Peano.Formula (n + 1)} :
-  PA (∀* (p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ (S #0)]ₚ)) ⇒ ∀' p))
+  PA (∀* (p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p))
 
 namespace PA
 
@@ -193,7 +169,7 @@ theorem mul_succ (t₁ t₂) :
   simp [Term.shift_subst_single] at h; exact h
 
 theorem ind :
-  ↑ᵀ^[n] PA ⊢ p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ (S #0)]ₚ)) ⇒ ∀' p := by
+  ↑ᵀ^[n] PA ⊢ p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p := by
   have h := hyp (ax_ind (p := p))
   apply Theory.foralls_elim .id at h
   simp [Formula.subst_id] at h
