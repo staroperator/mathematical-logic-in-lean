@@ -247,12 +247,6 @@ theorem composition : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ r) ⇒ p ⇒ r := by
 
 theorem transpose : Γ ⊢ (~ p ⇒ ~ q) ⇒ q ⇒ p := ax .transpose
 
-theorem transpose₂ : Γ ⊢ (p ⇒ q) ⇒ ~ q ⇒ ~ p := composition
-
-theorem transpose₃ : Γ ⊢ (p ⇒ ~ q) ⇒ q ⇒ ~ p := by
-  pintros
-  papplya 2 <;> passumption
-
 theorem true_intro : Γ ⊢ ⊤ := identity
 
 theorem false_elim : Γ ⊢ ⊥ ⇒ p := by
@@ -266,34 +260,32 @@ theorem contradiction : Γ ⊢ ~ p ⇒ p ⇒ q := by
   papplya 1
   passumption
 
-theorem double_neg : Γ ⊢ p ⇒ ~ ~ p := by
+theorem imp_double_neg : Γ ⊢ p ⇒ ~ ~ p := by
   pintros
   papplya 0
   passumption
 
-theorem double_neg₂ : Γ ⊢ ~ ~ p ⇒ p := by
+theorem double_neg_imp : Γ ⊢ ~ ~ p ⇒ p := by
   pintro
   papply transpose
-  · exact double_neg
+  · exact imp_double_neg
   · passumption
-
-theorem transpose₄ : Γ ⊢ (~ p ⇒ q) ⇒ ~ q ⇒ p := by
-  papply composition
-  · exact transpose₂
-  · papply ax .imp_distrib
-    pintro
-    exact double_neg₂
 
 theorem not_imp_left : Γ ⊢ ~ (p ⇒ q) ⇒ p := by
   pintro
-  papply double_neg₂
-  papply transpose₂
-  · exact contradiction (q := q)
-  · passumption
+  papply double_neg_imp
+  pintro
+  papplya 1
+  pintro
+  papply false_elim
+  papplya 1
+  passumption
 
 theorem not_imp_right : Γ ⊢ ~ (p ⇒ q) ⇒ ~ q := by
-  papply transpose₂
-  exact ax .imp_self
+  pintros
+  papplya 1
+  pintro
+  passumption
 
 theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⩑ q := by
   pintros
@@ -301,7 +293,7 @@ theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⩑ q := by
 
 theorem and_left : Γ ⊢ p ⩑ q ⇒ p := by
   pintro
-  papply double_neg₂
+  papply double_neg_imp
   pintro
   papplya 1
   pintros
@@ -311,7 +303,7 @@ theorem and_left : Γ ⊢ p ⩑ q ⇒ p := by
 
 theorem and_right : Γ ⊢ p ⩑ q ⇒ q := by
   pintro
-  papply double_neg₂
+  papply double_neg_imp
   pintro
   papplya 1
   pintro
@@ -325,7 +317,7 @@ theorem or_inr : Γ ⊢ q ⇒ p ⩒ q := ax .imp_self
 
 theorem or_elim : Γ ⊢ p ⩒ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
   pintros
-  papply double_neg₂
+  papply double_neg_imp
   pintro
   papplya 0
   papplya 2
@@ -340,7 +332,10 @@ theorem or_elim : Γ ⊢ p ⩒ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
     papplya 3
     passumption
 
-theorem excluded_middle : Γ ⊢ ~ p ⩒ p := double_neg₂
+theorem or_elim' : Γ ⊢ (p ⇒ r) ⇒ (q ⇒ r) ⇒ p ⩒ q ⇒ r := by
+  pintros; papply or_elim <;> passumption
+
+theorem excluded_middle : Γ ⊢ ~ p ⩒ p := double_neg_imp
 
 theorem andN_intro {v : Vec (𝓛.Formula n) m} :
   (∀ i, Γ ⊢ v i) → Γ ⊢ ⋀ i, v i := by
@@ -399,7 +394,28 @@ theorem iff_congr_neg : Γ ⊢ (p ⇔ q) ⇒ (~ p ⇔ ~ q) := by
   · passumption
   · exact iff_refl
 
-theorem double_neg_iff : Γ ⊢ ~ ~ p ⇔ p := iff_intro.mp₂ double_neg₂ double_neg
+theorem double_neg_iff : Γ ⊢ ~ ~ p ⇔ p := iff_intro.mp₂ double_neg_imp imp_double_neg
+
+theorem neg_and_iff : Γ ⊢ ~ (p ⩑ q) ⇔ ~ p ⩒ ~ q := by
+  papply iff_intro
+  · pintros
+    papplya 2
+    papply and_intro
+    · papply double_neg_imp
+      passumption
+    · passumption
+  · papply or_elim' <;> pintros <;> papplya 1
+      <;> [papply and_left; papply and_right] <;> passumption
+
+theorem neg_or_iff : Γ ⊢ ~ (p ⩒ q) ⇔ ~ p ⩑ ~ q := by
+  papply iff_intro
+  · pintro
+    papply and_intro <;> pintro <;> papplya 1
+      <;> [papply or_inl; papply or_inr] <;> passumption
+  · pintro
+    papply or_elim'
+    · papply and_left; passumption
+    · papply and_right; passumption
 
 theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   pintro
@@ -421,35 +437,38 @@ theorem exists_intro (t) : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
 
 theorem exists_elim : Γ ⊢ ∃' p ⇒ (∀' (p ⇒ ↑ₚq)) ⇒ q := by
   pintros
-  papply double_neg₂
+  papply double_neg_imp
   pintros
   papplya 2
-  suffices _ ⊢ ∀' (↑ₚ(~ q) ⇒ ~ p) by
-    papply forall_imp
-    · exact this
-    · papply forall_self
-      passumption
-  papply forall_imp
-  · apply forall_intro
-    exact transpose₂
+  papply forall_imp (p := p ⇒ ↑ₚq)
+  · pintros; simp
+    papplya 2
+    papplya 1
+    passumption
   · passumption
 
+theorem exists_elim' : Γ ⊢ (∀' (p ⇒ ↑ₚq)) ⇒ ∃' p ⇒ q := by
+  pintros; papply exists_elim <;> passumption
+
 theorem exists_self : Γ ⊢ ∃' ↑ₚp ⇒ p := by
-  papply transpose₄
-  exact forall_self
+  pintro
+  papply double_neg_imp
+  pintro
+  papplya 1
+  papply forall_self (p := ~ p)
+  passumption
 
 theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
-  pintros 2
-  papply exists_elim
-  · passumption 0
-  · papply forall_imp (p := p ⇒ q)
-    · apply forall_intro
-      pintros 2
-      papply exists_intro #0
-      rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id]
-      papplya 1
-      passumption 0
-    · passumption
+  pintro
+  papply exists_elim'
+  papply forall_imp (p := p ⇒ q)
+  · apply forall_intro
+    pintros 2
+    papply exists_intro #0
+    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id]
+    papplya 1
+    passumption 0
+  · passumption
 
 theorem forallN_intro : ↑ᴳ^[m] Γ ⊢ p → Γ ⊢ ∀^[m] p := by
   intro h
@@ -686,7 +705,7 @@ elab "prw" "[" rules:withoutPosition(rwRule,*,?) "]" : tactic => do
       | `(rwRule | ← $t:term) => `(tacticSeq | psymm; pexact $t)
       | _ => throwError "unreachable"
     evalTactic (←`(tactic| apply mp₂ iff_mpr))
-      let arr := (prwExt.getState (← MonadEnv.getEnv)).reverse
+    let arr := (prwExt.getState (← MonadEnv.getEnv)).reverse
     let newGoals ← repeat'
       λ goal => do
         evalTacticAt (←`(tactic| first | apply RwTerm.matched; ($t) | apply RwFormula.matched; ($t))) goal
@@ -796,17 +815,29 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
   · intro h₁ h₂
     apply h₁
     prevert
-    papply Proof.double_neg
+    papply Proof.imp_double_neg
     exact h₂
   · intro h₁ h₂
     apply h₁
-    papply Proof.double_neg₂
+    papply Proof.double_neg_imp
     pintro
     exact h₂
 
+theorem Consistent.neg_unprovable : Consistent Γ → Γ ⊢ p → Γ ⊬ ~ p := by
+  intro h h₁ h₂
+  apply h
+  papply h₂
+  exact h₁
+
+theorem Consistent.unprovable : Consistent Γ → Γ ⊢ ~ p → Γ ⊬ p := by
+  intro h h₁ h₂
+  apply h
+  papply h₁
+  exact h₂
+
 def Complete (Γ : 𝓛.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
 
-theorem Complete.unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
+theorem Complete.neg_provable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
   rcases h p with h₁ | h₁ <;> simp [h₁]
 
 theorem Complete.unprovable_iff (h₁ : Complete Γ) (h₂ : Consistent Γ) : Γ ⊬ p ↔ Γ ⊢ ~ p := by

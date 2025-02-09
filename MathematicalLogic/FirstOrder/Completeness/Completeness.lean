@@ -33,7 +33,7 @@ theorem consistent_iff_satisfiable : Consistent Γ ↔ Satisfiable Γ := ⟨Sati
 
 theorem completeness : Γ ⊨ p → Γ ⊢ p := by
   intro h₁
-  apply Proof.double_neg₂.mp
+  papply Proof.double_neg_imp
   by_contra h₂
   rw [←Consistent.append] at h₂
   apply Satisfiable.of_consistent at h₂

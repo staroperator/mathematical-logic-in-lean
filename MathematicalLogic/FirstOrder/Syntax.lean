@@ -270,6 +270,7 @@ prefix:max "↑ₚ" => shift
 @[simp] theorem shift_eq : ↑ₚ(t₁ ≐ t₂) = ↑ₜt₁ ≐ ↑ₜt₂ := rfl
 @[simp] theorem shift_false : ↑ₚ(⊥ : 𝓛.Formula n) = ⊥ := rfl
 @[simp] theorem shift_imp : ↑ₚ(p ⇒ q) = ↑ₚp ⇒ ↑ₚq := rfl
+@[simp] theorem shift_neg : ↑ₚ(~ p) = ~ ↑ₚp := rfl
 @[simp] theorem shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
 @[simp] theorem shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
 
