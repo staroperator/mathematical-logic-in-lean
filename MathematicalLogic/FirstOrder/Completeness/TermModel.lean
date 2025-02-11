@@ -20,11 +20,14 @@ def TermSetoid (Γ : 𝓛.FormulaSet n) : Setoid (𝓛.Term n) where
   iseqv.symm := Proof.eq_symm.mp
   iseqv.trans := Proof.eq_trans.mp₂
 
-@[simps] def TermModel (Γ : 𝓛.FormulaSet n) : 𝓛.Structure where
-  Dom := Quotient (TermSetoid Γ)
+def TermModel (Γ : 𝓛.FormulaSet n) := Quotient (TermSetoid Γ)
+
+variable {Γ : 𝓛.FormulaSet n}
+
+@[simps] instance : 𝓛.IsStructure (TermModel Γ) where
   interpFunc f v :=
     Quotient.liftOnVec v (⟦f ⬝ᶠ ·⟧)
-      (by intros v₁ v₂ h; simp; papply Proof.eq_congr_func; exact Proof.andN_intro h)
+      (by intros v₁ v₂ h; simp; apply Quotient.sound; papply Proof.eq_congr_func; exact Proof.andN_intro h)
   interpRel r v :=
     Quotient.liftOnVec v (Γ ⊢ r ⬝ʳ ·)
       (by intros v₁ v₂ h; simp; apply Proof.iff_iff; papply Proof.eq_congr_rel_iff; exact Proof.andN_intro h)
@@ -43,7 +46,7 @@ include h₁ h₂ h₃
 theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ := by
   induction p generalizing n with simp
   | rel r v => simp [interp_term, Quotient.liftOnVec_mk]
-  | eq t₁ t₂ => simp [interp_term]; rfl
+  | eq t₁ t₂ => simp [interp_term]; rw [Quotient.eq]; rfl
   | false => exact h₁
   | imp p q ih₁ ih₂ =>
     rw [ih₁ h₁ h₂ h₃, ih₂ h₁ h₂ h₃]
@@ -80,7 +83,7 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
 
 theorem satisfiable : Satisfiable Γ := by
   apply Satisfiable.up.{0}
-  exists TermModel Γ, (⟦Subst.id ·⟧)
+  exists Structure.of (TermModel Γ), (⟦Subst.id ·⟧)
   intros p h
   rw [interp_formula h₁ h₂ h₃, Formula.subst_id]
   exact Proof.hyp h

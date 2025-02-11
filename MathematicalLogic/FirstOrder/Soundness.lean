@@ -7,14 +7,14 @@ variable {𝓛 : Language}
 
 theorem Entails.axiom : p ∈ 𝓛.Axiom → Γ ⊨ p := by
   intro h 𝓜 ρ _
-  induction h with simp [Structure.satisfy_andN]
+  induction h with simp [satisfy_andN]
   | forall_elim =>
     intro h
-    simp [Structure.satisfy_subst_single]
+    simp [satisfy_subst_single]
     apply h
   | forall_self =>
     intro h _
-    simp [Structure.satisfy_shift]
+    simp [satisfy_shift]
     exact h
   | eq_trans =>
     intro h₁ h₂; simp [h₁, h₂]
@@ -47,33 +47,31 @@ theorem Consistent.empty : Consistent (∅ : 𝓛.FormulaSet n) := by
   intro _ h
   contradiction
 
-theorem Structure.theory.complete {𝓜 : 𝓛.Structure} : Complete 𝓜.theory := by
+variable {𝓜 : Type u} [𝓛.IsStructure 𝓜]
+
+theorem theory.complete : Complete (𝓛.theory 𝓜) := by
   intro p
   by_cases h : 𝓜 ⊨ₛ p
   · exact Or.inl (.hyp h)
   · exact Or.inr (.hyp h)
 
-theorem Complete.provable_iff_satisfied {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} :
-  Complete 𝓣 → (𝓣 ⊢ p ↔ 𝓜 ⊨ₛ p) := by
+variable {𝓣 : 𝓛.Theory} [𝓣.IsModel 𝓜]
+
+theorem Theory.soundness : 𝓣 ⊢ p → 𝓜 ⊨ₛ p := by
   intro h
+  apply Language.soundness h (𝓜 := .of 𝓜)
+  exact IsModel.satisfy_theory
+
+theorem Complete.provable_iff_satisfied (h : Complete 𝓣) : 𝓣 ⊢ p ↔ 𝓜 ⊨ₛ p := by
   by_cases h' : 𝓣 ⊢ p <;> simp [h']
-  · apply soundness h'; exact 𝓜.satisfy_theory
+  · exact Theory.soundness h'
   · cases h p with
     | inl h => contradiction
-    | inr h => apply soundness h; exact 𝓜.satisfy_theory
+    | inr h => apply Theory.soundness h
 
-namespace Theory
-
-theorem soundness {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} : 𝓣 ⊢ p → 𝓜 ⊨ₛ p := by
-  intro h
-  apply Language.soundness h
-  apply 𝓜.satisfy_theory
-
-theorem eq_theory_of_complete {𝓣 : 𝓛.Theory} {𝓜 : 𝓣.Model} :
-  Complete 𝓣 → 𝓣.theorems = 𝓜.theory := by
-  intro h
+theorem Complete.eq_theory (h : Complete 𝓣) : 𝓣.theorems = 𝓛.theory 𝓜 := by
   ext p
-  simp [Structure.theory]
-  rw [h.provable_iff_satisfied]
+  simp [theory]
+  exact h.provable_iff_satisfied
 
-end FirstOrder.Language.Theory
+end FirstOrder.Language

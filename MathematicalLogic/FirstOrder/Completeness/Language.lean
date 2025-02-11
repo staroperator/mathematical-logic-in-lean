@@ -137,13 +137,15 @@ theorem on_proof : Γ ⊢ p → φ.onFormula '' Γ ⊢ φ.onFormula p := by
   interpFunc f v := 𝓜.interpFunc (φ.onFunc f) v
   interpRel r v := 𝓜.interpRel (φ.onRel r) v
 
+variable {𝓜 : 𝓛₂.Structure}
+
 theorem interp_onTerm : ⟦ φ.onTerm t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ φ.reduct 𝓜, ρ := by
   induction t with simp [onTerm]
   | func f v ih => congr; funext; apply ih
 
 theorem satisfy_onFormula : 𝓜 ⊨[ρ] φ.onFormula p ↔ φ.reduct 𝓜 ⊨[ρ] p := by
   induction p with simp [onFormula]
-  | rel | eq => simp [interp_onTerm]
+  | rel | eq => simp [interp_onTerm] <;> rfl
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [ih]
 

@@ -73,7 +73,7 @@ theorem Theory.complete_iff_elementary_equivalent {𝓣 : 𝓛.Theory} :
   · intro h 𝓜 𝓝 p
     cases h p with
     | inl h₁ => simp [soundness h₁]
-    | inr h₁ => rw [←not_iff_not]; simp [←Structure.satisfy_neg, soundness h₁]
+    | inr h₁ => rw [←not_iff_not]; simp [←satisfy_neg, soundness h₁]
   · intro h p
     by_contra h₁; rw [not_or] at h₁; rcases h₁ with ⟨h₁, h₂⟩
     rw [←Consistent.append_neg] at h₁; apply Satisfiable.of_consistent at h₁
