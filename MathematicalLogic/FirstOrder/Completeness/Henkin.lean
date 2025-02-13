@@ -402,7 +402,7 @@ theorem hom_consistent {Γ : 𝓛.FormulaSet m} (h : Γ ⊢ ∃' ⊤) :
   intro h₁ h₂
   apply inv_proof at h₂
   simp [invFormula_false (k := 0)] at h₂
-  exact h₁ ((Proof.iff_mpr.mp Proof.not_forall_iff).mp₂ h h₂)
+  exact h₁ ((Proof.iff_mpr.mp Proof.neg_forall_iff).mp₂ h h₂)
 
 inductive axioms : (𝓛.henkinStep n).FormulaSet n where
 | henkin (p) : axioms (∃' (hom.onFormula p) ⇒ (hom.onFormula p)[↦ₛ (wit p)]ₚ)
@@ -431,7 +431,7 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
     simp [Set.insert_subset_iff] at h₅'
     rcases h₅' with ⟨⟨p⟩, h₅'⟩
     apply h₇ h₅'
-    apply (Proof.not_imp_left.mp h₄).mp
+    apply (Proof.neg_imp_left.mp h₄).mp
     apply Proof.const_generalization (c := henkinStep.wit p)
     · intro q h; simp at h; rcases h with h | h
       · rcases h₅ h with ⟨q', _, h⟩; subst h; apply henkinStep.wit_not_in_homFormula
@@ -447,7 +447,7 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
             subst h'
             contradiction
     · simp [Formula.consts_neg]; apply henkinStep.wit_not_in_homFormula
-    · exact Proof.not_imp_right.mp h₄
+    · exact Proof.neg_imp_right.mp h₄
 
 def henkinChain (𝓛 : Language) (n : ℕ) : ℕ → Language
 | 0 => 𝓛

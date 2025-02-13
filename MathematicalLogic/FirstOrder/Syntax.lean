@@ -102,6 +102,7 @@ prefix:max "⇑ₛ" => Subst.lift
 @[simp] theorem Subst.lift_app_zero : ⇑ₛσ 0 = #0 := rfl
 @[simp] theorem Subst.lift_app_succ : ⇑ₛσ x.succ = ↑ₜ(σ x) := rfl
 @[simp] theorem Subst.lift_app_one {σ : 𝓛.Subst (n + 1) m} : ⇑ₛσ 1 = ↑ₜ(σ 0) := rfl
+@[simp] theorem Subst.lift_app_two {σ : 𝓛.Subst (n + 2) m} : ⇑ₛσ 2 = ↑ₜ(σ 1) := rfl
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   simp_rw [shift, ←subst_comp]; congr
@@ -184,6 +185,11 @@ def andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | 0, _ => ⊤
 | _ + 1, v => v.head ⩑ andN v.tail
 notation3:57 "⋀ "(...)", " r:(scoped r => andN r) => r
+
+def orN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
+| 0, _ => ⊥
+| _ + 1, v => v.head ⩒ andN v.tail
+notation3:57 "⋁ "(...)", " r:(scoped r => orN r) => r
 
 def allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
 | 0, p => p
@@ -284,8 +290,13 @@ theorem subst_comp {σ₁ : 𝓛.Subst n m} {σ₂ : 𝓛.Subst m k} : p[σ₁ �
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [Subst.lift_comp, ih]
 
+theorem shift_subst_cons : (↑ₚp)[t ∷ᵥ σ]ₚ = p[σ]ₚ := by
+  rw [shift, ←subst_comp]; rfl
+
 theorem shift_subst_single : (↑ₚp)[↦ₛ t]ₚ = p := by
-  rw [shift, ←subst_comp]; nth_rw 2 [←subst_id p]; rfl
+  simp [Subst.single]; rw [shift_subst_cons, subst_id]
+
+theorem shift_subst_assign : (↑ₚp)[≔ₛ t]ₚ = ↑ₚp := shift_subst_cons
 
 theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
   simp_rw [shift, ←subst_comp]; congr
@@ -366,6 +377,10 @@ end Formula
 
 abbrev Sentence (𝓛 : Language) := 𝓛.Formula 0
 
+theorem Sentence.subst_nil {p : 𝓛.Sentence} {σ : 𝓛.Subst 0 0} : p[σ]ₚ = p := by
+  nth_rw 2 [←Formula.subst_id p]
+  simp [Vec.eq_nil]
+
 def Formula.alls : {n : ℕ} → 𝓛.Formula n → 𝓛.Sentence
 | 0, p => p
 | _ + 1, p => alls (∀' p)
@@ -376,6 +391,9 @@ abbrev FormulaSet (𝓛 : Language) (n : ℕ) := Set (𝓛.Formula n)
 def FormulaSet.append (Γ : 𝓛.FormulaSet n) (p : 𝓛.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
+theorem FormulaSet.append_comm : Γ,' p,' q = Γ,' q,' p := Set.insert_comm _ _ _
+theorem FormulaSet.append_eq_append : Γ = Δ → Γ,' p = Δ,' p := by intro h; rw [h]
+theorem FormulaSet.subset_of_eq {Γ : 𝓛.FormulaSet n} : Γ = Δ → Γ ⊆ Δ := by intro h; rw [h]
 theorem FormulaSet.mem_append : p ∈ Γ,' p := Set.mem_insert _ _
 theorem FormulaSet.subset_append : Γ ⊆ Γ,' p := Set.subset_insert _ _
 theorem FormulaSet.append_subset_append : Γ ⊆ Δ → Γ,' p ⊆ Δ,' p := Set.insert_subset_insert
@@ -385,7 +403,7 @@ prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : 𝓛.FormulaSet n) = ∅ := Set.image_empty _
 @[simp] theorem FormulaSet.shift_append : ↑ᴳ(Γ,' p) = ↑ᴳΓ,' ↑ₚp := Set.image_insert_eq
 
-def FormulaSet.shiftN : (m : ℕ) → 𝓛.FormulaSet n → 𝓛.FormulaSet (n + m)
+@[reducible] def FormulaSet.shiftN : (m : ℕ) → 𝓛.FormulaSet n → 𝓛.FormulaSet (n + m)
 | 0, Γ => Γ
 | m + 1, Γ => ↑ᴳ(Γ.shiftN m)
 notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
@@ -399,7 +417,7 @@ notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
 
 abbrev Theory (𝓛 : Language) := 𝓛.FormulaSet 0
 
-def Theory.shiftN : (n : ℕ) → 𝓛.Theory → 𝓛.FormulaSet n
+@[reducible] def Theory.shiftN : (n : ℕ) → 𝓛.Theory → 𝓛.FormulaSet n
 | 0, 𝓣 => 𝓣
 | n + 1, 𝓣 => ↑ᴳ(𝓣.shiftN n)
 notation "↑ᵀ^[" n "]" => Theory.shiftN n

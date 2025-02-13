@@ -30,6 +30,7 @@ instance : Coe ℕ (Peano.Term m) := ⟨ofNat⟩
 @[simp] theorem succ_eq : Func.succ ⬝ᶠ [t₁]ᵥ = S t₁ := rfl
 @[simp] theorem add_eq {t₁ t₂ : Peano.Term n} : Func.add ⬝ᶠ [t₁, t₂]ᵥ = t₁ + t₂ := rfl
 @[simp] theorem mul_eq {t₁ t₂ : Peano.Term n} : Func.mul ⬝ᶠ [t₁, t₂]ᵥ = t₁ * t₂ := rfl
+theorem succ_ofNat : S (ofNat a : Peano.Term n) = ofNat (a + 1) := rfl
 
 @[simp] theorem subst_succ :
   (S t)[σ]ₜ = S (t[σ]ₜ) := by simp [←succ_eq, Vec.eq_one]
@@ -90,6 +91,8 @@ open Peano
 namespace Proof
 
 variable {t₁ t₂ t₁' t₂' : Peano.Term n}
+
+@[prw] theorem RwTerm.zero : RwTerm Γ 0 (0 : Peano.Term n) := .refl
 
 @[prw] theorem RwTerm.succ (h : RwTerm Γ t₁ t₂) : RwTerm Γ (S t₁) (S t₂) :=
   .func (.cons h .refl)
@@ -177,12 +180,12 @@ theorem ind :
   exact h
 
 theorem add_ofNat {a b : ℕ} : ↑ᵀ^[n] PA ⊢ a + b ≐ (a + b : ℕ) := by
-  induction b with
+  induction b with simp [ofNat]
   | zero => apply add_zero
   | succ b ih => prw [add_succ, ih]; prefl
 
 theorem mul_ofNat {a b : ℕ} : ↑ᵀ^[n] PA ⊢ a * b ≐ (a * b : ℕ) := by
-  induction b with
+  induction b with simp [ofNat]
   | zero => apply mul_zero
   | succ b ih => prw [mul_succ, ih, add_ofNat]; prefl
 
@@ -368,7 +371,7 @@ theorem le_zero_iff : ↑ᵀ^[n] PA ⊢ t ⪁ 0 ⇔ t ≐ 0 := by
     prefl
 
 theorem le_succ_self : ↑ᵀ^[n] PA ⊢ t ⪁ S t := by
-  papply exists_intro 1; simp
+  papply exists_intro (S 0); simp
   prw [add_succ, add_zero]
   prefl
 
