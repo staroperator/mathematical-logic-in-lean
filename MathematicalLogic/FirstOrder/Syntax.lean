@@ -67,6 +67,7 @@ def Subst.id : 𝓛.Subst n n := λ x => #x
 
 def Subst.comp (σ₁ : 𝓛.Subst n m) (σ₂ : 𝓛.Subst m k) : 𝓛.Subst n k := λ x => (σ₁ x)[σ₂]ₜ
 infixl:90 " ∘ₛ " => Subst.comp
+theorem Subst.comp_def : σ₁ ∘ₛ σ₂ = λ x => (σ₁ x)[σ₂]ₜ := rfl
 @[simp] theorem Subst.comp_app : (σ₁ ∘ₛ σ₂) x = (σ₁ x)[σ₂]ₜ := rfl
 theorem Term.subst_comp : t[σ₁ ∘ₛ σ₂]ₜ = t[σ₁]ₜ[σ₂]ₜ := by
   induction t with simp
