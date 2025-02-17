@@ -547,7 +547,7 @@ theorem forallN_elim' (σ₁) : Γ ⊢ (∀^[m] p)[σ₂]ₚ ⇒ p[σ₁ ++ᵥ �
     papply ih (σ₁.tail)
     passumption
 
-theorem forallN_elim  (σ) : Γ ⊢ ∀^[m] p ⇒ p[σ ++ᵥ Subst.id]ₚ := by
+theorem forallN_elim (σ) : Γ ⊢ ∀^[m] p ⇒ p[σ ++ᵥ Subst.id]ₚ := by
   rw [←Formula.subst_id (∀^[m] p)]
   apply forallN_elim'
 
@@ -611,7 +611,7 @@ theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := a
 
 /--
   If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals,
-  `t₁ ≐ t` and `t ≐ t` (or `p ⇔ r` and `r ⇔ q`) using transtivity.
+  `t₁ ≐ t` and `t ≐ t₂` (or `p ⇔ r` and `r ⇔ q`) using transtivity.
   
   A meta variable is generated for `t` or `r` if it is not given.
   -/
@@ -758,7 +758,7 @@ def prwRuleToTactic (rule : TSyntax ``prwRule) : MacroM (TSyntax ``tacticSeq) :=
   | `(prwRule | $t:term) => `(tacticSeq| pexact $t)
   | `(prwRule | ← $n:num) => `(tacticSeq| psymm; pexact $(← hypTerm n.getNat))
   | `(prwRule | ← $t:term) => `(tacticSeq| psymm; pexact $t)
-  | _ => Macro.throwError "unknown syntax for prwRule"
+  | _ => Macro.throwError "unknown syntax for prwRule {rule}"
 
 def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) : TacticM (List MVarId) := do
   let tac ← liftMacroM (prwRuleToTactic rule)
