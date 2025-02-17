@@ -14,12 +14,12 @@ import MathematicalLogic.FirstOrder.Completeness.Language
 import MathematicalLogic.FirstOrder.Completeness.Henkin
 import MathematicalLogic.FirstOrder.Completeness.Lindenbaum
 import MathematicalLogic.FirstOrder.Completeness.TermModel
-import MathematicalLogic.FirstOrder.Completeness.Completeness
+import MathematicalLogic.FirstOrder.Completeness
 import MathematicalLogic.FirstOrder.Encoding
-import MathematicalLogic.FirstOrder.Arithmetic.Theory
+import MathematicalLogic.FirstOrder.Theories.Peano.Theory
 
 import MathematicalLogic.SecondOrder.Syntax
 import MathematicalLogic.SecondOrder.Semantics
-import MathematicalLogic.SecondOrder.Peano
-import MathematicalLogic.SecondOrder.Real
-import MathematicalLogic.SecondOrder.ZF
+import MathematicalLogic.SecondOrder.Theories.Peano
+import MathematicalLogic.SecondOrder.Theories.Real
+import MathematicalLogic.SecondOrder.Theories.ZF
