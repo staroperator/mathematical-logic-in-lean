@@ -32,6 +32,10 @@ namespace Fin
   (zero : motive 0) (one : motive 1) (two : motive 2)
   (i : Fin 3) : motive i :=
   i.cases zero λ i => i.cases one λ j => j.cases two (·.elim0)
+@[elab_as_elim] def cases4 {motive : Fin 4 → Sort _}
+  (zero : motive 0) (one : motive 1) (two : motive 2) (three : motive 3)
+  (i : Fin 4) : motive i :=
+  i.cases zero λ i => i.cases one λ j => j.cases two λ k => k.cases three (·.elim0)
 
 @[simp] theorem forall_fin1 {p : Fin 1 → Prop} : (∀ (i : Fin 1), p i) ↔ p 0 :=
   ⟨λ h => h 0, λ h i => i.cases1 h⟩

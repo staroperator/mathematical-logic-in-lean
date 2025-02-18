@@ -1,5 +1,7 @@
 import Mathlib.Data.Nat.Bits
 import Mathlib.Logic.Encodable.Basic
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import MathematicalLogic.Vec
 
 @[simp] theorem ite_pos_iff [Decidable p] : 0 < (if p then 1 else 0) ↔ p := by
@@ -27,6 +29,7 @@ abbrev comp₂ (f : Primrec 2) (g₁ g₂ : Primrec n) := f.comp [g₁, g₂]ᵥ
 abbrev comp₃ (f : Primrec 3) (g₁ g₂ g₃ : Primrec n) := f.comp [g₁, g₂, g₃]ᵥ
 abbrev comp₄ (f : Primrec 4) (g₁ g₂ g₃ g₄ : Primrec n) := f.comp [g₁, g₂, g₃, g₄]ᵥ
 abbrev comp₅ (f : Primrec 5) (g₁ g₂ g₃ g₄ g₅ : Primrec n) := f.comp [g₁, g₂, g₃, g₄, g₅]ᵥ
+abbrev comp₆ (f : Primrec 6) (g₁ g₂ g₃ g₄ g₅ g₆ : Primrec n) := f.comp [g₁, g₂, g₃, g₄, g₅, g₆]ᵥ
 abbrev zero : Primrec n := const 0
 
 def eval : Primrec n → Vec ℕ n → ℕ
@@ -44,6 +47,7 @@ instance : CoeFun (Primrec n) (λ _ => Vec ℕ n → ℕ) := ⟨eval⟩
 @[simp] theorem comp₁_eval : comp₁ f g v = f [g v]ᵥ := by simp [Vec.eq_one]
 @[simp] theorem comp₂_eval : comp₂ f g₁ g₂ v = f [g₁ v, g₂ v]ᵥ := by simp [Vec.eq_two]
 @[simp] theorem comp₃_eval : comp₃ f g₁ g₂ g₃ v = f [g₁ v, g₂ v, g₃ v]ᵥ := by simp [Vec.eq_three]
+@[simp] theorem comp₄_eval : comp₄ f g₁ g₂ g₃ g₄ v = f [g₁ v, g₂ v, g₃ v, g₄ v]ᵥ := by simp [Vec.eq_four]
 
 theorem prec_eval : prec f g v = v.head.recOn (f.eval v.tail) λ n ih => g.eval (n ∷ᵥ ih ∷ᵥ v.tail) := rfl
 theorem prec_eval_zero : prec f g (0 ∷ᵥ v) = f.eval v := rfl
@@ -206,13 +210,25 @@ def max : Primrec 2 :=
   simp [max, Nat.max_def]
   simp_rw [←Nat.not_le, ite_not]
 
-def and (f : Vec (Primrec n) m) : Primrec n :=
+def addv (f : Vec (Primrec n) m) : Primrec n :=
+  match m with
+  | 0 => const 0
+  | _ + 1 => add.comp₂ f.head (addv f.tail)
+theorem addv_eval {f : Vec (Primrec n) m} : (addv f) v = ∑ i, (f i) v := by
+  induction m with simp [addv]
+  | succ m ih => simp [ih, Fin.sum_univ_succ]
+theorem addv_eval_pos_iff {f : Vec (Primrec n) m} : 0 < (addv f) v ↔ ∃ i, 0 < (f i) v := by
+  rw [addv_eval, Fintype.sum_pos_iff_of_nonneg] <;> simp [Pi.lt_def, Pi.le_def]
+
+def mulv (f : Vec (Primrec n) m) : Primrec n :=
   match m with
   | 0 => const 1
-  | _ + 1 => mul.comp₂ f.head (and f.tail)
-theorem and_eval_pos_iff {f : Vec (Primrec n) m} : 0 < (and f).eval v ↔ ∀ i, 0 < (f i).eval v := by
-  induction m with simp [and]
-  | succ m ih => simp [ih, Fin.forall_fin_succ]
+  | _ + 1 => mul.comp₂ f.head (mulv f.tail)
+theorem mulv_eval {f : Vec (Primrec n) m} : (mulv f) v = ∏ i, (f i) v := by
+  induction m with simp [mulv]
+  | succ m ih => simp [ih, Fin.prod_univ_succ]
+theorem mulv_eval_pos_iff {f : Vec (Primrec n) m} : 0 < (mulv f) v ↔ ∀ i, 0 < (f i) v := by
+  rw [mulv_eval, CanonicallyOrderedAdd.prod_pos]; simp
 
 def pair : Primrec 2 :=
   ite.comp₃
@@ -468,28 +484,28 @@ theorem vand_eval {v : Vec ℕ n} : vand [n, v.paired]ᵥ = if ∀ i, v i > 0 th
 
 
 
-def boundedMu (f : Primrec (n + 1)) : Primrec (n + 1) :=
+def bdMu (f : Primrec (n + 1)) : Primrec (n + 1) :=
   zero.prec (ite.comp₃ (lt.comp₂ (proj 1) (proj 0)) (proj 1)
     (ite.comp₃ (f.comp (proj 0 ∷ᵥ (proj ·.succ.succ)))
       (proj 0) (succ.comp₁ (proj 0))))
 
-theorem boundedMu_eval_le_self :
-  boundedMu f (m ∷ᵥ v) ≤ m := by
+theorem bdMu_eval_le_self :
+  bdMu f (m ∷ᵥ v) ≤ m := by
   induction m with
-  | zero => simp [boundedMu, prec_eval_zero]
+  | zero => simp [bdMu, prec_eval_zero]
   | succ m ih =>
-    rw [boundedMu, prec_eval_succ, ←boundedMu]; simp
+    rw [bdMu, prec_eval_succ, ←bdMu]; simp
     split
     · split <;> simp [Nat.le_succ]
     · exact Nat.le_succ_of_le ih
 
-lemma boundedMu_eval_gt :
-  k < boundedMu f (m ∷ᵥ v) → f (k ∷ᵥ v) = 0 := by
+lemma bdMu_eval_gt :
+  k < bdMu f (m ∷ᵥ v) → f (k ∷ᵥ v) = 0 := by
   intro h
   induction m with
-  | zero => simp [boundedMu, prec_eval_zero] at h
+  | zero => simp [bdMu, prec_eval_zero] at h
   | succ m ih =>
-    rw [boundedMu, prec_eval_succ, ←boundedMu] at h; simp at h
+    rw [bdMu, prec_eval_succ, ←bdMu] at h; simp at h
     split at h
     next h₁ =>
       rw [Vec.eq_cons λ _ => _] at h; simp at h
@@ -504,13 +520,13 @@ lemma boundedMu_eval_gt :
     next =>
       exact ih h
 
-theorem boundedMu_eval_lt_self :
-  boundedMu f (m ∷ᵥ v) < m → f (boundedMu f (m ∷ᵥ v) ∷ᵥ v) > 0 := by
+theorem bdMu_eval_lt_self :
+  bdMu f (m ∷ᵥ v) < m → f (bdMu f (m ∷ᵥ v) ∷ᵥ v) > 0 := by
   intro h
   induction m with
-  | zero => simp [boundedMu] at h
+  | zero => simp [bdMu] at h
   | succ m ih =>
-    rw [boundedMu, prec_eval_succ, ←boundedMu] at *; simp at *
+    rw [bdMu, prec_eval_succ, ←bdMu] at *; simp at *
     split at h
     next h₁ =>
       simp [h₁]; rw [Vec.eq_cons λ _ => _] at *; simp at *
@@ -519,47 +535,47 @@ theorem boundedMu_eval_lt_self :
     next h₁ =>
       simp [h₁]; simp [h] at h₁; exact ih h₁
 
-theorem boundedMu_eval_lt_self_iff :
-  boundedMu f (m ∷ᵥ v) < m ↔ ∃ k < m, f (k ∷ᵥ v) > 0 := by
+theorem bdMu_eval_lt_self_iff :
+  bdMu f (m ∷ᵥ v) < m ↔ ∃ k < m, f (k ∷ᵥ v) > 0 := by
   constructor
   · intro h; exists _, h
-    exact boundedMu_eval_lt_self h
+    exact bdMu_eval_lt_self h
   · intro ⟨k, h₁, h₂⟩
     by_contra h₃
     simp at h₃
     apply Nat.ne_of_gt h₂
-    apply boundedMu_eval_gt
+    apply bdMu_eval_gt
     exact Nat.lt_of_lt_of_le h₁ h₃
 
-theorem boundedMu_eval_eq {f : Primrec (_ + 1)} :
-  n ≤ m → (∀ k < n, f (k ∷ᵥ v) = 0) → f (n ∷ᵥ v) > 0 → boundedMu f (m ∷ᵥ v) = n := by
+theorem bdMu_eval_eq {f : Primrec (_ + 1)} :
+  n ≤ m → (∀ k < n, f (k ∷ᵥ v) = 0) → f (n ∷ᵥ v) > 0 → bdMu f (m ∷ᵥ v) = n := by
   intro h₁ h₂ h₃
   by_contra h; apply lt_or_gt_of_ne at h; rcases h with h | h
   · have := lt_of_lt_of_le h h₁
-    apply boundedMu_eval_lt_self at this
+    apply bdMu_eval_lt_self at this
     simp [h₂ _ h] at this
-  · apply boundedMu_eval_gt at h
+  · apply bdMu_eval_gt at h
     simp [h] at h₃
 
-def boundedExists (f : Primrec (n + 1)) : Primrec (n + 1) :=
-  lt.comp₂ (boundedMu f) (proj 0)
-theorem boundedExists_eval_pos_iff :
-  boundedExists f (m ∷ᵥ v) > 0 ↔ ∃ k < m, f (k ∷ᵥ v) > 0 := by
-  simp [boundedExists, boundedMu_eval_lt_self_iff]
-theorem boundedExists_eval_zero_iff :
-  boundedExists f (m ∷ᵥ v) = 0 ↔ ∀ k < m, f (k ∷ᵥ v) = 0 := by
+def bdExists (f : Primrec (n + 1)) : Primrec (n + 1) :=
+  lt.comp₂ (bdMu f) (proj 0)
+theorem bdExists_eval_pos_iff :
+  0 < bdExists f (m ∷ᵥ v) ↔ ∃ k < m, 0 < f (k ∷ᵥ v) := by
+  simp [bdExists, bdMu_eval_lt_self_iff]
+theorem bdExists_eval_zero_iff :
+  bdExists f (m ∷ᵥ v) = 0 ↔ ∀ k < m, f (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
-  simp [Nat.ne_zero_iff_zero_lt, boundedExists_eval_pos_iff]
+  simp [Nat.ne_zero_iff_zero_lt, bdExists_eval_pos_iff]
 
-def boundedForall (f : Primrec (n + 1)) : Primrec (n + 1) :=
-  not.comp₁ (boundedExists (not.comp₁ f))
-theorem boundedForall_eval_pos_iff :
-  boundedForall f (m ∷ᵥ v) > 0 ↔ ∀ k < m, f (k ∷ᵥ v) > 0 := by
-  simp [boundedForall, boundedExists_eval_zero_iff, Nat.ne_zero_iff_zero_lt]
-theorem boundedForall_eval_zero_iff :
-  boundedForall f (m ∷ᵥ v) = 0 ↔ ∃ k < m, f (k ∷ᵥ v) = 0 := by
+def bdForall (f : Primrec (n + 1)) : Primrec (n + 1) :=
+  not.comp₁ (bdExists (not.comp₁ f))
+theorem bdForall_eval_pos_iff :
+  0 < bdForall f (m ∷ᵥ v) ↔ ∀ k < m, 0 < f (k ∷ᵥ v) := by
+  simp [bdForall, bdExists_eval_zero_iff, Nat.ne_zero_iff_zero_lt]
+theorem bdForall_eval_zero_iff :
+  bdForall f (m ∷ᵥ v) = 0 ↔ ∃ k < m, f (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
-  simp [Nat.ne_zero_iff_zero_lt, boundedForall_eval_pos_iff]
+  simp [Nat.ne_zero_iff_zero_lt, bdForall_eval_pos_iff]
 
 open Lean.Parser Std in
 def repr : Primrec n → ℕ → Format

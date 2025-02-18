@@ -1,5 +1,6 @@
 import MathematicalLogic.Notation
 import MathematicalLogic.Vec
+import MathematicalLogic.Part
 import MathematicalLogic.ZFSet
 
 import MathematicalLogic.Computability.Primrec
