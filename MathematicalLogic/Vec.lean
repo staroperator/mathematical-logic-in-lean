@@ -44,6 +44,11 @@ namespace Fin
 @[simp] theorem forall_fin3 {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 :=
   ⟨λ h => ⟨h 0, h 1, h 2⟩, λ h i => i.cases3 h.left h.right.left h.right.right⟩
 
+theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (OfNat.ofNat n : Fin (m + n + 1)) := by
+  simp [OfNat.ofNat, Nat.cast]
+  simp [natCast_def]
+  rw [Nat.mod_eq_of_lt (by simp [Nat.lt_succ]), Nat.mod_eq_of_lt (by simp [Nat.lt_succ])]
+
 def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
 @[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
 @[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl

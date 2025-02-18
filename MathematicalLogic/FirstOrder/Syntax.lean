@@ -103,7 +103,6 @@ prefix:max "⇑ₛ" => Subst.lift
 @[simp] theorem Subst.lift_app_zero : ⇑ₛσ 0 = #0 := rfl
 @[simp] theorem Subst.lift_app_succ : ⇑ₛσ x.succ = ↑ₜ(σ x) := rfl
 @[simp] theorem Subst.lift_app_one {σ : 𝓛.Subst (n + 1) m} : ⇑ₛσ 1 = ↑ₜ(σ 0) := rfl
-@[simp] theorem Subst.lift_app_two {σ : 𝓛.Subst (n + 2) m} : ⇑ₛσ 2 = ↑ₜ(σ 1) := rfl
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
   simp_rw [shift, ←subst_comp]; congr

@@ -1,4 +1,4 @@
-import MathematicalLogic.FirstOrder.Proof
+import MathematicalLogic.FirstOrder.Syntax
 
 namespace FirstOrder.Language
 
@@ -65,9 +65,64 @@ instance : Encodable (𝓛.Term n) where
   decode := Term.decode n
   encodek _ := Term.encode_decode
 
-@[simp] theorem Term.encode_var : Encodable.encode (#x : 𝓛.Term n) = 2 * x := rfl
-@[simp] theorem Term.encode_func {v : Vec (𝓛.Term n) m} :
+theorem Term.encode_var : Encodable.encode (#x : 𝓛.Term n) = 2 * x := rfl
+theorem Term.encode_func {v : Vec (𝓛.Term n) m} :
   Encodable.encode (f ⬝ᶠ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 := rfl
+theorem Subst.encode_eq {σ : 𝓛.Subst n m} :
+  Encodable.encode σ = Vec.paired λ i => Encodable.encode (σ i) := rfl
+attribute [local simp] Term.encode_var Term.encode_func
+
+theorem Term.encode_lt_func_m {v : Vec (𝓛.Term n) m} :
+  m < Encodable.encode (f ⬝ᶠ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply Nat.left_le_pair
+
+theorem Term.encode_lt_func_f {v : Vec (𝓛.Term n) m} :
+  Encodable.encode f < Encodable.encode (f ⬝ᶠ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply (Nat.right_le_pair _ _).trans'
+  apply Nat.left_le_pair
+
+theorem Term.encode_lt_func_v {v : Vec (𝓛.Term n) m} :
+  Encodable.encode v < Encodable.encode (f ⬝ᶠ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply (Nat.right_le_pair _ _).trans'
+  apply Nat.right_le_pair
+
+theorem Term.encode_le_subst {t : 𝓛.Term n} :
+  x ∈ t.vars → Encodable.encode (σ x) ≤ Encodable.encode (t[σ]ₜ) := by
+  intro h
+  induction t with simp [vars] at h
+  | var x => subst h; rfl
+  | func f v ih =>
+    rcases h with ⟨i, h⟩
+    apply (ih i h).trans
+    apply Nat.le_succ_of_le
+    apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+    apply (Nat.right_le_pair _ _).trans'
+    apply (Nat.right_le_pair _ _).trans'
+    apply Vec.le_paired (i := i)
+
+theorem Term.encode_subst_le_subst {t : 𝓛.Term n} :
+  (∀ x, Encodable.encode (σ₁ x) ≤ Encodable.encode (σ₂ x)) →
+  Encodable.encode (t[σ₁]ₜ) ≤ Encodable.encode (t[σ₂]ₜ) := by
+  intro h
+  induction t with simp
+  | var x => apply h
+  | func f v ih =>
+    apply Nat.mul_le_mul_left
+    apply Nat.pair_le_pair_right
+    apply Nat.pair_le_pair_right
+    apply Vec.paired_le_paired
+    exact ih
+
+theorem Term.encode_le_shift {t : 𝓛.Term n} : Encodable.encode t ≤ Encodable.encode (↑ₜt) := by
+  conv => lhs; rw [←subst_id (t := t)]
+  apply encode_subst_le_subst
+  intro; simp [Nat.mul_le_mul_left]
 
 variable [∀ n, Encodable (𝓛.Rel n)]
 
@@ -133,30 +188,122 @@ instance : Encodable (𝓛.Formula n) where
   decode := Formula.decode n
   encodek _ := Formula.encode_decode
 
-@[simp] theorem Formula.encode_rel {v : Vec (𝓛.Term n) m} :
+theorem Formula.encode_rel {v : Vec (𝓛.Term n) m} :
   Encodable.encode (r ⬝ʳ v) = 4 * m.pair ((Encodable.encode r).pair (Encodable.encode v)) + 1 := rfl
-@[simp] theorem Formula.encode_eq {t₁ t₂ : 𝓛.Term n} :
+theorem Formula.encode_eq {t₁ t₂ : 𝓛.Term n} :
   Encodable.encode (t₁ ≐ t₂) = 4 * (Encodable.encode t₁).pair (Encodable.encode t₂) + 2 := rfl
-@[simp] theorem Formula.encode_false :
+theorem Formula.encode_false :
   Encodable.encode (⊥ : 𝓛.Formula n) = 0 := rfl
-@[simp] theorem Formula.encode_imp {p q : 𝓛.Formula n} :
+theorem Formula.encode_imp {p q : 𝓛.Formula n} :
   Encodable.encode (p ⇒ q) = 4 * (Encodable.encode p).pair (Encodable.encode q) + 3 := rfl
-@[simp] theorem Formula.encode_all {p : 𝓛.Formula (n + 1)} :
+theorem Formula.encode_all {p : 𝓛.Formula (n + 1)} :
   Encodable.encode (∀' p) = 4 * Encodable.encode p + 4 := rfl
+attribute [local simp] Formula.encode_rel Formula.encode_eq Formula.encode_false Formula.encode_imp Formula.encode_all
 
-lemma Formula.encode_lt_imp_left {p q : 𝓛.Formula n} :
+theorem Formula.encode_lt_rel_m {v : Vec (𝓛.Term n) m} :
+  m < Encodable.encode (r ⬝ʳ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply Nat.left_le_pair
+
+theorem Formula.encode_lt_rel_r {v : Vec (𝓛.Term n) m} :
+  Encodable.encode r < Encodable.encode (r ⬝ʳ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply (Nat.right_le_pair _ _).trans'
+  apply Nat.left_le_pair
+
+theorem Formula.encode_lt_rel_v {v : Vec (𝓛.Term n) m} :
+  Encodable.encode v < Encodable.encode (r ⬝ʳ v) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply (Nat.right_le_pair _ _).trans'
+  apply Nat.right_le_pair
+
+theorem Formula.encode_lt_eq_left {t₁ t₂ : 𝓛.Term n} :
+  Encodable.encode t₁ < Encodable.encode (t₁ ≐ t₂) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_add_right _ _).trans'
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply Nat.left_le_pair
+
+theorem Formula.encode_lt_eq_right {t₁ t₂ : 𝓛.Term n} :
+  Encodable.encode t₂ < Encodable.encode (t₁ ≐ t₂) := by
+  simp [Nat.lt_succ]
+  apply (Nat.le_add_right _ _).trans'
+  apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+  apply Nat.right_le_pair
+
+theorem Formula.encode_lt_imp_left {p q : 𝓛.Formula n} :
   Encodable.encode p < Encodable.encode (p ⇒ q) := by
   simp [Nat.lt_succ]
   apply (Nat.le_add_right _ _).trans'
   apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
   apply Nat.left_le_pair
 
-lemma Formula.encode_lt_imp_right {p q : 𝓛.Formula n} :
+theorem Formula.encode_lt_imp_right {p q : 𝓛.Formula n} :
   Encodable.encode q < Encodable.encode (p ⇒ q) := by
-  simp [encode, Nat.lt_succ]
+  simp [Nat.lt_succ]
   apply (Nat.le_add_right _ _).trans'
   apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
   apply Nat.right_le_pair
+
+theorem Formula.encode_lt_all {p : 𝓛.Formula (n + 1)} :
+  Encodable.encode p < Encodable.encode (∀' p) := by
+  simp [Formula.encode_all, Nat.lt_succ]
+  apply (Nat.le_add_right _ _).trans'
+  exact Nat.le_mul_of_pos_left _ (by simp)
+
+theorem Formula.encode_le_subst {p : 𝓛.Formula n} {σ : 𝓛.Subst n m} :
+  x ∈ p.free → Encodable.encode (σ x) ≤ Encodable.encode (p[σ]ₚ) := by
+  intro h
+  induction p generalizing m with simp [free] at h <;> simp [encode]
+  | rel r v =>
+    rcases h with ⟨i, h⟩
+    apply (Nat.le_add_right _ _).trans'
+    apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+    apply (Nat.right_le_pair _ _).trans'
+    apply (Nat.right_le_pair _ _).trans'
+    apply le_trans' Vec.le_paired
+    exact Term.encode_le_subst h
+  | eq t₁ t₂ =>
+    apply (Nat.le_add_right _ _).trans'
+    apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+    cases h with
+    | inl h => exact le_trans (Term.encode_le_subst h) (Nat.left_le_pair _ _)
+    | inr h => exact le_trans (Term.encode_le_subst h) (Nat.right_le_pair _ _)
+  | imp p q ih₁ ih₂ =>
+    apply (Nat.le_add_right _ _).trans'
+    apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+    cases h with
+    | inl h => exact le_trans (ih₁ h) (Nat.left_le_pair _ _)
+    | inr h => exact le_trans (ih₂ h) (Nat.right_le_pair _ _)
+  | all p ih =>
+    apply (Nat.le_add_right _ _).trans'
+    apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+    apply (ih h).trans'
+    simp
+    exact Term.encode_le_shift
+
+theorem Formula.encode_le_subst_single {p : 𝓛.Formula (n + 1)} :
+  0 ∈ p.free → Encodable.encode t ≤ Encodable.encode (p[↦ₛ t]ₚ) :=
+  encode_le_subst (σ := ↦ₛ t)
+
+-- workaround; should be fixed in the future using a `FinEncodable` class
+class HasConstEncodeZero (𝓛 : Language) [Encodable 𝓛.Const] : Prop where
+  hasConstEncodeZero : ∃ (r : 𝓛.Const), Encodable.encode r = 0
+
+theorem Formula.exists_encode_le_succ_subst_single [HasConstEncodeZero 𝓛] {p : 𝓛.Formula (n + 1)} {t : 𝓛.Term n} :
+  ∃ t', p[↦ₛ t]ₚ = p[↦ₛ t']ₚ ∧ Encodable.encode t' ≤ Encodable.encode (p[↦ₛ t]ₚ) + 1 := by
+  by_cases h : 0 ∈ p.free
+  · exists t, rfl; apply Nat.le_succ_of_le; exact encode_le_subst_single h
+  · rcases HasConstEncodeZero.hasConstEncodeZero (𝓛 := 𝓛) with ⟨c, hc⟩
+    exists c; constructor
+    · apply subst_ext_free
+      intro i h'
+      cases i using Fin.cases with simp
+      | zero => contradiction
+    · simp [hc, Nat.pair]
 
 end
 

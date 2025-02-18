@@ -321,7 +321,7 @@ theorem vget_eval' {v : Vec ℕ n} (h : i < n) :
 
 def isvec : Primrec 2 :=
   not.comp₁ (iterate snd)
-theorem isvec_eval : isvec [n, k]ᵥ > 0 ↔ ∃ (v : Vec ℕ n), k = v.paired := by
+theorem isvec_eval_pos_iff : 0 < isvec [n, k]ᵥ ↔ ∃ (v : Vec ℕ n), k = v.paired := by
   simp [isvec, iterate_eval]
   induction n generalizing k with simp [Vec.paired]
   | succ n ih =>
@@ -557,23 +557,23 @@ theorem bdMu_eval_eq {f : Primrec (_ + 1)} :
   · apply bdMu_eval_gt at h
     simp [h] at h₃
 
-def bdExists (f : Primrec (n + 1)) : Primrec (n + 1) :=
-  lt.comp₂ (bdMu f) (proj 0)
+def bdExists (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
+  lt.comp₂ ((bdMu g).comp (f ∷ᵥ proj)) f
 theorem bdExists_eval_pos_iff :
-  0 < bdExists f (m ∷ᵥ v) ↔ ∃ k < m, 0 < f (k ∷ᵥ v) := by
-  simp [bdExists, bdMu_eval_lt_self_iff]
+  0 < bdExists f g v ↔ ∃ k < f v, 0 < g (k ∷ᵥ v) := by
+  simp [bdExists]; rw [Vec.eq_cons λ _ => _]; simp [bdMu_eval_lt_self_iff]
 theorem bdExists_eval_zero_iff :
-  bdExists f (m ∷ᵥ v) = 0 ↔ ∀ k < m, f (k ∷ᵥ v) = 0 := by
+  bdExists f g v = 0 ↔ ∀ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
   simp [Nat.ne_zero_iff_zero_lt, bdExists_eval_pos_iff]
 
-def bdForall (f : Primrec (n + 1)) : Primrec (n + 1) :=
-  not.comp₁ (bdExists (not.comp₁ f))
+def bdForall (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
+  not.comp₁ (bdExists f (not.comp₁ g))
 theorem bdForall_eval_pos_iff :
-  0 < bdForall f (m ∷ᵥ v) ↔ ∀ k < m, 0 < f (k ∷ᵥ v) := by
+  0 < bdForall f g v ↔ ∀ k < f v, 0 < g (k ∷ᵥ v) := by
   simp [bdForall, bdExists_eval_zero_iff, Nat.ne_zero_iff_zero_lt]
 theorem bdForall_eval_zero_iff :
-  bdForall f (m ∷ᵥ v) = 0 ↔ ∃ k < m, f (k ∷ᵥ v) = 0 := by
+  bdForall f g v = 0 ↔ ∃ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
   simp [Nat.ne_zero_iff_zero_lt, bdForall_eval_pos_iff]
 
