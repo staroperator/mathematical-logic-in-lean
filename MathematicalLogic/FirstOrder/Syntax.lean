@@ -192,7 +192,7 @@ notation3:57 "⋀ "(...)", " r:(scoped r => andN r) => r
 
 def orN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | 0, _ => ⊥
-| _ + 1, v => v.head ⩒ andN v.tail
+| _ + 1, v => v.head ⩒ orN v.tail
 notation3:57 "⋁ "(...)", " r:(scoped r => orN r) => r
 
 def allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n

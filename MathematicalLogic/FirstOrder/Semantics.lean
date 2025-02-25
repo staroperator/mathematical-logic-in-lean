@@ -52,6 +52,23 @@ theorem satisfy_andN {v : Vec (𝓛.Formula n) m} :
   induction m with simp [Formula.andN]
   | succ n ih => simp [Vec.head, ih, Fin.forall_fin_succ]
 
+theorem satisfy_orN {v : Vec (𝓛.Formula n) m} :
+  𝓜 ⊨[ρ] (⋁ i, v i) ↔ ∃ i, 𝓜 ⊨[ρ] v i := by
+  induction m with simp [Formula.orN]
+  | succ n ih => simp [Vec.head, ih, Fin.exists_fin_succ]
+
+theorem satisfy_allN {p : 𝓛.Formula (n + m)} :
+  𝓜 ⊨[ρ] ∀^[m] p ↔ ∀ v, 𝓜 ⊨[v ++ᵥ ρ] p := by
+  induction m with simp [Formula.allN, Vec.eq_nil]
+  | succ m ih =>
+    rw [ih]; simp [Fin.forall_fin_succ_pi]; rw [forall_comm]; rfl
+
+theorem satisfy_exN {p : 𝓛.Formula (n + m)} :
+  𝓜 ⊨[ρ] ∃^[m] p ↔ ∃ v, 𝓜 ⊨[v ++ᵥ ρ] p := by
+  induction m with simp [Formula.exN, Vec.eq_nil]
+  | succ m ih =>
+    rw [ih]; simp [Fin.exists_fin_succ_pi]; rw [exists_comm]; rfl
+
 theorem satisfy_subst {σ : 𝓛.Subst n m} :
   𝓜 ⊨[ρ] p[σ]ₚ ↔ 𝓜 ⊨[λ x => ⟦ σ x ⟧ₜ 𝓜, ρ] p := by
   induction p generalizing m with simp
