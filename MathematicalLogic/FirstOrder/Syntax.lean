@@ -54,7 +54,11 @@ abbrev Subst (𝓛 : Language) (n m : ℕ) := Vec (𝓛.Term m) n
 def Term.subst : 𝓛.Term n → 𝓛.Subst n m → 𝓛.Term m
 | #x, σ => σ x
 | f ⬝ᶠ v, σ => f ⬝ᶠ λ i => (v i).subst σ
-notation:lead t "[" σ "]ₜ" => Term.subst t σ
+macro:max t:term noWs "[" σ:term "]ₜ" : term => `(Term.subst $t $σ)
+@[app_unexpander Term.subst] def Term.unexpandSubst : Lean.PrettyPrinter.Unexpander
+| `($_ $t $σ) => `($t[$σ]ₜ)
+| _ => throw ()
+
 @[simp] theorem Term.subst_var : (#x)[σ]ₜ = σ x := rfl
 @[simp] theorem Term.subst_func : (f ⬝ᶠ v)[σ]ₜ = f ⬝ᶠ λ i => (v i)[σ]ₜ := rfl
 theorem Term.subst_const {c : 𝓛.Const} : (c : 𝓛.Term n)[σ]ₜ = c := by simp; apply Vec.eq_nil
@@ -245,7 +249,11 @@ def subst : 𝓛.Formula n → 𝓛.Subst n m → 𝓛.Formula m
 | ⊥, _ => ⊥
 | p ⇒ q, σ => p.subst σ ⇒ q.subst σ
 | ∀' p, σ => ∀' (p.subst ⇑ₛσ)
-notation:lead p "[" σ "]ₚ" => subst p σ
+macro:max p:term noWs "[" σ:term "]ₚ" : term => `(subst $p $σ)
+@[app_unexpander subst] def unexpandSubst : Lean.PrettyPrinter.Unexpander
+| `($_ $p $σ) => `($p[$σ]ₚ)
+| _ => throw ()
+
 @[simp] theorem subst_rel : (r ⬝ʳ ts)[σ]ₚ = r ⬝ʳ λ i => (ts i)[σ]ₜ := rfl
 @[simp] theorem subst_eq : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
 @[simp] theorem subst_false : ⊥[σ]ₚ = ⊥ := rfl
