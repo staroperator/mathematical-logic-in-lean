@@ -78,8 +78,6 @@ theorem some_lt_iff : some a < x ↔ ∃ b ∈ x, a < b := by simp [lt_iff]
 
 end
 
-theorem zero_def [Zero α] : (0 : Part α) = some 0 := rfl
-
 def find_aux (f : ℕ →. ℕ)
   (h : ∃ n, 0 < f n ∧ ∀ k < n, (f k).Dom)
   (n : ℕ) (ih : ∀ k < n, 0 ∈ f k) : {n : ℕ // 0 < f n ∧ ∀ k < n, 0 ∈ f k} :=

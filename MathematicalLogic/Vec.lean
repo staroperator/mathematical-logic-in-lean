@@ -268,6 +268,7 @@ theorem paired_le_paired {v₁ v₂ : Vec ℕ n} : (∀ i, v₁ i ≤ v₂ i) �
 @[simp] theorem unpair_paired {v : Vec ℕ (n + 1)} : v.paired.unpair = (v.head, v.tail.paired) := by simp [paired]
 
 section
+
 variable [Encodable α]
 
 def encode (v : Vec α n) := paired λ i => Encodable.encode (v i)
@@ -294,6 +295,7 @@ instance encodable : Encodable (Vec α n) where
 @[simp] theorem encode_nil {v : Vec α 0} : Encodable.encode v = 0 := rfl
 @[simp] theorem encode_cons {v : Vec α n} : Encodable.encode (a ∷ᵥ v) = (Encodable.encode a).pair (Encodable.encode v) := rfl
 theorem encode_eq {v : Vec α n} : Encodable.encode v = Vec.paired λ i => Encodable.encode (v i) := rfl
+
 end
 
 instance [Countable α] : Countable (Vec α n) :=
