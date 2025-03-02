@@ -4,6 +4,8 @@ import MathematicalLogic.Vec
 
 namespace Part
 
+theorem dom_of_mem {o : Part α} (h : a ∈ o) : o.Dom := dom_iff_mem.mpr ⟨a, h⟩
+
 def bindVec (v : Vec (Part α) n) : Part (Vec α n) :=
   ⟨∀ i, (v i).Dom, λ h i => (v i).get (h i)⟩
 
@@ -20,8 +22,39 @@ def bindVec (v : Vec (Part α) n) : Part (Vec α n) :=
 
 theorem bindVec_some : bindVec (λ i => some (v i)) = some v := by
   simp [bindVec, eq_some_iff]
-theorem bindVec_some_1 : bindVec [some a]ᵥ = some [a]ᵥ := by
-  rw [←bindVec_some]; congr; ext i; cases i using Fin.cases1; simp
+
+@[simp] theorem bindVec_nil {v : Vec (Part α) 0} : bindVec v = Part.some []ᵥ := by
+  ext; simp [Vec.eq_nil]
+
+theorem bindVec_cons {v : Vec (Part α) (n + 1)} :
+  bindVec v = v.head >>= λ a => bindVec v.tail >>= λ w => some (a ∷ᵥ w) := by
+  ext u; rw [Vec.eq_cons u]; simp [Vec.head, Fin.forall_fin_succ]
+
+@[simp] theorem bindVec_1 {v : Vec (Part α) 1} : bindVec v = v 0 >>= λ a => some [a]ᵥ := by
+  simp [bindVec_cons, Vec.head]
+
+@[simp] theorem bindVec_2 {v : Vec (Part α) 2} :
+  bindVec v = v 0 >>= λ a => v 1 >>= λ b => some [a, b]ᵥ := by
+  simp [bindVec_cons, Vec.head, bind_assoc]
+
+@[simp] theorem bindVec_3 {v : Vec (Part α) 3} :
+  bindVec v = v 0 >>= λ a => v 1 >>= λ b => v 2 >>= λ c => some [a, b, c]ᵥ := by
+  simp [bindVec_cons, Vec.head, bind_assoc]
+
+def natrec (a : Part α) (f : ℕ → α →. α) (n : ℕ) : Part α :=
+  Nat.rec a (λ n ih => ih >>= λ a => f n a) n
+
+theorem natrec_zero : natrec a f 0 = a := rfl
+
+theorem natrec_succ : natrec a f (n + 1) = natrec a f n >>= λ a => f n a := rfl
+
+theorem natrec_dom_le : (natrec a f n).Dom → k ≤ n → (natrec a f k).Dom := by
+  intro h₁ h₂
+  induction h₂ with
+  | refl => exact h₁
+  | step _ ih =>
+    simp [natrec_succ] at h₁
+    exact ih h₁.fst
 
 section
 
@@ -75,6 +108,14 @@ theorem lt_iff : x < y ↔ ∃ b ∈ y, ∀ a ∈ x, a < b := by rfl
 @[simp] theorem some_lt_some_iff : some a < some b ↔ a < b := by simp [lt_iff]
 theorem some_le_iff : some a ≤ x ↔ ∃ b ∈ x, a ≤ b := by simp [le_iff]
 theorem some_lt_iff : some a < x ↔ ∃ b ∈ x, a < b := by simp [lt_iff]
+
+variable [Zero α]
+@[simp] theorem zero_lt_some_iff : 0 < some a ↔ 0 < a := by simp [zero_def]
+theorem pos_iff : 0 < x ↔ ∃ a ∈ x, 0 < a := by simp [zero_def, some_lt_iff]
+theorem dom_of_pos (h : 0 < x) : x.Dom := by
+  simp [pos_iff] at h; rcases h with ⟨_, h, _⟩; exact dom_of_mem h
+@[simp] theorem bind_pos_iff {a : Part β} {f : β → Part α} : 0 < a.bind f ↔ ∃ x ∈ a, 0 < f x := by
+  simp [pos_iff]; aesop
 
 end
 

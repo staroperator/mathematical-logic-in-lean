@@ -388,9 +388,7 @@ theorem rcons_eval {v : Vec ℕ n} :
       simp_rw [Nat.succ_add, ←Nat.add_succ, ←Nat.succ_sub h, Nat.succ_sub_succ]
 
 def cov (f : Primrec (n + 2)) : Primrec (n + 1) :=
-  zero.prec
-    (rcons.comp₃ (proj 0) (proj 1)
-      (f.comp (proj 0 ∷ᵥ proj 1 ∷ᵥ (proj ·.succ.succ))))
+  zero.prec (rcons.comp₃ (proj 0) (proj 1) f)
 theorem cov_eval {f : Primrec (n + 2)} :
   f.cov (m ∷ᵥ v) = Vec.paired (λ i : Fin m => f (i ∷ᵥ f.cov (i ∷ᵥ v) ∷ᵥ v)) := by
   induction m with
@@ -399,14 +397,10 @@ theorem cov_eval {f : Primrec (n + 2)} :
     conv =>
       lhs; rw [cov, prec_eval_succ, ←cov]
       simp [Vec.eq_three]; simp
-      rw [Vec.eq_cons λ _ => _]; simp
-      rw [Vec.eq_cons λ _ => _]; simp
       rw [ih]
       simp [rcons_eval]
-    congr; funext i
-    simp [Vec.rcons, Fin.snoc]
-    intro h
-    rw [Nat.eq_of_le_of_lt_succ h i.isLt, ih]
+    congr! with i
+    cases i using Fin.lastCases <;> simp [ih]
 
 def covrec (f : Primrec (n + 2)) : Primrec (n + 1) :=
   vget.comp₂ (f.cov.comp (succ.comp₁ (proj 0) ∷ᵥ (proj ·.succ))) (proj 0)

@@ -163,6 +163,8 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
   ext i; cases i using Fin.cases1; simp
 @[simp] theorem rcons_cons : rcons (x ∷ᵥ v) y = x ∷ᵥ rcons v y := by
   simp [rcons, Vec.cons, Fin.cons_snoc_eq_snoc_cons]
+@[simp] theorem rcons_last : rcons v a (Fin.last _) = a := Fin.snoc_last _ _
+@[simp] theorem rcons_castSucc : rcons v a (Fin.castSucc x) = v x := Fin.snoc_castSucc _ _ _
 
 def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
   match n with
