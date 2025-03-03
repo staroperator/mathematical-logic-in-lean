@@ -112,6 +112,11 @@ theorem some_lt_iff : some a < x ↔ ∃ b ∈ x, a < b := by simp [lt_iff]
 variable [Zero α]
 @[simp] theorem zero_lt_some_iff : 0 < some a ↔ 0 < a := by simp [zero_def]
 theorem pos_iff : 0 < x ↔ ∃ a ∈ x, 0 < a := by simp [zero_def, some_lt_iff]
+theorem pos_iff_get (h : x.Dom) : 0 < x ↔ 0 < x.get h := by
+  simp [pos_iff]
+  constructor
+  · intro ⟨a, h₁, h₂⟩; rw [Part.get_eq_of_mem h₁]; exact h₂
+  · intro h₁; exists x.get h, Part.get_mem h
 theorem dom_of_pos (h : 0 < x) : x.Dom := by
   simp [pos_iff] at h; rcases h with ⟨_, h, _⟩; exact dom_of_mem h
 @[simp] theorem bind_pos_iff {a : Part β} {f : β → Part α} : 0 < a.bind f ↔ ∃ x ∈ a, 0 < f x := by

@@ -129,7 +129,7 @@ theorem not_mem_iff (x : α) :
   simp [Part.zero_def, -Part.some_get]
 
 def compl : Recursive sᶜ where
-  char := (Primrec.not.toPart).comp₁ (char s)
+  char := (Primrec.nsign.toPart).comp₁ (char s)
   char_dom x := by simp; exact char_dom x
   mem_iff x := by simp; simp [not_mem_iff, Part.zero_def, Part.eq_some_iff]
 
