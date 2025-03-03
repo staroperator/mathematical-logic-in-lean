@@ -18,7 +18,7 @@ def Term.funcPR : Primrec 3 :=
 
 def Term.substPR : Primrec 2 :=
   (covrec (
-    ite.comp₃ (odd.comp₁ (proj 0))
+    ite (odd.comp₁ (proj 0))
       (succ.comp₁ (mul.comp₂ (const 2)
         (pair.comp₂ (fst.comp₁ (div2.comp₁ (proj 0)))
           (pair.comp₂ (fst.comp₁ (snd.comp₁ (div2.comp₁ (proj 0))))
@@ -154,12 +154,12 @@ def Formula.depth : 𝓛.Formula n → ℕ
 | _ => 0
 
 def Formula.depthPR : Primrec 1 :=
-  covrec (ite.comp₃ (not (proj 0)) zero
-    (ite.comp₃ (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 3))
+  covrec (ite (not (proj 0)) zero
+    (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 3))
       (max.comp₂
         (vget.comp₂ (proj 1) (fst.comp₁ (div.comp₂ (proj 0) (const 4))))
         (vget.comp₂ (proj 1) (snd.comp₁ (div.comp₂ (proj 0) (const 4)))))
-      (ite.comp₃ (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 0))
+      (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 0))
         (succ.comp₁ (vget.comp₂ (proj 1) (pred.comp₁ (div.comp₂ (proj 0) (const 4)))))
         zero)))
 theorem Formula.depthPR_eval {p : 𝓛.Formula n} :
@@ -190,8 +190,8 @@ theorem Formula.depthPR_eval {p : 𝓛.Formula n} :
 
 def Formula.substPR : Primrec 4 :=
   (paired (covrec (unpaired
-    (ite.comp₃ (not (proj 0)) zero
-      (ite.comp₃ (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 1))
+    (ite (not (proj 0)) zero
+      (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 1))
         (add.comp₂ (mul.comp₂ (const 4)
           (pair.comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4)))
             (pair.comp₂ (fst.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4))))
@@ -200,7 +200,7 @@ def Formula.substPR : Primrec 4 :=
                 (snd.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4))))
                 (Subst.liftNPR.comp₄
                   (sub.comp₂ (proj 3) (proj 1)) (proj 4) (proj 5) (proj 6)))))) (const 1))
-        (ite.comp₃ (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 2))
+        (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 2))
           (add.comp₂ (mul.comp₂ (const 4)
             (pair.comp₂
               (Term.substPR.comp₂
@@ -211,7 +211,7 @@ def Formula.substPR : Primrec 4 :=
                 (snd.comp₁ (div.comp₂ (proj 0) (const 4)))
                 (Subst.liftNPR.comp₄
                   (sub.comp₂ (proj 3) (proj 1)) (proj 4) (proj 5) (proj 6))))) (const 2))
-          (ite.comp₃ (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 3))
+          (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 3))
             (add.comp₂ (mul.comp₂ (const 4)
               (pair.comp₂
                 (vget.comp₂ (proj 2)
@@ -303,6 +303,7 @@ section
 
 variable (𝓛 : Language) [∀ n, Encodable (𝓛.Func n)] [∀ n, Encodable (𝓛.Rel n)]
 
+-- should be replaced with `FinEncodable (𝓛.Func n)` and `FinEncodable (𝓛.Rel n)` in the future
 class PrimCodable where
   isFuncPR : Primrec 2
   isFuncPR_eval_pos_iff : ∀ {n m}, 0 < isFuncPR [n, m]ᵥ ↔ ∃ (f : 𝓛.Func n), m = Encodable.encode f
@@ -315,7 +316,7 @@ variable [𝓛.PrimCodable]
 
 def isTermPR : Primrec 2 :=
   (covrec (
-    ite.comp₃ (odd.comp₁ (proj 0))
+    ite (odd.comp₁ (proj 0))
       (andv [
         (isFuncPR 𝓛).comp₂ (fst.comp₁ (div2.comp₁ (proj 0))) (fst.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))),
         isvec.comp₂ (fst.comp₁ (div2.comp₁ (proj 0))) (snd.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))),
@@ -328,10 +329,6 @@ theorem isTermPR_eval_pos_iff : 0 < 𝓛.isTermPR [n, m]ᵥ ↔ ∃ (t : 𝓛.Te
   · intro h; simp [isTermPR] at h
     induction' m using Nat.strong_induction_on with m ih
     rw [covrec_eval] at h; simp at h; split at h
-    next h' =>
-      simp at h
-      exists #⟨m.div2, h⟩
-      simp [Term.encode_var, Nat.div2_val]; rw [←m.bodd_add_div2]; simp [h']
     next h' =>
       simp at h; rcases h with ⟨h₁, h₂, h₃⟩
       simp [PrimCodable.isFuncPR_eval_pos_iff] at h₁; rcases h₁ with ⟨f, h₁⟩
@@ -354,6 +351,10 @@ theorem isTermPR_eval_pos_iff : 0 < 𝓛.isTermPR [n, m]ᵥ ↔ ∃ (t : 𝓛.Te
       simp [Term.encode_func, Vec.encode_eq, ←h₁, ←h₃, ←h₂]
       nth_rw 1 [←m.bodd_add_div2]
       simp [h', Nat.one_add]
+    next h' =>
+      simp at h
+      exists #⟨m.div2, h⟩
+      simp [Term.encode_var, Nat.div2_val]; rw [←m.bodd_add_div2]; simp [h']
   · rintro ⟨t, rfl⟩; simp [isTermPR]
     induction t with
     | var x => rw [covrec_eval]; simp [Term.encode_var, Nat.div2_val]
@@ -372,9 +373,9 @@ theorem isTermPR_eval_pos_iff : 0 < 𝓛.isTermPR [n, m]ᵥ ↔ ∃ (t : 𝓛.Te
 
 def isFormulaPR : Primrec 2 :=
   (paired (covrec (unpaired (
-    ite.comp₃ (not (proj 0))
+    ite (not (proj 0))
       (const 1)
-      (ite.comp₃ (eq (mod.comp₂ (proj 0) (const 4)) (const 1))
+      (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 1))
         (andv [
           (isRelPR 𝓛).comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (fst.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4)))),
           isvec.comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (snd.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4)))),
@@ -385,7 +386,7 @@ def isFormulaPR : Primrec 2 :=
                 (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
                 )
         ]ᵥ)
-        (ite.comp₃ (eq (mod.comp₂ (proj 0) (const 4)) (const 2))
+        (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 2))
           (and
             (𝓛.isTermPR.comp₂
               (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
@@ -393,7 +394,7 @@ def isFormulaPR : Primrec 2 :=
             (𝓛.isTermPR.comp₂
               (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
               (snd.comp₁ (div.comp₂ (proj 0) (const 4)))))
-          (ite.comp₃ (eq (mod.comp₂ (proj 0) (const 4)) (const 3))
+          (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 3))
             (and
               (vget.comp₂ (proj 2) (pair.comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (proj 1)))
               (vget.comp₂ (proj 2) (pair.comp₂ (snd.comp₁ (div.comp₂ (proj 0) (const 4))) (proj 1))))
@@ -418,8 +419,9 @@ theorem isFormulaPR_eval_pos_iff : 0 < 𝓛.isFormulaPR [n, m]ᵥ ↔ ∃ (p : �
     intro h₁
     induction' m using Nat.strong_induction_on with m ih generalizing d k
     rw [←h, covrec_eval, h] at h₁; simp at h₁; split at h₁
+    next h₂ => exists ⊥; simp [Formula.encode_false, h₂, Formula.depth]
     next h₂ =>
-      split at h₁
+      simp [Nat.ne_zero_iff_zero_lt] at h₂; split at h₁
       next h₃ =>
         simp at h₁; rcases h₁ with ⟨h₁, h₁', h₁''⟩
         simp [PrimCodable.isRelPR_eval_pos_iff] at h₁; rcases h₁ with ⟨r, h₁⟩
@@ -477,7 +479,6 @@ theorem isFormulaPR_eval_pos_iff : 0 < 𝓛.isFormulaPR [n, m]ᵥ ↔ ∃ (p : �
               match m with
               | 0 | 1 | 2 | 3 => contradiction
               | _ + 4 => simp at h
-    next h₂ => simp at h₂; exists ⊥; simp [Formula.encode_false, h₂, Formula.depth]
   · rintro ⟨p, rfl, h₂⟩
     induction p generalizing d k with subst h₁
     | rel r v =>

@@ -189,11 +189,11 @@ def eq (f g : Primrec n) := and (le f g) (ge f g)
 
 abbrev ne (f g : Primrec n) := not (eq f g)
 
-def ite : Primrec 3 :=
-  (proj 1).cases (proj 1)
-@[simp] theorem ite_eval : ite v = if v 0 = 0 then v 2 else v 1 := by
+def ite (f g h : Primrec n) : Primrec n :=
+  ((proj 1).cases (proj 1)).comp₃ f g h
+@[simp] theorem ite_eval : ite f g h v = if 0 < f v then g v else h v := by
   simp [ite, cases_eval]
-  generalize v 0 = n, v 1 = m₁, v 2 = m₂
+  generalize f v = n
   cases n <;> simp
 
 def odd : Primrec 1 :=
@@ -205,48 +205,50 @@ def odd : Primrec 1 :=
   | succ n ih => simp [ih]
 
 def div2 : Primrec 1 :=
-  zero.prec (ite.comp₃ (odd.comp₁ (proj 0)) (succ.comp₁ (proj 1)) (proj 1))
+  zero.prec (ite (odd.comp₁ (proj 0)) (succ.comp₁ (proj 1)) (proj 1))
 @[simp] theorem div2_eval : div2 v = (v 0).div2 := by
   simp [div2, prec_eval]
   generalize v 0 = n
   induction n with simp
-  | succ n ih => simp [ih]; cases n.bodd <;> simp
+  | succ n ih => simp [ih]
 
 def mod : Primrec 2 :=
-  ite.comp₃ (nsign.comp₁ (proj 1)) (proj 0)
-    (zero.prec (ite.comp₃ (lt (succ.comp₁ (proj 1)) (proj 2)) (succ.comp₁ (proj 1)) zero))
-@[simp] theorem mod_eval : mod v = (v 0) % v 1 := by
+  ite (proj 1) (zero.prec (ite (lt (succ.comp₁ (proj 1)) (proj 2)) (succ.comp₁ (proj 1)) zero)) (proj 0)
+@[simp] theorem mod_eval : mod v = v 0 % v 1 := by
   simp [mod, prec_eval]
   generalize v 0 = n, v 1 = m
-  by_cases h₁ : m = 0 <;> simp [h₁]
-  induction n with simp
-  | succ n ih =>
-    simp [ih]
-    rw [Nat.add_mod_eq_ite]
-    by_cases h₂ : m = 1
-    · simp [h₂, Nat.mod_one]
-    · simp [Nat.one_mod_eq_one.mpr h₂]
-      split <;> try simp
-      symm; simp [Nat.sub_eq_zero_iff_le, Nat.succ_le, Nat.mod_lt _ (Nat.pos_of_ne_zero h₁)]
+  by_cases h₁ : 0 < m
+  · simp [h₁]
+    induction n with simp
+    | succ n ih =>
+      simp [ih]
+      split
+      next h₂ =>
+        rw [Nat.add_mod_eq_ite]
+        simp [Nat.mod_eq_of_lt ((Nat.le_add_left _ _).trans_lt h₂), not_le_of_lt h₂]
+      next h₂ =>
+        simp at h₂
+        apply eq_of_le_of_le (Nat.mod_lt _ h₁) at h₂
+        rw [←Nat.div_add_mod n m, add_assoc, h₂]
+        simp
+  · simp at h₁; simp [h₁]
 
 def max : Primrec 2 :=
-  ite.comp₃ (le (proj 0) (proj 1)) (proj 1) (proj 0)
+  ite (le (proj 0) (proj 1)) (proj 1) (proj 0)
 @[simp] theorem max_eval : max v = (v 0).max (v 1) := by
   simp [max, Nat.max_def]
-  simp_rw [←Nat.not_le, ite_not]
 
 def pair : Primrec 2 :=
-  ite.comp₃
+  ite
     (gt (proj 1) (proj 0))
     (add.comp₂ (mul.comp₂ (proj 1) (proj 1)) (proj 0))
     (add.comp₂ (mul.comp₂ (proj 0) (succ.comp₁ (proj 0))) (proj 1))
 @[simp] theorem pair_eval : pair v = (v 0).pair (v 1) := by
   simp [pair, Nat.pair, Nat.mul_succ]
-  simp_rw [←Nat.not_le, ite_not]
 
 def sqrt : Primrec 1 :=
   zero.prec 
-    (ite.comp₃
+    (ite
       (eq
         (mul.comp₂ (succ.comp₁ (proj 1)) (succ.comp₁ (proj 1)))
         (succ.comp₁ (proj 0)))
@@ -270,7 +272,7 @@ def sqrt : Primrec 1 :=
         · exact Ne.symm h
 
 def fst : Primrec 1 :=
-  ite.comp₃
+  ite
     (gt
       (sqrt.comp₁ (proj 0))
       (sub.comp₂ (proj 0) (mul.comp₂ (sqrt.comp₁ (proj 0)) (sqrt.comp₁ (proj 0)))))
@@ -278,10 +280,10 @@ def fst : Primrec 1 :=
     (sqrt.comp₁ (proj 0))
 @[simp] theorem fst_eval : fst v = (v 0).unpair.1 := by
   simp [fst, Nat.unpair]
-  simp_rw [←Nat.not_lt, ite_not, apply_ite Prod.fst]
+  split <;> simp
 
 def snd : Primrec 1 :=
-  ite.comp₃
+  ite
     (gt
       (sqrt.comp₁ (proj 0))
       (sub.comp₂ (proj 0) (mul.comp₂ (sqrt.comp₁ (proj 0)) (sqrt.comp₁ (proj 0)))))
@@ -289,7 +291,7 @@ def snd : Primrec 1 :=
     (sub.comp₂ (proj 0) (mul.comp₂ (sqrt.comp₁ (proj 0)) (succ.comp₁ (sqrt.comp₁ (proj 0)))))
 @[simp] theorem snd_eval : snd v = (v 0).unpair.2 := by
   simp [snd, Nat.unpair, Nat.mul_succ, Nat.sub_add_eq]
-  simp_rw [←Nat.not_lt, ite_not, apply_ite Prod.snd]
+  split <;> simp
 
 def paired (f : Primrec (n + 1)) : Primrec (n + 2) :=
   f.comp (pair.comp₂ (proj 0) (proj 1) ∷ᵥ (proj ·.succ.succ))
@@ -423,8 +425,8 @@ theorem covrec_eval {f : Primrec (n + 2)} :
   simp [vget_eval']
 
 def div : Primrec 2 :=
-  ite.comp₃ (nsign.comp₁ (proj 1)) zero
-    (covrec (ite.comp₃ (lt (proj 0) (proj 2)) zero (succ.comp₁ (vget.comp₂ (proj 1) (sub.comp₂ (proj 0) (proj 2))))))
+  ite (not (proj 1)) zero
+    (covrec (ite (lt (proj 0) (proj 2)) zero (succ.comp₁ (vget.comp₂ (proj 1) (sub.comp₂ (proj 0) (proj 2))))))
 @[simp] theorem div_eval : div v = v 0 / v 1 := by
   simp [div]
   rw [Vec.eq_two v]; generalize v 0 = n, v 1 = m; simp
@@ -432,17 +434,17 @@ def div : Primrec 2 :=
   simp [Nat.ne_zero_iff_zero_lt] at h₁
   induction' n using Nat.strong_induction_on with n ih
   rw [covrec_eval]; simp
-  by_cases h₃ : m ≤ n <;> simp [h₃]
-  · have h₄ : n - m < n := Nat.sub_lt (Nat.lt_of_lt_of_le h₁ h₃) h₁
-    rw [vget_eval' h₄]; simp
-    rw [ih]
-    · conv => rhs; rw [Nat.div_eq]; simp [h₁, h₃]
-    · exact h₄
-  · simp at h₃; symm; simp [h₃]
+  by_cases h₃ : n < m
+  · simp [eq_comm, Nat.div_eq_zero_iff, h₃]
+  · simp at h₃
+    have h₄ : n - m < n := Nat.sub_lt (h₁.trans_le h₃) h₁
+    rw [vget_eval' h₄, ih _ h₄]
+    simp [not_lt_of_ge h₃]
+    conv => rhs; rw [Nat.div_eq]; simp [h₁, h₃]
 
 def vmap' : Primrec 3 :=
   paired (covrec (unpaired 
-    (ite.comp₃ (not (proj 0)) zero
+    (ite (not (proj 0)) zero
       (pair.comp₂ (vget.comp₂ (proj 3) (fst.comp₁ (proj 1)))
         (vget.comp₂ (proj 2) (pair.comp₂ (pred.comp₁ (proj 0)) (snd.comp₁ (proj 1))))))))
 theorem vmap'_eval {v : Vec ℕ n} {f : Vec ℕ m} (h : ∀ i, v i < m) :
@@ -462,7 +464,7 @@ theorem vmap'_eval {v : Vec ℕ n} {f : Vec ℕ m} (h : ∀ i, v i < m) :
 
 def vmax : Primrec 2 :=
   paired (covrec (unpaired
-    (ite.comp₃ (not (proj 0)) zero
+    (ite (not (proj 0)) zero
       (max.comp₂ (fst.comp₁ (proj 1)) (vget.comp₂ (proj 2) (pair.comp₂ (pred.comp₁ (proj 0)) (snd.comp₁ (proj 1))))))))
 theorem vmax_eval {v : Vec ℕ n} : vmax [n, v.paired]ᵥ = v.max := by
   simp [vmax]
@@ -484,8 +486,8 @@ theorem vand_eval_pos_iff {v : Vec ℕ n} : 0 < vand [n, v.paired]ᵥ ↔ ∀ i,
 
 
 def bdMu (f : Primrec (n + 1)) : Primrec (n + 1) :=
-  zero.prec (ite.comp₃ (lt (proj 1) (proj 0)) (proj 1)
-    (ite.comp₃ (f.comp (proj 0 ∷ᵥ (proj ·.succ.succ)))
+  zero.prec (ite (lt (proj 1) (proj 0)) (proj 1)
+    (ite (f.comp (proj 0 ∷ᵥ (proj ·.succ.succ)))
       (proj 0) (succ.comp₁ (proj 0))))
 
 theorem bdMu_eval_le_self :
@@ -495,8 +497,8 @@ theorem bdMu_eval_le_self :
   | succ m ih =>
     rw [bdMu, prec_eval_succ, ←bdMu]; simp
     split
-    · split <;> simp [Nat.le_succ]
     · exact Nat.le_succ_of_le ih
+    · split <;> simp [Nat.le_succ]
 
 lemma bdMu_eval_gt :
   k < bdMu f (m ∷ᵥ v) → f (k ∷ᵥ v) = 0 := by
@@ -506,18 +508,18 @@ lemma bdMu_eval_gt :
   | succ m ih =>
     rw [bdMu, prec_eval_succ, ←bdMu] at h; simp at h
     split at h
+    next => exact ih h
     next h₁ =>
+      simp at h₁
       rw [Vec.eq_cons λ _ => _] at h; simp at h
       split at h
+      next => exact ih (Nat.lt_of_lt_of_le h h₁)
       next h₂ =>
+        simp at h₂
         simp [Nat.lt_succ_iff_lt_or_eq] at h
         rcases h with h | h
         · exact ih (Nat.lt_of_lt_of_le h h₁)
         · rw [h]; exact h₂
-      next =>
-        exact ih (Nat.lt_of_lt_of_le h h₁)
-    next =>
-      exact ih h
 
 theorem bdMu_eval_lt_self :
   bdMu f (m ∷ᵥ v) < m → f (bdMu f (m ∷ᵥ v) ∷ᵥ v) > 0 := by
@@ -527,12 +529,11 @@ theorem bdMu_eval_lt_self :
   | succ m ih =>
     rw [bdMu, prec_eval_succ, ←bdMu] at *; simp at *
     split at h
+    next h₁ => simp [h₁]; exact ih h₁
     next h₁ =>
       simp [h₁]; rw [Vec.eq_cons λ _ => _] at *; simp at *
       split at h <;> simp at h
-      next h₂ => simp [h₂]; exact Nat.zero_lt_of_ne_zero h₂
-    next h₁ =>
-      simp [h₁]; simp [h] at h₁; exact ih h₁
+      next h₂ => simp [h₂]
 
 theorem bdMu_eval_lt_self_iff :
   bdMu f (m ∷ᵥ v) < m ↔ ∃ k < m, f (k ∷ᵥ v) > 0 := by
