@@ -112,7 +112,7 @@ open Lean Syntax Meta Elab Tactic
 macro "pintro" : tactic => `(tactic|
   first
   | eapply deduction.mpr
-  | (eapply forall_intro; try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append, Theory.shift_shiftN, Theory.shiftN_shiftN]))
+  | (eapply forall_intro; try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append]))
 
 /-- Revert a hypothesis through deduction theorem. -/
 macro "prevert" : tactic => `(tactic| eapply deduction.mp)
@@ -191,12 +191,11 @@ private partial def isSubsetOf (Γ Δ : Expr) : MetaM (Option (TSyntax `term)) :
 
 /--
   `f` should be a term of type `Γ ⊢ p₁ ⇒ p₂ ⇒ ⋯ ⇒ pₙ`, and `goal` should be a type `Δ ⊢ pₙ` (in whnf) where `Γ ⊆ Δ`.
-  `d` is the maximum limit of `n-1`.
   
   `apply f goal d` will create a term `Proof.mp (Proof.mp (... (Proof.mp f ?m₁)) ?mₙ₋₂) ?mₙ₋₁` of type `goal`,
   return the term and a list of `?m₁, ⋯, ?mₙ₋₁`.
   -/
-private def papply (f : Expr) (goal : Expr) (d : ℕ) : TacticM (Expr × List MVarId) := do
+private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × List MVarId) := do
   let (fmvars, _, ftype) ← forallMetaTelescopeReducing (← instantiateMVars (← inferType f))
   let some (𝓛, n, Γ, p) := ftype.app4? ``Proof | throwError m!"{ftype} is not a proof"
   let some (𝓛', n', Δ, _) := goal.app4? ``Proof | throwError m!"{goal} is not a proof"
@@ -210,12 +209,12 @@ private def papply (f : Expr) (goal : Expr) (d : ℕ) : TacticM (Expr × List MV
   let mut goalFormula := p
   repeat do
     let proofType ← inferType proofTerm
-    if newMVarIds.length <= d then
+    if d.all λ d => newMVarIds.length == d then
       let s ← MonadBacktrack.saveState
       if ← isDefEq goal proofType then
         break
-      if newMVarIds.length == d then
-        throwError "failed to apply {ftype} at {goal} within depth {d}"
+      if d == some newMVarIds.length then
+        throwError "failed to apply {ftype} at {goal} with depth {newMVarIds.length}"
       MonadBacktrack.restoreState s
     if let some (_, _, p, q) := (← whnf goalFormula).app4? ``Formula.imp then
       let mvarId ← mkFreshMVarId
@@ -230,60 +229,69 @@ private def papply (f : Expr) (goal : Expr) (d : ℕ) : TacticM (Expr × List MV
       newMVarIds := newMVarIds ++ [mvar.mvarId!]
   return (proofTerm, newMVarIds)
 
+syntax location := "at" (ident <|> num)
+
+syntax depth := "with" num
+
 /--
-  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ`, `papply t` apply it on another goal using `Proof.mp`.
-  - `papply t` will apply `t` on the current goal `Δ ⊢ pₙ` (where `Γ` is a subset of `Δ`) and create goals
-    for other `Δ ⊢ pᵢ`.
-  - `papply t at h` (where `h` is an identifier) will apply `t` on the local hypothesis `h` with type `Δ ⊢ pₙ₋₁`
-    (where `Γ` is a subset of `Δ`), replace it with `Δ ⊢ pₙ` and create goals for other `Δ ⊢ pᵢ`.
-  - `papply t at m` (where `m` is an number) will apply `t` on `n`-th assumption (if the current goal is `Δ ⊢ q`,
-    it is the `n`-th proposition in `Δ`, from right to left), replace it with `pₙ` and create goals for other
-    `Δ ⊢ pᵢ`.
+  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ ⇒ q`, `papply t` apply it on another goal using a chain
+  of `Proof.mp`.
+  - `papply t` will apply `t` on the current goal `Δ ⊢ q` (where `Γ` is a subset of `Δ`) and create
+    goals for `Δ ⊢ pᵢ`.
+  - `papply t at h` (where `h` is an identifier) will apply `t` on the local hypothesis `h` with
+    type `Δ ⊢ pₙ` (where `Γ`
+    is a subset of `Δ`), replace it with `Δ ⊢ q` and create goals for other `Δ ⊢ pᵢ`.
+  - `papply t at k` (where `k` is an number literal) will apply `t` on the `k`-th assumption `pₙ` in
+    current goal (on the LHS of `⊢`, counting from right to left), replace it with `q` and create
+    goals for other `Δ ⊢ pᵢ`.
   
-  `papply with d` limits the number of `Proof.mp` (equal to `n-1`) not to exceed `d`. Default is 100 if `d` is not specified.
+  `papply ⋯ with d` controls the number of `Proof.mp` (equal to `n`) to be `d`. If `with` is not
+  presented, `papply` will try from `n = 0` until it succeeds or exhausts all `Proof.mp`.
   -/
-syntax "papply" (ppSpace colGt term) ("at" (ident <|> num))? ("with" num)? : tactic
-
-elab_rules : tactic
-| `(tactic| papply $t with $d) => withMainContext do
-  let mainGoal ← getMainGoal
-  let (goalTerm, newGoals) ← papply (← elabTerm t none true) (← mainGoal.getType') d.getNat
-  mainGoal.assign goalTerm
-  replaceMainGoal newGoals
-| `(tactic| papply $t at $h:ident with $d) => withMainContext do
-  let some ldecl := (← getLCtx).findFromUserName? h.getId | throwError m!"{h} not found"
-  let some (𝓛, n, Γ, p) := ldecl.type.app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
-  let q ← mkFreshExprMVar (some (mkApp2 (.const ``Formula []) 𝓛 n))
-  let goal := mkApp4 (.const ``Proof []) 𝓛 n Γ (mkApp4 (.const ``Formula.imp []) 𝓛 n p q)
-  let (goalTerm, newGoals) ← papply (← elabTerm t none true) goal d.getNat
-  let (_, mainGoal) ← (← getMainGoal).note ldecl.userName
-    (mkApp7 (.const ``mp []) 𝓛 n Γ p q goalTerm ldecl.toExpr)
-    (some (mkApp4 (.const ``Proof []) 𝓛 n Γ q))
-  let mainGoal ← mainGoal.tryClear ldecl.fvarId
-  replaceMainGoal ([mainGoal] ++ newGoals)
-
-macro_rules
-| `(tactic| papply $t) => `(tactic| papply $t with 100)
-| `(tactic| papply $t at $h:ident) => `(tactic| papply $t at $h with 100)
-| `(tactic| papply $t at $n:num with $d) =>
-  `(tactic|
-    eapply cut; swap;
-    (on_goal 1 =>
-      pswap 0 $(mkNatLit (n.getNat+1))
-      pclear 0);
-    (on_goal 2 =>
-      eapply mp
-      on_goal 2 => passumption $n
-      papply $t with $d))
-| `(tactic| papply $t at $n:num) => `(tactic| papply $t at $n with 100)
+elab "papply" t:(ppSpace colGt term) l:(location)? d:(depth)? : tactic => withMainContext do
+  let d := d.map λ d => d.raw[1].toNat
+  match l with
+  | none =>
+    let mainGoal ← getMainGoal
+    let (goalTerm, newGoals) ← papply (← elabTerm t none true) (← mainGoal.getType') d
+    mainGoal.assign goalTerm
+    replaceMainGoal newGoals
+  | some l =>
+    if l.raw[1].getKind == identKind then
+      let target := l.raw[1]
+      let some ldecl := (← getLCtx).findFromUserName? target.getId | throwError m!"{target} not found"
+      let some (𝓛, n, Γ, p) := ldecl.type.app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
+      let q ← mkFreshExprMVar (some (mkApp2 (.const ``Formula []) 𝓛 n))
+      let goal := mkApp4 (.const ``Proof []) 𝓛 n Γ (mkApp4 (.const ``Formula.imp []) 𝓛 n p q)
+          let (goalTerm, newGoals) ← papply (← elabTerm t none true) goal d
+      let (_, mainGoal) ← (← getMainGoal).note ldecl.userName
+        (mkApp7 (.const ``mp []) 𝓛 n Γ p q goalTerm ldecl.toExpr)
+        (some (mkApp4 (.const ``Proof []) 𝓛 n Γ q))
+      let mainGoal ← mainGoal.tryClear ldecl.fvarId
+      replaceMainGoal (mainGoal :: newGoals)
+    else if l.raw[1].getKind == numLitKind then
+      let n := l.raw[1].toNat
+      let [goal, newMainGoal] ← evalTacticAt
+        (← `(tactic| (
+          eapply cut
+          on_goal 2 =>
+            pswap 0 $(mkNatLit (n+1))
+            pclear 0
+          on_goal 1 =>
+            eapply mp
+            on_goal 2 => passumption $(mkNatLit n))))
+        (← getMainGoal)
+        | throwError "papply failed"
+      let (goalTerm, newGoals) ← papply (← elabTerm t none true) (← goal.getType') d
+      goal.assign goalTerm
+      replaceMainGoal (newMainGoal :: newGoals)
 
 /-- Apply the `n`-th assumption using `Proof.mp`. -/
-syntax "papplya" num ("at" (ident <|> num))? : tactic
+syntax "papplya" num (location)? : tactic
 
 macro_rules
 | `(tactic| papplya $n) => do `(tactic| papply $(← hypTerm n.getNat))
-| `(tactic| papplya $n at $h:ident) => do `(tactic| papply $(← hypTerm n.getNat) at $h)
-| `(tactic| papplya $n at $m:num) => do `(tactic| papply $(← hypTerm n.getNat) at $m)
+| `(tactic| papplya $n at $l) => do `(tactic| papply $(← hypTerm n.getNat) at $l)
 
 /-- Close the goal with given proof term. -/
 macro "pexact" t:(ppSpace colGt term) : tactic =>
@@ -796,7 +804,7 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) : TacticM (List MVarId) 
   - `prw [e₁, ⋯, eₙ] at h` (where `h` is an identifier) will rewrite at local hypothesis `h`.
   - `prw [e₁, ⋯, eₙ] at n` (where `n` is a number) will rewrite on `n`-th assumption.
   -/
-syntax "prw" "[" withoutPosition(prwRule,*,?) "]" ("at" (ident <|> num))? : tactic
+syntax "prw" "[" withoutPosition(prwRule,*,?) "]" (location)? : tactic
 
 elab_rules : tactic
 | `(tactic| prw [$rules,*]) => do

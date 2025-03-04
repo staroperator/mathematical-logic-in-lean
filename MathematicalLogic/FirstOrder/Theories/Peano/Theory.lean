@@ -507,7 +507,7 @@ theorem not_lt_zero : ↑ᵀ^[n] PA ⊢ ~ t ⋖ 0 := by
   pintro
   papply exists_elim
   · passumption 0
-  · simp; pintro; prw [succ_add]; pexact succ_ne_zero
+  · pintro; simp; prw [succ_add]; pexact succ_ne_zero
 
 theorem lt_succ_self : ↑ᵀ^[n] PA ⊢ t ⋖ S t := by
   prw [lt_succ_iff]; pexact le_refl
