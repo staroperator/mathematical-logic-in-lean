@@ -82,7 +82,7 @@ theorem cov_eval {f : Partrec (n + 2)} (hf : ∀ a b, (f (a ∷ᵥ b ∷ᵥ v)).
   | succ m ih =>
     nth_rw 1 [cov]; rw [prec_eval_succ, ←cov]
     simp [ih, Part.eq_some_iff]
-    refine ⟨_, _, _, ⟨Part.get _ (hf _ _), Part.get_mem (hf _ _), rfl, rfl, rfl⟩, ?_⟩
+    refine ⟨_, _, Part.get _ (hf _ _), ⟨Part.get_mem (hf _ _), rfl, rfl⟩, ?_⟩
     simp [Primrec.rcons_eval]
     congr! with i
     cases i using Fin.lastCases <;> simp [ih]
@@ -104,7 +104,7 @@ theorem covrec_eval {f : Partrec (n + 2)} (hf : ∀ a b, (f (a ∷ᵥ b ∷ᵥ v
   `bd f (k ∷ᵥ v)` replaces all unbounded `mu` in `f v` with a `Primrec.bdMu` bounded by `k`;
   it returns `0` for `Part.none`, and `x + 1` for `Part.some x`.
   
-  `bd` is similar to `Partrec.evaln` in mathlib, although `bd` itself is not primitive recursive
+  `bd` is similar to `Nat.Partrec.Code.evaln` in mathlib, although `bd` itself is not primitive recursive
   (since `bd f` is equivalent to `f + 1` when `f` is primitive recursive). -/
 def bd : Partrec n → Primrec (n + 1)
 | const n => .const (n + 1)
@@ -349,14 +349,14 @@ def site (f g h : Partrec n) : Partrec n :=
 theorem mem_site_eval_iff : m ∈ site f g h v ↔ 0 < f v ∧ m ∈ g v ∨ 0 ∈ f v ∧ m ∈ h v := by
   simp [site, Fin.forall_fin_succ, Part.pos_iff]
   constructor
-  · rintro ⟨a, _, _, ⟨_, h₁, ⟨_, ⟨_, h₂, rfl⟩, _, ⟨_, h₃, rfl⟩, rfl, rfl, rfl⟩⟩, hm⟩
+  · rintro ⟨a, _, _, ⟨h₁, ⟨_, h₂, rfl⟩, _, h₃, rfl⟩, hm⟩
     simp [Vec.exists_vec_succ] at h₂ h₃
     rcases h₂ with ⟨k, _, ⟨h₂, h₂'⟩, rfl⟩
     rcases h₃ with ⟨_, _, ⟨h₃, h₃'⟩, rfl⟩
     simp [←Vec.ext_iff] at h₂' h₃'; subst h₂' h₃'
     apply Part.mem_unique h₂ at h₃; subst h₃
     simp [Part.mem_find_iff, ←Vec.ext_iff] at h₂
-    rcases h₂ with ⟨⟨_, _, _, ⟨_, h₂, rfl, rfl, rfl, _⟩, h₃⟩, _⟩
+    rcases h₂ with ⟨⟨_, h₂, h₃⟩, h₄⟩
     apply Part.mem_unique h₁ at h₂; subst h₂
     split at hm
     next ha =>
@@ -369,19 +369,19 @@ theorem mem_site_eval_iff : m ∈ site f g h v ↔ 0 < f v ∧ m ∈ g v ∨ 0 �
       simp [hm]; apply bd_sound (k := k); simp [Nat.sub_add_cancel h₃]
   · rintro (⟨⟨a, h₁, h₂⟩, h₃⟩ | ⟨h₁, h₂⟩)
     · apply bd_of_mem at h₃; rcases h₃ with ⟨k, h₃⟩
-      refine ⟨a, m, h.bd (k ∷ᵥ v) - 1, ⟨a, h₁, m, ⟨m + 1, ⟨k ∷ᵥ v, ⟨?goal1, ?_⟩, ?_⟩, ?_⟩,
-        h.bd (k ∷ᵥ v) - 1, ⟨h.bd (k ∷ᵥ v), ⟨k ∷ᵥ v, ⟨?goal1, ?_⟩, ?_⟩, ?_⟩, ?_, ?_⟩, ?_⟩ <;> simp [h₂, h₃]
+      refine ⟨a, m, h.bd (k ∷ᵥ v) - 1, ⟨h₁, ⟨m + 1, ⟨k ∷ᵥ v, ⟨?goal1, ?_⟩, ?_⟩, ?_⟩,
+        h.bd (k ∷ᵥ v), ⟨k ∷ᵥ v, ⟨?goal1, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;> simp [h₂, h₃]
       simp [Part.mem_find_iff, ←Vec.ext_iff]
       constructor
-      · exists a, m + 1, h.bd (k ∷ᵥ v); simp [h₁, h₂]
-      · intro k' hk; exists a, 0, h.bd (k' ∷ᵥ v); simp [hk, h₁, h₂]
+      · exists a; simp [h₁, h₂]
+      · intro k' hk; exists a; simp [hk, h₁, h₂]
     · apply bd_of_mem at h₂; rcases h₂ with ⟨k, h₂⟩
-      refine ⟨0, g.bd (k ∷ᵥ v) - 1, m, ⟨0, h₁, g.bd (k ∷ᵥ v) - 1, ⟨g.bd (k ∷ᵥ v), ⟨k ∷ᵥ v, ⟨?goal2, ?_⟩, ?_⟩, ?_⟩,
-        h.bd (k ∷ᵥ v) - 1, ⟨h.bd (k ∷ᵥ v), ⟨k ∷ᵥ v,  ⟨?goal2, ?_⟩, ?_⟩, ?_⟩, ?_, ?_⟩, ?_⟩ <;> simp [h₂]
+      refine ⟨0, g.bd (k ∷ᵥ v) - 1, m, ⟨h₁, ⟨g.bd (k ∷ᵥ v), ⟨k ∷ᵥ v, ⟨?goal2, ?_⟩, ?_⟩, ?_⟩,
+        m + 1, ⟨k ∷ᵥ v, ⟨?goal2, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;> simp [h₂]
       simp [Part.mem_find_iff, ←Vec.ext_iff]
       constructor
-      · exists 0, g.bd (k ∷ᵥ v), m + 1; simp [h₁, h₂]
-      · intro k' hk; exists 0, g.bd (k' ∷ᵥ v), 0; simp [hk, h₁, h₂]
+      · exists 0; simp [h₁, h₂]
+      · intro k' hk; exists 0; simp [hk, h₁, h₂]
 
 theorem site_dom : (site f g h v).Dom ↔ 0 < f v ∧ (g v).Dom ∨ 0 ∈ f v ∧ (h v).Dom := by
   simp [Part.dom_iff_mem, mem_site_eval_iff]; aesop
@@ -451,10 +451,8 @@ theorem mem_par_eval_right : ¬ (f v).Dom → m ∈ g v → m ∈ par f g v := b
 
 theorem mem_par_eval : m ∈ par f g v → m ∈ f v ∨ m ∈ g v := by
   intro h
-  simp [par, mem_site_eval_iff, Fin.forall_fin_succ, Vec.exists_vec_succ, eq_comm (a := 0)] at h
-  simp [←Vec.ext_iff] at h
-  rcases h with ⟨⟨k, _, ⟨⟨h₁, rfl⟩, h₂⟩⟩, ⟨_, ⟨_, _, ⟨h₃, rfl⟩, rfl⟩, rfl⟩⟩
-    | ⟨⟨k, _, ⟨⟨h₁, rfl⟩, h₂⟩⟩, ⟨_, ⟨_, _, ⟨h₃, rfl⟩, rfl⟩, rfl⟩⟩
+  simp [par, mem_site_eval_iff, Fin.forall_fin_succ, Vec.exists_vec_succ, ←Vec.ext_iff, eq_comm (a := 0)] at h
+  rcases h with ⟨⟨k, h₁, h₂⟩, _, ⟨_, h₃, rfl⟩, rfl⟩ | ⟨⟨k, h₁, h₂⟩, _, ⟨_, h₃, rfl⟩, rfl⟩
   · apply Part.mem_unique h₁ at h₃; subst h₃
     left; apply bd_sound (k := k)
     simp [Nat.sub_add_cancel h₂]
