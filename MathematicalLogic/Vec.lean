@@ -37,18 +37,15 @@ namespace Fin
   (i : Fin 4) : motive i :=
   i.cases zero λ i => i.cases one λ j => j.cases two λ k => k.cases three (·.elim0)
 
-@[simp] theorem forall_fin1 {p : Fin 1 → Prop} : (∀ (i : Fin 1), p i) ↔ p 0 :=
-  ⟨λ h => h 0, λ h i => i.cases1 h⟩
-@[simp] theorem forall_fin2 {p : Fin 2 → Prop} : (∀ (i : Fin 2), p i) ↔ p 0 ∧ p 1 :=
-  ⟨λ h => ⟨h 0, h 1⟩, λ h i => i.cases2 h.left h.right⟩
-@[simp] theorem forall_fin3 {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 :=
-  ⟨λ h => ⟨h 0, h 1, h 2⟩, λ h i => i.cases3 h.left h.right.left h.right.right⟩
+attribute [simp] forall_fin_one forall_fin_two
+@[simp] theorem forall_fin_three {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 := by simp [forall_fin_succ]
 
 theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (OfNat.ofNat n : Fin (m + n + 1)) := by
   simp [OfNat.ofNat, Nat.cast]
   simp [natCast_def]
   rw [Nat.mod_eq_of_lt (by simp [Nat.lt_succ]), Nat.mod_eq_of_lt (by simp [Nat.lt_succ])]
 
+/-- `castAdd' x m` embeds `x : Fin m` in `Fin (m + n)`. -/
 def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
 @[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
 @[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl
@@ -64,7 +61,7 @@ theorem castAdd'_or_addNat (x : Fin (n + m)) : (∃ y, x = castAdd' y n) ∨ ∃
 
 end Fin
 
-abbrev Vec (α : Type u) (n : ℕ) := Fin n → α
+@[reducible] def Vec (α : Type u) (n : ℕ) := Fin n → α
 
 namespace Vec
 
@@ -129,14 +126,11 @@ theorem eq_three (v : Vec α 3) : v = [v 0, v 1, v 2]ᵥ := by
 theorem eq_four (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
   rw [eq_cons v, eq_three v.tail]; rfl
 
-@[simp] theorem exists_vec0 {p : Vec α 0 → Prop} : ∃ (v : Vec α 0), p v ↔ p []ᵥ := by
-  simp [Vec, Fin.exists_fin_zero_pi]; simp [Vec.eq_nil]
-@[simp] theorem exists_vec1 {p : Vec α 1 → Prop} : (∃ (v : Vec α 1), p v) ↔ ∃ x, p [x]ᵥ := by
-  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
-@[simp] theorem exists_vec2 {p : Vec α 2 → Prop} : (∃ (v : Vec α 2), p v) ↔ ∃ x y, p [x, y]ᵥ := by
-  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
-@[simp] theorem exists_vec3 {p : Vec α 3 → Prop} : (∃ (v : Vec α 3), p v) ↔ ∃ x y z, p [x, y, z]ᵥ := by
-  simp [Vec, Fin.exists_fin_succ_pi, Fin.exists_fin_zero_pi]; simp [Vec.cons, Vec.eq_nil]
+theorem exists_vec_succ {p : Vec α (n + 1) → Prop} : (∃ v, p v) ↔ ∃ a v, p (a ∷ᵥ v) := Fin.exists_fin_succ_pi (P := p)
+@[simp high] theorem exists_vec0 {p : Vec α 0 → Prop} : (∃ v, p v) ↔ p []ᵥ := by simp [Vec.eq_nil]
+@[simp] theorem exists_vec1 {p : Vec α 1 → Prop} : (∃ v, p v) ↔ ∃ x, p [x]ᵥ := by simp [exists_vec_succ]
+@[simp] theorem exists_vec2 {p : Vec α 2 → Prop} : (∃ v, p v) ↔ ∃ x y, p [x, y]ᵥ := by simp [exists_vec_succ]
+@[simp] theorem exists_vec3 {p : Vec α 3 → Prop} : (∃ v, p v) ↔ ∃ x y z, p [x, y, z]ᵥ := by simp [exists_vec_succ]
 
 section
 
@@ -152,10 +146,8 @@ variable {motive : {n : ℕ} → Vec α n → Sort v}
 
 end
 
-@[simp] theorem comp_nil : f ∘ []ᵥ = []ᵥ := by ext x; exact x.elim0
-@[simp] theorem comp_cons : f ∘ (a ∷ᵥ v) = f a ∷ᵥ f ∘ v := by
+theorem comp_cons : f ∘ (a ∷ᵥ v) = f a ∷ᵥ f ∘ v := by
   ext x; cases x using Fin.cases <;> rfl
-theorem comp_comp {v : Vec α n} : g ∘ (f ∘ v) = (g ∘ f) ∘ v := rfl
 
 def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
 @[simp] theorem rcons_nil : rcons []ᵥ x = [x]ᵥ := by
@@ -166,6 +158,9 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
 @[simp] theorem rcons_last : rcons v a (Fin.last _) = a := Fin.snoc_last _ _
 @[simp] theorem rcons_castSucc : rcons v a (Fin.castSucc x) = v x := Fin.snoc_castSucc _ _ _
 
+/--
+  `append v₁ v₂` adds elements in `v₁` before elements in `v₂`, but adds length of `v₁` on the right of `v₂`,
+  contrary to `Fin.append`. -/
 def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
   match n with
   | 0 => v₂
@@ -174,11 +169,11 @@ infixl:65 " ++ᵥ " => append
 @[simp] theorem nil_append : []ᵥ ++ᵥ v = v := rfl
 @[simp] theorem cons_append : a ∷ᵥ v₁ ++ᵥ v₂ = a ∷ᵥ (v₁ ++ᵥ v₂) := rfl
 
-theorem append_left {v₂ : Vec α m} : (v₁ ++ᵥ v₂) (Fin.castAdd' x m) = v₁ x := by
+@[simp] theorem append_left {v₂ : Vec α m} : (v₁ ++ᵥ v₂) (Fin.castAdd' x m) = v₁ x := by
   induction v₁ with
   | nil => exact x.elim0
   | cons a v₁ ih => cases x using Fin.cases <;> simp [ih]
-theorem append_right {v₁ : Vec α n} : (v₁ ++ᵥ v₂) (Fin.addNat x n) = v₂ x := by
+@[simp] theorem append_right {v₁ : Vec α n} : (v₁ ++ᵥ v₂) (Fin.addNat x n) = v₂ x := by
   induction v₁ with
   | nil => simp
   | cons a v₁ ih => simp [ih]
@@ -196,13 +191,13 @@ def max : {n : ℕ} → Vec ℕ n → ℕ
 | 0, _ => 0
 | _ + 1, v => Nat.max v.head v.tail.max
 
-theorem le_max {v : Vec ℕ n} : v i ≤ v.max := by
+theorem le_max {v : Vec ℕ n} (i) : v i ≤ v.max := by
   induction n with
   | zero => exact i.elim0
   | succ n ih =>
     cases i using Fin.cases with
     | zero => apply Nat.le_max_left
-    | succ => rw [←tail_app (v := v)]; apply Nat.le_trans ih; apply Nat.le_max_right
+    | succ => rw [←tail_app (v := v)]; apply Nat.le_trans (ih _); apply Nat.le_max_right
 
 theorem max_le {v : Vec ℕ n} : (∀ i, v i ≤ m) → v.max ≤ m := by
   intro h
@@ -214,7 +209,7 @@ theorem max_le {v : Vec ℕ n} : (∀ i, v i ≤ m) → v.max ≤ m := by
 
 theorem max_le_iff {v : Vec ℕ n} : v.max ≤ m ↔ ∀ i, v i ≤ m := by
   constructor
-  · intro h i; exact le_trans le_max h
+  · intro h i; exact le_trans (le_max i) h
   · exact max_le
 
 @[simp] theorem max_zero : max (n := n) (λ _ => 0) = 0 := by
@@ -236,7 +231,7 @@ theorem max_eq_nth (v : Vec ℕ (n + 1)) : ∃ i, v.max = v i := by
 theorem le_max_iff {v : Vec ℕ (n + 1)} : m ≤ v.max ↔ ∃ i, m ≤ v i := by
   constructor
   · intro h; rcases v.max_eq_nth with ⟨i, h'⟩; exists i; rw [←h']; exact h
-  · intro ⟨i, h⟩; apply le_trans h; exact le_max
+  · intro ⟨i, h⟩; apply le_trans h; exact le_max i
 
 theorem max_pos_iff {v : Vec ℕ n} : v.max > 0 ↔ ∃ i, v i > 0 := by
   induction n with simp [max]

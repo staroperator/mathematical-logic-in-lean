@@ -189,12 +189,16 @@ def eq (f g : Primrec n) := and (le f g) (ge f g)
 
 abbrev ne (f g : Primrec n) := not (eq f g)
 
+def cond : Primrec 3 :=
+  (proj 1).cases (proj 1)
+@[simp] theorem cond_eval : cond v = if 0 < v 0 then v 1 else v 2 := by
+  simp [cond, cases_eval]
+  cases v 0 <;> simp
+
 def ite (f g h : Primrec n) : Primrec n :=
-  ((proj 1).cases (proj 1)).comp₃ f g h
+  cond.comp₃ f g h
 @[simp] theorem ite_eval : ite f g h v = if 0 < f v then g v else h v := by
-  simp [ite, cases_eval]
-  generalize f v = n
-  cases n <;> simp
+  simp [ite]
 
 def odd : Primrec 1 :=
   zero.prec (nsign.comp₁ (proj 1))
@@ -547,7 +551,7 @@ theorem bdMu_eval_lt_self_iff :
     apply bdMu_eval_gt
     exact Nat.lt_of_lt_of_le h₁ h₃
 
-theorem bdMu_eval_eq {f : Primrec (_ + 1)} :
+theorem bdMu_eval_eq {f : Primrec _} :
   n ≤ m → (∀ k < n, f (k ∷ᵥ v) = 0) → f (n ∷ᵥ v) > 0 → bdMu f (m ∷ᵥ v) = n := by
   intro h₁ h₂ h₃
   by_contra h; apply lt_or_gt_of_ne at h; rcases h with h | h
@@ -559,23 +563,23 @@ theorem bdMu_eval_eq {f : Primrec (_ + 1)} :
 
 def bdExists (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
   lt ((bdMu g).comp (f ∷ᵥ proj)) f
-theorem bdExists_eval_pos_iff :
+@[simp] theorem bdExists_eval_pos_iff :
   0 < bdExists f g v ↔ ∃ k < f v, 0 < g (k ∷ᵥ v) := by
   simp [bdExists]; rw [Vec.eq_cons λ _ => _]; simp [bdMu_eval_lt_self_iff]
-theorem bdExists_eval_zero_iff :
+@[simp] theorem bdExists_eval_zero_iff :
   bdExists f g v = 0 ↔ ∀ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
-  simp [Nat.ne_zero_iff_zero_lt, bdExists_eval_pos_iff]
+  simp [Nat.ne_zero_iff_zero_lt]
 
 def bdForall (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
   not (bdExists f (not g))
-theorem bdForall_eval_pos_iff :
+@[simp] theorem bdForall_eval_pos_iff :
   0 < bdForall f g v ↔ ∀ k < f v, 0 < g (k ∷ᵥ v) := by
   simp [bdForall, bdExists_eval_zero_iff, Nat.ne_zero_iff_zero_lt]
-theorem bdForall_eval_zero_iff :
+@[simp] theorem bdForall_eval_zero_iff :
   bdForall f g v = 0 ↔ ∃ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]
-  simp [Nat.ne_zero_iff_zero_lt, bdForall_eval_pos_iff]
+  simp [Nat.ne_zero_iff_zero_lt]
 
 open Lean.Parser Std in
 def repr : Primrec n → ℕ → Format

@@ -330,10 +330,10 @@ theorem on_formula (i : 𝓜 ≃ᴹ 𝓝) (p : 𝓛.Formula n) (ρ : Vec 𝓜 n)
   | rel r v => rw [i.on_rel]; congr!; simp [i.on_term]
   | eq t₁ t₂ => simp [←i.on_term]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
-  | all p ih => rw [i.toEquiv.forall_congr]; simp [ih]
+  | all p ih => rw [i.toEquiv.forall_congr]; simp [ih, Vec.comp_cons]
 
 theorem elementary_equivalent (i : 𝓜 ≃ᴹ 𝓝) : 𝓜 ≃ᴱ 𝓝 := by
-  intro; simp [i.on_formula]
+  intro; simp [i.on_formula, Vec.eq_nil]
 
 end Isomorphism
 

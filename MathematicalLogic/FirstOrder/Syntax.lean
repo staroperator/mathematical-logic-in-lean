@@ -45,7 +45,7 @@ instance decEq [∀ n, DecidableEq (𝓛.Func n)] : DecidableEq (𝓛.Term n) :=
 | _ ⬝ᶠ v => (Vec.max λ i => (v i).size) + 1
 instance : SizeOf (𝓛.Term n) := ⟨size⟩
 @[simp] theorem sizeOf_lt_func : sizeOf (v i) < sizeOf (f ⬝ᶠ v) :=
-  Nat.lt_succ_of_le (Vec.le_max (v := λ i => (v i).size))
+  Nat.lt_succ_of_le (Vec.le_max (v := λ i => (v i).size) i)
 
 end Term
 
@@ -152,7 +152,7 @@ theorem Term.shiftN_subst_liftN : (↑ₜ^[m] t)[⇑ₛ^[m] σ]ₜ = ↑ₜ^[m] 
   | succ m ih => simp [shift_subst_lift, ih]
 
 theorem Subst.castAdd'_append_addNat : (λ i => #(i.castAdd' n)) ++ᵥ (λ i => #(i.addNat m)) = @Subst.id 𝓛 (n + m) := by
-  ext x; rcases x.castAdd'_or_addNat with (⟨x, rfl⟩ | ⟨x, rfl⟩) <;> simp [Vec.append_left, Vec.append_right]
+  ext x; rcases x.castAdd'_or_addNat with (⟨x, rfl⟩ | ⟨x, rfl⟩) <;> simp
 
 def Term.vars : 𝓛.Term n → Set (Fin n)
 | #x => {x}
