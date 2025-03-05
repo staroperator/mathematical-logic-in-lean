@@ -647,7 +647,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
     · simp [isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, h⟩
       simp at h; subst h
-      exact .imp_self
+      exact .imp_imp_self
     · simp [Fin.ofNat_succ 6, Fin.forall_fin_succ, isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, ⟨r, rfl⟩, h⟩
       simp at h; subst h
@@ -655,7 +655,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
     · simp [isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, h⟩
       simp at h; subst h
-      exact .transpose
+      exact .imp_contra
     · simp [isTermPR_eval_pos_iff, isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, ⟨p, rfl⟩, ⟨t, rfl⟩, h⟩
       simp [Formula.substSinglePR_eval] at h; subst h
@@ -709,7 +709,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         · simp
   · intro h₃
     induction h₃ generalizing d k with (subst h₁; rw [←h, covrec_eval, h]; simp)
-    | @imp_self _ p q =>
+    | @imp_imp_self _ p q =>
       exists 0; simp
       refine ⟨Encodable.encode p, ?_, Encodable.encode q, ?_, ?_⟩
       · exact Formula.encode_lt_imp_left
@@ -728,7 +728,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         apply Formula.encode_lt_imp_right.trans'
         exact Formula.encode_lt_imp_right
       · simp [Fin.forall_fin_succ, isFormulaPR_eval_pos_iff]
-    | @transpose _ p q =>
+    | @imp_contra _ p q =>
       exists 2; simp
       refine ⟨Encodable.encode p, ?_, Encodable.encode q, ?_, ?_⟩
       · apply Formula.encode_lt_imp_right.trans'

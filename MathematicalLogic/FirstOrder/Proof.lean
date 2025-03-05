@@ -5,9 +5,9 @@ import MathematicalLogic.FirstOrder.Proof.Init
 namespace FirstOrder.Language
 
 inductive Axiom (L : Language) : L.FormulaSet n where
-| imp_self : L.Axiom (p ⇒ q ⇒ p)
+| imp_imp_self : L.Axiom (p ⇒ q ⇒ p)
 | imp_distrib : L.Axiom ((p ⇒ q ⇒ r) ⇒ (p ⇒ q) ⇒ p ⇒ r)
-| transpose : L.Axiom ((~ p ⇒ ~ q) ⇒ q ⇒ p)
+| imp_contra : L.Axiom ((~ p ⇒ ~ q) ⇒ q ⇒ p)
 | forall_elim : L.Axiom (∀' p ⇒ p[↦ₛ t]ₚ)
 | forall_self : L.Axiom (p ⇒ ∀' ↑ₚp)
 | forall_imp : L.Axiom (∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q)
@@ -50,7 +50,7 @@ theorem weaken_append : Γ ⊢ p → Γ,' q ⊢ p := weaken FormulaSet.subset_ap
 theorem mp₂ (h₁ : Γ ⊢ p ⇒ q ⇒ r) (h₂ : Γ ⊢ p) (h₃ : Γ ⊢ q) : Γ ⊢ r := mp (mp h₁ h₂) h₃
 
 theorem identity : Γ ⊢ p ⇒ p :=
-  mp₂ (ax .imp_distrib) (ax .imp_self) (ax (.imp_self (q := p)))
+  mp₂ (ax .imp_distrib) (ax .imp_imp_self) (ax (.imp_imp_self (q := p)))
 
 theorem deduction : Γ ⊢ p ⇒ q ↔ Γ,' p ⊢ q := by
   constructor
@@ -60,8 +60,8 @@ theorem deduction : Γ ⊢ p ⇒ q ↔ Γ,' p ⊢ q := by
     | hyp h =>
       cases h with
       | inl h => subst h; exact identity
-      | inr h => exact mp (ax .imp_self) (hyp h)
-    | ax h => exact mp (ax .imp_self) (ax h)
+      | inr h => exact mp (ax .imp_imp_self) (hyp h)
+    | ax h => exact mp (ax .imp_imp_self) (ax h)
     | mp _ _ ih₁ ih₂ => exact mp (mp (ax .imp_distrib) ih₁) ih₂
 
 theorem cut (h₁ : Γ ⊢ p) (h₂ : Γ,' p ⊢ q) : Γ ⊢ q := mp (deduction.mpr h₂) h₁
@@ -156,7 +156,7 @@ elab "pclear" n:(ppSpace colGt num) : tactic => do
   replaceMainGoal [mainGoal]
 
 /-- Remove all assumptions except the `FormulaSet`. -/
-macro "pclears" : tactic => `(tactic| repeat apply pclear 0)
+macro "pclears" : tactic => `(tactic| repeat pclear 0)
 
 /-- Swap the `n`-th assumption and the `m`-th assumption. -/
 elab "pswap" n:num m:num : tactic => do
@@ -305,12 +305,12 @@ theorem composition : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ r) ⇒ p ⇒ r := by
   papplya 2
   passumption
 
-theorem transpose : Γ ⊢ (~ p ⇒ ~ q) ⇒ q ⇒ p := ax .transpose
+theorem imp_contra : Γ ⊢ (~ p ⇒ ~ q) ⇒ q ⇒ p := ax .imp_contra
 
 theorem true_intro : Γ ⊢ ⊤ := identity
 
 theorem false_elim : Γ ⊢ ⊥ ⇒ p := by
-  papply transpose
+  papply imp_contra
   pintro
   exact true_intro
 
@@ -326,10 +326,8 @@ theorem imp_double_neg : Γ ⊢ p ⇒ ~ ~ p := by
   passumption
 
 theorem double_neg_imp : Γ ⊢ ~ ~ p ⇒ p := by
-  pintro
-  papply transpose
-  · exact imp_double_neg
-  · passumption
+  papply imp_contra
+  pexact imp_double_neg
 
 theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⩑ q := by
   pintros
@@ -357,7 +355,7 @@ theorem or_inl : Γ ⊢ p ⇒ p ⩒ q := by
   pintros
   papply contradiction <;> passumption
 
-theorem or_inr : Γ ⊢ q ⇒ p ⩒ q := ax .imp_self
+theorem or_inr : Γ ⊢ q ⇒ p ⩒ q := ax .imp_imp_self
 
 theorem or_elim : Γ ⊢ p ⩒ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
   pintros
@@ -400,6 +398,29 @@ theorem andN_elim {v : Vec (L.Formula n) m} (i : Fin m) :
     cases i using Fin.cases with
     | zero => papply and_left at 0; passumption 0
     | succ i => papply and_right at 0; papply ih i at 0; passumption 0
+
+theorem orN_intro {v : Vec (L.Formula n) m} (i : Fin m) :
+  Γ ⊢ v i ⇒ ⋁ i, v i := by
+  induction m with
+  | zero => exact i.elim0
+  | succ n ih =>
+    pintro
+    cases i using Fin.cases with
+    | zero => papply or_inl; passumption 0
+    | succ i => papply or_inr; papply ih; passumption 0
+
+theorem orN_elim {v : Vec (L.Formula n) m} :
+  Γ ⊢ ⋁ i, v i → (∀ i, Γ ⊢ v i ⇒ p) → Γ ⊢ p := by
+  intro h₁ h₂
+  induction m generalizing Γ with
+  | zero => papply false_elim; exact h₁
+  | succ m ih =>
+    papply or_elim
+    · exact h₁
+    · exact h₂ 0
+    · pintro; apply ih
+      · passumption
+      · intro i; pclears; exact h₂ i.succ
 
 theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
 theorem iff_mp : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
@@ -943,9 +964,8 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
   constructor
   · intro h₁ h₂
     apply h₁
-    prevert
-    papply imp_double_neg
-    exact h₂
+    papplya 0
+    pexact h₂
   · intro h₁ h₂
     apply h₁
     papply double_neg_imp
@@ -966,7 +986,7 @@ theorem Consistent.unprovable : Consistent Γ → Γ ⊢ ~ p → Γ ⊬ p := by
 
 def Complete (Γ : L.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
 
-theorem Complete.neg_provable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
+theorem Complete.disprovable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
   rcases h p with h₁ | h₁ <;> simp [h₁]
 
 theorem Complete.unprovable_iff (h₁ : Complete Γ) (h₂ : Consistent Γ) : Γ ⊬ p ↔ Γ ⊢ ~ p := by

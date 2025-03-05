@@ -110,7 +110,7 @@ variable {t₁ t₂ t₁' t₂' : Peano.Term n}
 
 @[prw] theorem RwFormula.le (h₁ : RwTerm Γ t₁ t₁') (h₂ : RwTerm Γ t₂ t₂') : RwFormula Γ (t₁ ⪁ t₂) (t₁' ⪁ t₂') := by
   simp [Peano.le]
-  refine neg ?_
+  apply neg
   papply iff_congr_forall
   pintro
   refine neg (eq (.add ?_ .refl) ?_)

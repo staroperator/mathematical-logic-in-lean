@@ -514,11 +514,11 @@ class Enumerable (s : Set α) where
   mem_iff : ∀ x, x ∈ s ↔ ∃ n, 0 < enum [n, Encodable.encode x]ᵥ
 
 theorem Enumerable.not_mem_iff [Enumerable s] (x : α) :
-  x ∉ s ↔ ∀ n, enum s [n, Encodable.encode x]ᵥ = 0 := by
+  x ∉ s ↔ ∀ n, 0 ∈ enum s [n, Encodable.encode x]ᵥ := by
   rw [mem_iff x]; simp
   congr! with n
   rw [←Part.some_get (enum_dom n x)]
-  simp [Part.zero_def, -Part.some_get]
+  simp [Part.zero_def, eq_comm, -Part.some_get]
 
 instance Recursive.enumerable [Recursive s] : Enumerable s where
   enum := (char s).comp₁ (.proj 1)

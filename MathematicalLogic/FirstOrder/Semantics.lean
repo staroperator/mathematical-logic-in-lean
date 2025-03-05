@@ -1,7 +1,5 @@
 import MathematicalLogic.FirstOrder.Syntax
 
-universe u v
-
 namespace FirstOrder.Language
 
 class IsStructure (L : Language) (M : Type u) where

@@ -334,7 +334,7 @@ theorem formula_of_homLimit [h : Nonempty ι] (p : φ.directLimit.Formula n) :
 theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
   ∃ i q, p = (φ.homLimit i).onFormula q ∧ q ∈ (L i).Axiom := by
   induction h with
-  | @imp_self _ p₁ p₂ =>
+  | @imp_imp_self _ p₁ p₂ =>
     rcases formula_of_homLimit p₁ with ⟨i₁, q₁, h₁⟩
     rcases formula_of_homLimit p₂ with ⟨i₂, q₂, h₂⟩
     rcases directed_of (· ≤ ·) i₁ i₂ with ⟨i, h₃, h₄⟩
@@ -343,7 +343,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     exists i, q₁' ⇒ q₂' ⇒ q₁'
     constructor
     · simp [Hom.onFormula, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
-    · exact .imp_self
+    · exact .imp_imp_self
   | @imp_distrib _ p₁ p₂ p₃ =>
     rcases formula_of_homLimit p₁ with ⟨i₁, q₁, h₁⟩
     rcases formula_of_homLimit p₂ with ⟨i₂, q₂, h₂⟩
@@ -356,7 +356,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     constructor
     · simp [Hom.onFormula, q₁', q₂', q₃']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂, h₃]
     · exact .imp_distrib
-  | @transpose _ p₁ p₂ =>
+  | @imp_contra _ p₁ p₂ =>
     rcases formula_of_homLimit p₁ with ⟨i₁, q₁, h₁⟩
     rcases formula_of_homLimit p₂ with ⟨i₂, q₂, h₂⟩
     rcases directed_of (· ≤ ·) i₁ i₂ with ⟨i, h₃, h₄⟩
@@ -365,7 +365,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     exists i, (~ q₁' ⇒ ~ q₂') ⇒ q₂' ⇒ q₁'
     constructor
     · simp [Hom.onFormula, Hom.onFormula_neg, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
-    · exact .transpose
+    · exact .imp_contra
   | @forall_elim _ p t =>
     rcases term_of_homLimit t with ⟨i₁, t', h₁⟩
     rcases formula_of_homLimit p with ⟨i₂, q, h₂⟩
