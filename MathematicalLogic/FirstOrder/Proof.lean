@@ -407,15 +407,15 @@ theorem andN_intro {v : Vec (𝓛.Formula n) m} :
     · apply h
     · apply ih; intro i; apply h
 
-theorem andN_elim {v : Vec (𝓛.Formula n) m} {i : Fin m} :
-  (Γ ⊢ ⋀ i, v i) → Γ ⊢ v i := by
-  intro h
+theorem andN_elim {v : Vec (𝓛.Formula n) m} (i : Fin m) :
+  Γ ⊢ (⋀ i, v i) ⇒ v i := by
   induction m with
   | zero => exact i.elim0
   | succ n ih =>
+    pintro
     cases i using Fin.cases with
-    | zero => exact mp and_left h
-    | succ i => apply ih (mp and_right h)
+    | zero => papply and_left at 0; passumption 0
+    | succ i => papply and_right at 0; papply ih i at 0; passumption 0
 
 theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
 theorem iff_mp : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
@@ -565,11 +565,11 @@ theorem forallN_imp : Γ ⊢ ∀^[m] p ⇒ ∀^[m] (p ⇒ q) ⇒ ∀^[m] q := by
   simp [Formula.shiftN_eq_subst]
   apply mp (p := p)
   · nth_rw 2 [←Formula.subst_id (p ⇒ q)]
-    rw [←Subst.castAdd'_append_addNat]
+    rw [Vec.eq_append Subst.id]
     papply forallN_elim'
     passumption
   · nth_rw 3 [←Formula.subst_id p]
-    rw [←Subst.castAdd'_append_addNat]
+    rw [Vec.eq_append Subst.id]
     papply forallN_elim'
     passumption
 

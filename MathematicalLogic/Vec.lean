@@ -126,6 +126,10 @@ theorem eq_three (v : Vec α 3) : v = [v 0, v 1, v 2]ᵥ := by
 theorem eq_four (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
   rw [eq_cons v, eq_three v.tail]; rfl
 
+open Lean Parser Tactic in
+macro "simp_vec" g:(location)? : tactic =>
+  `(tactic| repeat rw [Vec.eq_cons λ _ => _] $(g)?; simp [Vec.head, Vec.tail, Function.comp_def] $(g)?)
+
 theorem exists_vec_succ {p : Vec α (n + 1) → Prop} : (∃ v, p v) ↔ ∃ a v, p (a ∷ᵥ v) := Fin.exists_fin_succ_pi (P := p)
 @[simp high] theorem exists_vec0 {p : Vec α 0 → Prop} : (∃ v, p v) ↔ p []ᵥ := by simp [Vec.eq_nil]
 @[simp] theorem exists_vec1 {p : Vec α 1 → Prop} : (∃ v, p v) ↔ ∃ x, p [x]ᵥ := by simp [exists_vec_succ]
@@ -168,7 +172,6 @@ def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
 infixl:65 " ++ᵥ " => append
 @[simp] theorem nil_append : []ᵥ ++ᵥ v = v := rfl
 @[simp] theorem cons_append : a ∷ᵥ v₁ ++ᵥ v₂ = a ∷ᵥ (v₁ ++ᵥ v₂) := rfl
-
 @[simp] theorem append_left {v₂ : Vec α m} : (v₁ ++ᵥ v₂) (Fin.castAdd' x m) = v₁ x := by
   induction v₁ with
   | nil => exact x.elim0
@@ -177,6 +180,8 @@ infixl:65 " ++ᵥ " => append
   induction v₁ with
   | nil => simp
   | cons a v₁ ih => simp [ih]
+theorem eq_append (v : Vec α (m + n)) : v = (λ i => v (i.castAdd' m)) ++ᵥ λ i => v (i.addNat n) := by
+  ext x; rcases x.castAdd'_or_addNat with (⟨x, rfl⟩ | ⟨x, rfl⟩) <;> simp
 
 instance decEq [DecidableEq α] : DecidableEq (Vec α n) := by
   intro v₁ v₂

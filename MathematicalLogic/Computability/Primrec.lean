@@ -74,11 +74,10 @@ theorem cases_eval : cases f g v = v.head.casesOn (f v.tail) λ n => g (n ∷ᵥ
   generalize v.head = n
   cases n with
   | zero => rfl
-  | succ => simp [cases, prec_eval_succ]; rw [Vec.eq_cons λ _ => _]; simp
+  | succ => simp [cases, prec_eval_succ]; simp_vec
 theorem cases_eval_zero : cases f g (0 ∷ᵥ v) = f.eval v := rfl
 theorem cases_eval_succ : cases f g ((n + 1) ∷ᵥ v) = g.eval (n ∷ᵥ v) := by
-  simp [cases, prec_eval_succ]
-  rw [Vec.eq_cons λ _ => _]; simp
+  simp [cases, prec_eval_succ]; simp_vec
 
 def add : Primrec 2 :=
   (proj 0).prec (succ.comp₁ (proj 1))
@@ -316,7 +315,7 @@ theorem iterate_eval : iterate f (n ∷ᵥ x ∷ᵥ v) = (λ x => f (x ∷ᵥ v)
   simp [iterate]
   induction n with
   | zero => simp [prec_eval_zero]
-  | succ n ih => rw [Function.iterate_succ']; simp [prec_eval_succ]; rw [Vec.eq_cons λ _ => _]; simp [ih]
+  | succ n ih => rw [Function.iterate_succ']; simp [prec_eval_succ, ih]; simp_vec
 
 def vget : Primrec 2 :=
   fst.comp₁ (iterate snd).swap
@@ -349,15 +348,12 @@ theorem vmk_eval : vmk f (n ∷ᵥ v) = Vec.paired λ (i : Fin n) => f (i ∷ᵥ
   simp [vmk]
   generalize h : prec _ _ = g
   suffices h' : ∀ m ≤ n, g (m ∷ᵥ n ∷ᵥ v) = Vec.paired λ (i : Fin m) => f ((i + n - m) ∷ᵥ v) by
-    rw [Vec.eq_cons λ _ => _]; simp
-    rw [Vec.eq_cons λ _ => _]; simp
-    rw [h'] <;> simp
+    simp_vec; rw [h'] <;> simp
   subst h; intro m h; simp [prec_eval]
   induction m with simp [Vec.paired]
   | succ m ih =>
     constructor
-    · rw [Vec.eq_cons λ _ => _]; simp [ih]
-      congr! 2
+    · simp_vec; rfl
     · rw [ih]
       · congr; ext; rw [Nat.succ_add, Nat.succ_sub_succ]
       · exact Nat.le_of_succ_le h
@@ -368,8 +364,8 @@ theorem vmap_eval {v : Vec ℕ n} : vmap f (n ∷ᵥ v.paired ∷ᵥ w) = Vec.pa
   simp [vmap]
   rw [vmk_eval]
   congr; ext i
-  simp; rw [Vec.eq_cons λ _ => _]
-  simp; rw [vget_eval]
+  simp; simp_vec
+  rw [vget_eval]
 
 def rcons : Primrec 3 :=
   ((pair.comp₂ (proj 2) zero).prec
@@ -388,9 +384,9 @@ theorem rcons_eval {v : Vec ℕ n} :
   induction k with simp
   | zero => simp [Vec.eq_nil, Vec.paired]
   | succ k ih =>
-    rw [Vec.eq_cons (λ j => _)]; simp
-    conv => rhs; unfold Vec.paired
-    simp; constructor
+    simp_vec
+    conv => rhs; simp [Vec.paired]
+    congr
     · rw [←vget_eval (v := v)]
     · rw [ih (Nat.le_of_succ_le h)]
       congr; funext i
@@ -417,14 +413,10 @@ def covrec (f : Primrec (n + 2)) : Primrec (n + 1) :=
   vget.comp₂ (f.cov.comp (succ.comp₁ (proj 0) ∷ᵥ (proj ·.succ))) (proj 0)
 theorem covrec_eval {f : Primrec (n + 2)} :
   f.covrec (m ∷ᵥ v) = f (m ∷ᵥ Vec.paired (λ i : Fin m => f.covrec (i ∷ᵥ v)) ∷ᵥ v) := by
-  simp [covrec, Vec.eq_two]
-  rw [Vec.eq_cons λ _ => _]
-  simp [Vec.tail, Function.comp]
+  simp [covrec, Vec.eq_two]; simp_vec
   rw [cov_eval, vget_eval' (Nat.lt_succ_self _)]
   congr!; rw [cov_eval]
-  congr; funext i
-  rw [Vec.eq_cons λ _ => _]
-  simp [Vec.tail, Function.comp, vget_eval]
+  congr; funext i; simp_vec
   conv => rhs; rw [cov_eval]
   simp [vget_eval']
 
@@ -514,8 +506,7 @@ lemma bdMu_eval_gt :
     split at h
     next => exact ih h
     next h₁ =>
-      simp at h₁
-      rw [Vec.eq_cons λ _ => _] at h; simp at h
+      simp at h₁; simp_vec at h
       split at h
       next => exact ih (Nat.lt_of_lt_of_le h h₁)
       next h₂ =>
@@ -535,7 +526,7 @@ theorem bdMu_eval_lt_self :
     split at h
     next h₁ => simp [h₁]; exact ih h₁
     next h₁ =>
-      simp [h₁]; rw [Vec.eq_cons λ _ => _] at *; simp at *
+      simp [h₁]; simp_vec at *
       split at h <;> simp at h
       next h₂ => simp [h₂]
 
@@ -565,7 +556,7 @@ def bdExists (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
   lt ((bdMu g).comp (f ∷ᵥ proj)) f
 @[simp] theorem bdExists_eval_pos_iff :
   0 < bdExists f g v ↔ ∃ k < f v, 0 < g (k ∷ᵥ v) := by
-  simp [bdExists]; rw [Vec.eq_cons λ _ => _]; simp [bdMu_eval_lt_self_iff]
+  simp [bdExists]; simp_vec; exact bdMu_eval_lt_self_iff
 @[simp] theorem bdExists_eval_zero_iff :
   bdExists f g v = 0 ↔ ∀ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]

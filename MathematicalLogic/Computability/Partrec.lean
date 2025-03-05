@@ -132,7 +132,7 @@ theorem bd_mono : bd f (k ∷ᵥ v) = m + 1 → k' ≥ k → bd f (k' ∷ᵥ v) 
   | comp f g ih₁ ih₂ =>
     split at h
     next h₁ =>
-      rw [Vec.eq_cons λ _ => _] at h ⊢; simp [Vec.head, Vec.tail, Function.comp_def] at h ⊢
+      simp_vec at h ⊢
       simp [λ i => ih₂ i (Nat.sub_add_cancel (h₁ i)).symm hk]; exact ih₁ h hk
     next => simp at h
   | prec f g ih₁ ih₂ =>
@@ -142,8 +142,7 @@ theorem bd_mono : bd f (k ∷ᵥ v) = m + 1 → k' ≥ k → bd f (k' ∷ᵥ v) 
     | zero =>
       simp at h ⊢; exact ih₁ h hk
     | succ a ih =>
-      simp at h ⊢
-      repeat rw [Vec.eq_cons λ _ => _] at h ⊢; simp [Vec.head, Vec.tail, Function.comp_def] at h ⊢
+      simp at h ⊢; simp_vec at h ⊢
       split at h
       next h₂ =>
         simp [ih _ (Nat.sub_add_cancel h₂).symm]
@@ -152,7 +151,7 @@ theorem bd_mono : bd f (k ∷ᵥ v) = m + 1 → k' ≥ k → bd f (k' ∷ᵥ v) 
   | mu f ih =>
     generalize hk₁ : Primrec.bdMu _ _ = k₁ at h
     generalize hk₂ : Primrec.bdMu _ _ = k₂
-    repeat rw [Vec.eq_cons λ _ => _] at hk₁ hk₂; simp [Vec.head, Vec.tail, Function.comp_def] at hk₁ hk₂
+    simp_vec at hk₁ hk₂
     split at h <;> try simp at h
     next h₁ =>
       split at h <;> try simp at h
@@ -189,8 +188,7 @@ theorem bd_sound : bd f (k ∷ᵥ v) = m + 1 → m ∈ f v := by
       exists λ i => (g i).bd (k ∷ᵥ v) - 1
       constructor
       · intro i; apply ih₂ (k := k); simp [Nat.sub_add_cancel (h₁ i)]
-      · rw [Vec.eq_cons λ _ => _] at h; simp [Vec.head, Vec.tail, Function.comp_def] at h
-        exact ih₁ h
+      · simp_vec at h; exact ih₁ h
   | prec f g ih₁ ih₂ =>
     rw [Vec.eq_cons v]; simp [Vec.head]
     generalize v 0 = a, v.tail = v at h ⊢
@@ -200,14 +198,14 @@ theorem bd_sound : bd f (k ∷ᵥ v) = m + 1 → m ∈ f v := by
       simp [Primrec.prec_eval_succ] at h
       split at h <;> try simp at h
       next h₁ =>
-        repeat rw [Vec.eq_cons λ _ => _] at h; simp [Vec.head, Vec.tail, Function.comp_def] at h
+        simp_vec at h
         simp [prec_eval_succ]
         refine ⟨_, ?_, ih₂ h⟩
         apply ih
         simp [Nat.sub_add_cancel h₁]
   | mu f ih =>
     generalize h₁ : Primrec.bdMu _ _ = k' at h
-    repeat rw [Vec.eq_cons λ _ => _] at h₁; simp [Vec.head, Vec.tail, Function.comp_def] at h₁
+    simp_vec at h₁
     split at h <;> try simp at h
     next h₂ =>
       split at h <;> try simp at h
@@ -252,8 +250,7 @@ theorem bd_pos_of_mem : m ∈ f v → ∃ k, bd f (k ∷ᵥ v) = m + 1 := by
     exists max (Vec.max u) k
     intro k' hk; simp at hk
     have := λ i => h₁ i k' ((Vec.le_max i).trans hk.1)
-    simp [this]
-    rw [Vec.eq_cons λ _ => _]; simp [Vec.head, Vec.tail, Function.comp_def, this]
+    simp_vec; simp [this]
     exact h₂ k' hk.2
   | prec f g ih₁ ih₂ =>
     rw [Vec.eq_cons v] at h; simp [Vec.head] at h
@@ -272,8 +269,7 @@ theorem bd_pos_of_mem : m ∈ f v → ∃ k, bd f (k ∷ᵥ v) = m + 1 := by
       simp [Primrec.prec_eval_succ]
       exists max k₁ k₂
       intro k' hk; simp at hk
-      simp [h₁ k' hk.1]
-      repeat rw [Vec.eq_cons λ _ => _]; simp [Vec.head, Vec.tail, Function.comp_def]
+      simp [h₁ k' hk.1]; simp_vec
       exact h₂ k' hk.2
   | mu f ih =>
     simp [Part.mem_find_iff, Part.pos_iff] at h
@@ -283,7 +279,7 @@ theorem bd_pos_of_mem : m ∈ f v → ∃ k, bd f (k ∷ᵥ v) = m + 1 := by
     exists max (Vec.max u) (max (m + 1) k)
     intro k' hk; simp [Nat.succ_le_iff] at hk
     generalize h₄ : Primrec.bdMu _ _ = k''
-    repeat rw [Vec.eq_cons λ _ => _] at h₄; simp [Vec.head, Vec.tail, Function.comp_def] at h₄
+    simp_vec at h₄
     have : k'' = m := by
       subst h₄
       apply Primrec.bdMu_eval_eq
@@ -319,17 +315,13 @@ theorem bd_of_mem : m ∈ f v → ∃ k, ∀ k', bd f (k' ∷ᵥ v) = if k' < k 
 theorem bd_ofPrim {f : Primrec n} : (ofPrim f).bd (k ∷ᵥ v) = f v + 1 := by
   induction f with simp [Vec.head, ofPrim, bd]
   | comp f g ih₁ ih₂ =>
-    simp [ih₂]; rw [Vec.eq_cons λ _ => _]; simp [Vec.head, Vec.tail, Function.comp_def, ih₁, ih₂]
+    simp_vec; simp [ih₁, ih₂]
   | prec f g ih₁ ih₂ =>
     rw [Vec.eq_cons v]; simp [Vec.head]
     generalize v 0 = a, v.tail = v
     induction a with
-    | zero =>
-      simp [Primrec.prec_eval_zero, ih₁]
-    | succ a ih =>
-      simp [Primrec.prec_eval_succ, ih]
-      repeat rw [Vec.eq_cons λ _ => _]; simp [Vec.head, Vec.tail, Function.comp_def]
-      simp [ih₂]
+    | zero => simp [Primrec.prec_eval_zero, ih₁]
+    | succ a ih => simp [Primrec.prec_eval_succ, ih]; simp_vec; simp [ih₂]
 
 theorem dom_iff_exists_bd_pos : (f v).Dom ↔ ∃ k, 0 < bd f (k ∷ᵥ v) := by
   by_cases h : (f v).Dom <;> simp [h]
