@@ -2,7 +2,7 @@ import MathematicalLogic.FirstOrder.Proof
 
 namespace FirstOrder.Language
 
-inductive Peano.Func : ℕ → Type where
+private inductive Peano.Func : ℕ → Type where
 | zero : Func 0
 | succ : Func 1
 | add : Func 2
@@ -26,6 +26,9 @@ def ofNat : ℕ → Peano.Term n
 instance : OfNat (Peano.Term m) n := ⟨ofNat n⟩
 instance : Coe ℕ (Peano.Term m) := ⟨ofNat⟩
 
+def ofEncode [Encodable α] (a : α) : Peano.Term n := ofNat (Encodable.encode a)
+scoped notation "⌜" a "⌝" => ofEncode a
+
 @[simp] theorem zero_eq : Func.zero ⬝ᶠ []ᵥ = (0 : Peano.Term n) := rfl
 @[simp] theorem succ_eq : Func.succ ⬝ᶠ [t₁]ᵥ = S t₁ := rfl
 @[simp] theorem add_eq {t₁ t₂ : Peano.Term n} : Func.add ⬝ᶠ [t₁, t₂]ᵥ = t₁ + t₂ := rfl
@@ -39,12 +42,14 @@ theorem succ_ofNat : S (ofNat a : Peano.Term n) = ofNat (a + 1) := rfl
   induction n with simp [ofNat]
   | zero => simp [←zero_eq, Vec.eq_nil]
   | succ n ih => simp [ih]
+@[simp] theorem subst_ofEncode [Encodable α] {a : α} : (⌜a⌝)[σ]ₜ = ⌜a⌝ := subst_ofNat
 @[simp] theorem subst_zero {σ : Peano.Subst n m} : 0[σ]ₜ = 0 := subst_ofNat
 @[simp] theorem subst_add {t₁ t₂ : Peano.Term n} :
   (t₁ + t₂)[σ]ₜ = t₁[σ]ₜ + t₂[σ]ₜ := by simp [←add_eq, Vec.eq_two]
 @[simp] theorem subst_mul {t₁ t₂ : Peano.Term n} :
   (t₁ * t₂)[σ]ₜ = t₁[σ]ₜ * t₂[σ]ₜ := by simp [←mul_eq, Vec.eq_two]
 @[simp] theorem shift_ofNat : ↑ₜ(ofNat n : Peano.Term m) = ofNat n := subst_ofNat
+@[simp] theorem shift_ofEncode [Encodable α] {a : α} : ↑ₜ(⌜a⌝ : Peano.Term n) = ⌜a⌝ := shift_ofNat
 @[simp] theorem shift_zero : ↑ₜ(0 : Peano.Term n) = 0 := subst_zero
 @[simp] theorem shift_succ : ↑ₜ(S t) = S ↑ₜt := subst_succ
 @[simp] theorem shift_add {t₁ t₂ : Peano.Term n} : ↑ₜ(t₁ + t₂) = ↑ₜt₁ + ↑ₜt₂ := subst_add
@@ -64,7 +69,7 @@ open Lean.Parser Std in
 def reprTerm : Peano.Term n → ℕ → Format
 | #x, _ => "#" ++ repr x
 | .zero ⬝ᶠ _, _ => "0"
-| .succ ⬝ᶠ v, p => Repr.addAppParen ("S" ++ reprTerm (v 0) argPrec) p
+| .succ ⬝ᶠ v, p => Repr.addAppParen ("S " ++ reprTerm (v 0) argPrec) p
 | .add ⬝ᶠ v, p => (if p ≥ 65 then Format.paren else id) (reprTerm (v 0) 65 ++ " + " ++ reprTerm (v 1) 65)
 | .mul ⬝ᶠ v, p => (if p ≥ 70 then Format.paren else id) (reprTerm (v 0) 70 ++ " * " ++ reprTerm (v 1) 70)
 
@@ -74,8 +79,8 @@ open Lean.Parser Std in
 def reprFormula : Peano.Formula n → ℕ → Format
 | t₁ ≐ t₂, prec => (if prec ≥ 25 then Format.paren else id) (reprTerm t₁ 25 ++ " = " ++ reprTerm t₂ 25)
 | (∀' (p ⇒ ⊥)) ⇒ ⊥, prec => Repr.addAppParen ("∃ " ++ reprFormula p argPrec) prec
-| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ⩑ " ++ reprFormula q 57)
-| (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ⩒ " ++ reprFormula q 56)
+| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ∧ " ++ reprFormula q 57)
+| (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ∨ " ++ reprFormula q 56)
 | ⊥ ⇒ ⊥, _ => "⊤"
 | p ⇒ ⊥, prec => (if prec ≥ 58 then Format.paren else id) ("~ " ++ reprFormula p 58)
 | ⊥, _ => "⊥"
@@ -136,7 +141,7 @@ namespace PA
 open Proof
 attribute [local simp] Term.shift_subst_single Term.shift_subst_assign
 
-theorem succ_ne_zero :
+theorem succ_ne_zero (t) :
   ↑ᵀ^[n] PA ⊢ ~ S t ≐ 0 := by
   have h := hyp ax_succ_ne_zero
   apply Theory.foralls_elim [t]ᵥ at h
@@ -309,7 +314,7 @@ lemma add_eq_zero_left : ↑ᵀ^[n] PA ⊢ t₁ + t₂ ≐ 0 ⇒ t₁ ≐ 0 := b
   · papply exists_elim'
     pintros; simp
     papply false_elim
-    papply succ_ne_zero (t := ↑ₜt₁ + #0)
+    papply succ_ne_zero (↑ₜt₁ + #0)
     prw [←add_succ, ←0]
     passumption
 
@@ -453,7 +458,7 @@ theorem ne_of_lt : ↑ᵀ^[n] PA ⊢ t₁ ⋖ t₂ ⇒ ~ t₁ ≐ t₂ := by
   papply exists_elim'
   pintros 2; simp
   pintro
-  papply succ_ne_zero (t := #0)
+  papply succ_ne_zero #0
   papply add_left_cancel (t := ↑ₜt₁)
   prw [add_zero, add_succ, ←succ_add, 1, 0]
   prefl

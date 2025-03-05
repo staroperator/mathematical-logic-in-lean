@@ -478,9 +478,9 @@ namespace Recursive
 variable [Recursive s]
 
 theorem not_mem_iff (x : α) :
-  x ∉ s ↔ char s [Encodable.encode x]ᵥ = 0 := by
+  x ∉ s ↔ 0 ∈ char s [Encodable.encode x]ᵥ := by
   rw [mem_iff x, ←Part.some_get (char_dom x)]
-  simp [Part.zero_def, -Part.some_get]
+  simp [Part.zero_def, eq_comm, -Part.some_get]
 
 def compl : Recursive sᶜ where
   char := (Primrec.nsign.toPart).comp₁ (char s)
@@ -578,8 +578,10 @@ theorem IsEnumerable.iff_semi_decidable :
     refine ⟨⟨.ofPrim f.bd, ?_, ?_⟩⟩ <;> simp [h, Partrec.dom_iff_exists_bd_pos]
 
 /-- A set is recursive if and only if it and its complement are both enumerable. -/
-theorem IsRecursive.iff_re_compl_re : IsEnumerable s ∧ IsEnumerable sᶜ ↔ IsRecursive s := by
+theorem IsRecursive.iff_re_compl_re : IsRecursive s ↔ IsEnumerable s ∧ IsEnumerable sᶜ := by
   constructor
+  · intro h
+    exact ⟨h.enumerable, (IsRecursive.compl_iff.mp h).enumerable⟩
   · intro ⟨h₁, h₂⟩
     rw [IsEnumerable.iff_semi_decidable] at h₁ h₂
     rcases h₁ with ⟨f, h₁⟩
@@ -597,5 +599,3 @@ theorem IsRecursive.iff_re_compl_re : IsEnumerable s ∧ IsEnumerable sᶜ ↔ I
         apply Partrec.mem_par_eval at h'
         rcases h' with h' | h' <;> simp at h' <;> rcases h' with ⟨h', rfl⟩ <;> simp
         simp [←Part.dom_iff_mem, ←h₁, h] at h'
-  · intro h
-    exact ⟨h.enumerable, (IsRecursive.compl_iff.mp h).enumerable⟩

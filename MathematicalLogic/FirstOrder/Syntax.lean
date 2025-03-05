@@ -1,4 +1,3 @@
-import Mathlib.Data.Set.Lattice
 import MathematicalLogic.Vec
 import MathematicalLogic.Notation
 
@@ -139,10 +138,10 @@ def Subst.liftN : (m : ℕ) → 𝓛.Subst n k → 𝓛.Subst (n + m) (k + m)
 | 0, σ => σ
 | m + 1, σ => ⇑ₛ(liftN m σ)
 notation "⇑ₛ^[" m "]" => Subst.liftN m
-theorem Subst.liftN_app_addNat {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.addNat x m) = ↑ₜ^[m] (σ x) := by
+@[simp] theorem Subst.liftN_app_addNat {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.addNat x m) = ↑ₜ^[m] (σ x) := by
   induction m with simp [liftN, Term.shiftN]
   | succ m ih => simp [ih]
-theorem Subst.liftN_app_castAdd' {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.castAdd' x n) = #(Fin.castAdd' x k) := by
+@[simp] theorem Subst.liftN_app_castAdd' {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.castAdd' x n) = #(Fin.castAdd' x k) := by
   induction m with simp [liftN]
   | zero => exact x.elim0
   | succ m ih => cases x using Fin.cases <;> simp [ih]
@@ -150,9 +149,6 @@ theorem Subst.liftN_app_castAdd' {σ : 𝓛.Subst n k} : ⇑ₛ^[m] σ (Fin.cast
 theorem Term.shiftN_subst_liftN : (↑ₜ^[m] t)[⇑ₛ^[m] σ]ₜ = ↑ₜ^[m] (t[σ]ₜ) := by
   induction m with simp [shiftN, Subst.liftN]
   | succ m ih => simp [shift_subst_lift, ih]
-
-theorem Subst.castAdd'_append_addNat : (λ i => #(i.castAdd' n)) ++ᵥ (λ i => #(i.addNat m)) = @Subst.id 𝓛 (n + m) := by
-  ext x; rcases x.castAdd'_or_addNat with (⟨x, rfl⟩ | ⟨x, rfl⟩) <;> simp
 
 def Term.vars : 𝓛.Term n → Set (Fin n)
 | #x => {x}
@@ -188,12 +184,12 @@ prefix:max "∃' " => ex
 def andN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | 0, _ => ⊤
 | _ + 1, v => v.head ⩑ andN v.tail
-notation3:57 "⋀ "(...)", " r:(scoped r => andN r) => r
+notation3 "⋀ "(...)", " r:52:(scoped r => andN r) => r
 
 def orN : {m : ℕ} → Vec (𝓛.Formula n) m → 𝓛.Formula n
 | 0, _ => ⊥
 | _ + 1, v => v.head ⩒ orN v.tail
-notation3:57 "⋁ "(...)", " r:(scoped r => orN r) => r
+notation3 "⋁ "(...)", " r:52:(scoped r => orN r) => r
 
 def allN : (m : ℕ) → 𝓛.Formula (n + m) → 𝓛.Formula n
 | 0, p => p
@@ -423,7 +419,7 @@ notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
   induction m with simp [shiftN, Formula.shiftN]
   | succ m ih => simp [ih]
 
-abbrev Theory (𝓛 : Language) := 𝓛.FormulaSet 0
+abbrev Theory (𝓛 : Language) := Set 𝓛.Sentence
 
 @[reducible] def Theory.shiftN : (n : ℕ) → 𝓛.Theory → 𝓛.FormulaSet n
 | 0, 𝓣 => 𝓣

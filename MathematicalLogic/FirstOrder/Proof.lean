@@ -263,7 +263,7 @@ elab "papply" t:(ppSpace colGt term) l:(location)? d:(depth)? : tactic => withMa
       let some (𝓛, n, Γ, p) := ldecl.type.app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
       let q ← mkFreshExprMVar (some (mkApp2 (.const ``Formula []) 𝓛 n))
       let goal := mkApp4 (.const ``Proof []) 𝓛 n Γ (mkApp4 (.const ``Formula.imp []) 𝓛 n p q)
-          let (goalTerm, newGoals) ← papply (← elabTerm t none true) goal d
+      let (goalTerm, newGoals) ← papply (← elabTerm t none true) goal d
       let (_, mainGoal) ← (← getMainGoal).note ldecl.userName
         (mkApp7 (.const ``mp []) 𝓛 n Γ p q goalTerm ldecl.toExpr)
         (some (mkApp4 (.const ``Proof []) 𝓛 n Γ q))
@@ -330,22 +330,6 @@ theorem double_neg_imp : Γ ⊢ ~ ~ p ⇒ p := by
   papply transpose
   · exact imp_double_neg
   · passumption
-
-theorem neg_imp_left : Γ ⊢ ~ (p ⇒ q) ⇒ p := by
-  pintro
-  papply double_neg_imp
-  pintro
-  papplya 1
-  pintro
-  papply false_elim
-  papplya 1
-  passumption
-
-theorem neg_imp_right : Γ ⊢ ~ (p ⇒ q) ⇒ ~ q := by
-  pintros
-  papplya 1
-  pintro
-  passumption
 
 theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⩑ q := by
   pintros
@@ -477,6 +461,29 @@ theorem neg_or_iff : Γ ⊢ ~ (p ⩒ q) ⇔ ~ p ⩑ ~ q := by
     · papply and_left; passumption
     · papply and_right; passumption
 
+theorem neg_or_iff_imp : Γ ⊢ ~ p ⩒ q ⇔ (p ⇒ q) := by
+  papply iff_intro
+  · papply or_elim'
+    · pexact contradiction
+    · pintros; passumption
+  · pintros
+    papplya 1
+    papply double_neg_imp
+    passumption
+
+theorem neg_imp_iff : Γ ⊢ ~ (p ⇒ q) ⇔ p ⩑ ~ q := by
+  papply iff_intro
+  · pintros
+    papplya 1
+    pintro
+    papply double_neg_imp
+    papplya 1
+    passumption
+  · pintros
+    phave ~ q
+    · papply and_right; passumption
+    · papplya 0; papplya 1; papply and_left; passumption
+
 theorem and_imp_iff : Γ ⊢ (p ⩑ q ⇒ r) ⇔ (p ⇒ q ⇒ r) := by
   papply iff_intro
   · pintros; papplya 2; papply and_intro <;> passumption
@@ -488,10 +495,15 @@ theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   · exact iff_mp
   · exact iff_mpr
 
-theorem neg_forall_iff : Γ ⊢ ~ ∀' p ⇔ ∃' (~ p) := iff_congr_neg.mp (iff_congr_forall.mp (forall_intro (iff_symm.mp double_neg_iff)))
+theorem neg_forall_iff : Γ ⊢ ~ ∀' p ⇔ ∃' (~ p) :=
+  iff_congr_neg.mp (iff_congr_forall.mp (forall_intro (iff_symm.mp double_neg_iff)))
+
 theorem neg_exists_iff : Γ ⊢ ~ ∃' p ⇔ ∀' (~ p) := double_neg_iff
+
 theorem neg_forall_neg_iff : Γ ⊢ ~ ∀' (~ p) ⇔ ∃' p := iff_refl
-theorem neg_exists_neg_iff : Γ ⊢ ~ ∃' (~ p) ⇔ ∀' p := iff_trans.mp₂ double_neg_iff (iff_congr_forall.mp (forall_intro double_neg_iff))
+
+theorem neg_exists_neg_iff : Γ ⊢ ~ ∃' (~ p) ⇔ ∀' p :=
+  iff_trans.mp₂ double_neg_iff (iff_congr_forall.mp (forall_intro double_neg_iff))
 
 theorem exists_intro (t) : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
   pintros
@@ -604,6 +616,9 @@ theorem existsN_elim {p : 𝓛.Formula (n + m)} :
       · apply forallN_intro
         pintros
         papply exists_elim <;> passumption
+
+theorem existsN_elim' : Γ ⊢ ∀^[m] (p ⇒ ↑ₚ^[m] q) ⇒ ∃^[m] p ⇒ q := by
+  pintros; papply existsN_elim <;> passumption
 
 theorem eq_refl : Γ ⊢ t ≐ t := ax .eq_refl
 

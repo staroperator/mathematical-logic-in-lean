@@ -128,7 +128,7 @@ theorem eq_four (v : Vec α 4) : v = [v 0, v 1, v 2, v 3]ᵥ := by
 
 open Lean Parser Tactic in
 macro "simp_vec" g:(location)? : tactic =>
-  `(tactic| repeat rw [Vec.eq_cons λ _ => _] $(g)?; simp [Vec.head, Vec.tail, Function.comp_def] $(g)?)
+  `(tactic| repeat rw [Vec.eq_cons λ _ => _] $(g)?; simp [Vec.head, Vec.tail, Function.comp_def, Vec.eq_nil] $(g)?)
 
 theorem exists_vec_succ {p : Vec α (n + 1) → Prop} : (∃ v, p v) ↔ ∃ a v, p (a ∷ᵥ v) := Fin.exists_fin_succ_pi (P := p)
 @[simp high] theorem exists_vec0 {p : Vec α 0 → Prop} : (∃ v, p v) ↔ p []ᵥ := by simp [Vec.eq_nil]

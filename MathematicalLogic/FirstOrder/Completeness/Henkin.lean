@@ -431,7 +431,8 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
     simp [Set.insert_subset_iff] at h₅'
     rcases h₅' with ⟨⟨p⟩, h₅'⟩
     apply h₇ h₅'
-    apply (Proof.neg_imp_left.mp h₄).mp
+    simp at h₄; prw [Proof.neg_imp_iff] at h₄
+    papply (Proof.and_left.mp h₄)
     apply Proof.const_generalization (c := henkinStep.wit p)
     · intro q h; simp at h; rcases h with h | h
       · rcases h₅ h with ⟨q', _, h⟩; subst h; apply henkinStep.wit_not_in_homFormula
@@ -447,7 +448,7 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
             subst h'
             contradiction
     · simp [Formula.consts_neg]; apply henkinStep.wit_not_in_homFormula
-    · exact Proof.neg_imp_right.mp h₄
+    · exact Proof.and_right.mp h₄
 
 def henkinChain (𝓛 : Language) (n : ℕ) : ℕ → Language
 | 0 => 𝓛
