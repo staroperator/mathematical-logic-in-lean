@@ -31,21 +31,21 @@ theorem Fin.embedAt_or_insertAt (x : Fin (n + k + 1)) : x = embedAt k ∨ ∃ y,
 
 namespace FirstOrder.Language
 
-variable {𝓛 : Language}
+variable {L : Language}
 
-def Term.consts : 𝓛.Term n → Set 𝓛.Const
+def Term.consts : L.Term n → Set L.Const
 | #_ => {}
 | .func (m := 0) c _ => {c}
 | .func (m := _ + 1) _ v => ⋃i, (v i).consts
 
-def Formula.consts : 𝓛.Formula n → Set 𝓛.Const
+def Formula.consts : L.Formula n → Set L.Const
 | _ ⬝ʳ v => ⋃i, (v i).consts
 | t₁ ≐ t₂ => t₁.consts ∪ t₂.consts
 | ⊥ => {}
 | p ⇒ q => p.consts ∪ q.consts
 | ∀' p => p.consts
 
-theorem Formula.consts_neg {p : 𝓛.Formula n} : (~ p).consts = p.consts := by
+theorem Formula.consts_neg {p : L.Formula n} : (~ p).consts = p.consts := by
   unfold PropNotation.neg; simp [Formula.consts]
 
 theorem Formula.consts_ex : (∃' p).consts = p.consts := by
@@ -59,7 +59,7 @@ lemma Term.consts_of_subst :
     cases n with simp [vars, consts]
     | succ => rw [Set.iUnion_comm, ←Set.iUnion_union_distrib]; simp_rw [ih]
 
-lemma Formula.consts_of_subst {σ : 𝓛.Subst n m} :
+lemma Formula.consts_of_subst {σ : L.Subst n m} :
   p[σ]ₚ.consts = p.consts ∪ ⋃ x ∈ p.free, (σ x).consts := by
   induction p generalizing m with simp [free, consts]
   | rel r v => simp [Term.consts_of_subst]; rw [Set.iUnion_comm, Set.iUnion_union_distrib]
@@ -83,12 +83,12 @@ lemma Formula.consts_of_subst {σ : 𝓛.Subst n m} :
       · simp [Term.shift, Term.consts_of_subst]
         left; exact h₂
 
-def Subst.singleAt : (k : ℕ) → (t : 𝓛.Term n) → 𝓛.Subst (n + k + 1) (n + k)
+def Subst.singleAt : (k : ℕ) → (t : L.Term n) → L.Subst (n + k + 1) (n + k)
 | 0, t => ↦ₛ t
 | k + 1, t => ⇑ₛ (singleAt k t)
 local infix:55 " ↦ₛ " => Subst.singleAt
 
-theorem Subst.singleAt_const_app_embedAt {c : 𝓛.Const} : (k ↦ₛ (c : 𝓛.Term n)) (Fin.embedAt k) = (c : 𝓛.Term _) := by
+theorem Subst.singleAt_const_app_embedAt {c : L.Const} : (k ↦ₛ (c : L.Term n)) (Fin.embedAt k) = (c : L.Term _) := by
   induction k with simp [singleAt, Fin.embedAt]
   | succ k ih => simp [ih, Term.shift, Vec.eq_nil]
 
@@ -96,11 +96,11 @@ theorem Subst.singleAt_app_insertAt : (k ↦ₛ t) (Fin.insertAt k x) = #x := by
   induction k with simp [singleAt, Fin.insertAt]
   | succ k ih => cases x using Fin.cases <;> simp [ih]
 
-def Subst.shiftAt : (k : ℕ) → 𝓛.Subst (n + k) (n + k + 1)
+def Subst.shiftAt : (k : ℕ) → L.Subst (n + k) (n + k + 1)
 | 0 => shift
 | k + 1 => ⇑ₛ (shiftAt k)
 
-theorem Subst.shiftAt_app : shiftAt (𝓛 := 𝓛) k x = #(Fin.insertAt k x) := by
+theorem Subst.shiftAt_app : shiftAt (L := L) k x = #(Fin.insertAt k x) := by
   induction k with simp [shiftAt, Fin.insertAt]
   | succ k ih => cases x using Fin.cases <;> simp [ih]
 
@@ -109,7 +109,7 @@ theorem Subst.shiftAt_comp_singleAt : shiftAt k ∘ₛ (k ↦ₛ t) = id := by
   induction k with simp [singleAt, shiftAt]
   | succ k ih => cases x using Fin.cases <;> simp [Term.shift_subst_lift, ih]
 
-def Subst.insertAt : (k : ℕ) → 𝓛.Subst (n + k) m → (t : 𝓛.Term m) → 𝓛.Subst (n + k + 1) m
+def Subst.insertAt : (k : ℕ) → L.Subst (n + k) m → (t : L.Term m) → L.Subst (n + k + 1) m
 | 0, σ, t => t ∷ᵥ σ
 | k + 1, σ, t => σ.head ∷ᵥ insertAt k σ.tail t
 
@@ -122,12 +122,12 @@ theorem Subst.insertAt_app_insertAt : insertAt k σ t (Fin.insertAt k x) = σ x 
   | succ k ih => cases x using Fin.cases <;> simp [Vec.head, ih]
 
 open Classical in
-noncomputable def Term.invConst (k : ℕ) : 𝓛.Term (n + k) → 𝓛.Const → 𝓛.Term (n + k + 1)
+noncomputable def Term.invConst (k : ℕ) : L.Term (n + k) → L.Const → L.Term (n + k + 1)
 | #x, _ => #(Fin.insertAt k x)
 | func (m := 0) f _, c => if f = c then #(Fin.embedAt k) else f ⬝ᶠ []ᵥ
 | func (m := _ + 1) f v, c => f ⬝ᶠ λ i => (v i).invConst k c
 
-theorem Term.subst_singleAt_invConst {t : 𝓛.Term (n + k + 1)} (h : c ∉ t.consts) :
+theorem Term.subst_singleAt_invConst {t : L.Term (n + k + 1)} (h : c ∉ t.consts) :
   (t[k ↦ₛ c]ₜ).invConst k c = t := by
   induction t with simp
   | var x =>
@@ -139,7 +139,7 @@ theorem Term.subst_singleAt_invConst {t : 𝓛.Term (n + k + 1)} (h : c ∉ t.co
     · simp [Ne.symm h, Vec.eq_nil]
     · ext i; simp [ih i (h i)]
 
-theorem Term.invConst_eq_shiftAt {t : 𝓛.Term (n + k)} (h : c ∉ t.consts) :
+theorem Term.invConst_eq_shiftAt {t : L.Term (n + k)} (h : c ∉ t.consts) :
   t.invConst k c = t[Subst.shiftAt k]ₜ := by
   induction t with
   | var x => simp [invConst, Subst.shiftAt_app]
@@ -148,7 +148,7 @@ theorem Term.invConst_eq_shiftAt {t : 𝓛.Term (n + k)} (h : c ∉ t.consts) :
     · simp [Ne.symm h, Vec.eq_nil]
     · ext i; simp [ih i (h i)]
 
-theorem Term.invConst_subst {t : 𝓛.Term (n + k)} {σ : 𝓛.Subst (n + k) (n' + k')} :
+theorem Term.invConst_subst {t : L.Term (n + k)} {σ : L.Subst (n + k) (n' + k')} :
   (t[σ]ₜ).invConst k' c = (t.invConst k c)[Subst.insertAt k ((·.invConst k' c) ∘ σ) #(Fin.embedAt k')]ₜ := by
   induction t with
   | var x => simp [invConst, Function.comp, Subst.insertAt_app_insertAt]
@@ -157,7 +157,7 @@ theorem Term.invConst_subst {t : 𝓛.Term (n + k)} {σ : 𝓛.Subst (n + k) (n'
     · by_cases h : f = c <;> simp [h, Vec.eq_nil, Subst.insertAt_app_embedAt]
     · simp [ih]
 
-theorem Term.invConst_shift {t : 𝓛.Term (n + k)} :
+theorem Term.invConst_shift {t : L.Term (n + k)} :
   (↑ₜt).invConst (k + 1) c = ↑ₜ(t.invConst k c) := by
   rw [shift, invConst_subst]
   congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
@@ -165,25 +165,25 @@ theorem Term.invConst_shift {t : 𝓛.Term (n + k)} :
   · simp [h, Subst.insertAt_app_embedAt]
   · simp [h, Subst.insertAt_app_insertAt, invConst, Fin.insertAt]
 
-noncomputable def Formula.invConst (k : ℕ) : 𝓛.Formula (n + k) → 𝓛.Const → 𝓛.Formula (n + k + 1)
+noncomputable def Formula.invConst (k : ℕ) : L.Formula (n + k) → L.Const → L.Formula (n + k + 1)
 | r ⬝ʳ v, c => r ⬝ʳ λ i => (v i).invConst k c
 | t₁ ≐ t₂, c => t₁.invConst k c ≐ t₂.invConst k c
 | ⊥, _ => ⊥
 | p ⇒ q, c => p.invConst k c ⇒ q.invConst k c
 | ∀' p, c => ∀' (p.invConst (k + 1) c)
-@[simp] theorem Formula.invConst_false : (⊥ : 𝓛.Formula (n + k)).invConst k c = ⊥ := by
+@[simp] theorem Formula.invConst_false : (⊥ : L.Formula (n + k)).invConst k c = ⊥ := by
   rw [←false_eq]; simp only [invConst]
-@[simp] theorem Formula.invConst_imp : (p ⇒ q : 𝓛.Formula (n + k)).invConst k c = p.invConst k c ⇒ q.invConst k c := by
+@[simp] theorem Formula.invConst_imp : (p ⇒ q : L.Formula (n + k)).invConst k c = p.invConst k c ⇒ q.invConst k c := by
   rw [←imp_eq]; simp only [invConst]
-@[simp] theorem Formula.invConst_neg : (~ p : 𝓛.Formula (n + k)).invConst k c = ~ p.invConst k c := by
+@[simp] theorem Formula.invConst_neg : (~ p : L.Formula (n + k)).invConst k c = ~ p.invConst k c := by
   rw [←neg_eq, invConst_imp, invConst_false]; rfl
 
-theorem Formula.invConst_andN {v : Vec (𝓛.Formula (n + k)) m} : invConst k (⋀ i, v i) c = ⋀ i, invConst k (v i) c := by
+theorem Formula.invConst_andN {v : Vec (L.Formula (n + k)) m} : invConst k (⋀ i, v i) c = ⋀ i, invConst k (v i) c := by
   induction m with simp [andN]
   | zero => simp [Top.top]
   | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
 
-theorem Formula.subst_singleAt_invConst {p : 𝓛.Formula (n + k + 1)} (h : c ∉ p.consts) :
+theorem Formula.subst_singleAt_invConst {p : L.Formula (n + k + 1)} (h : c ∉ p.consts) :
   (p[k ↦ₛ c]ₚ).invConst k c = p := by
   cases p with (simp [invConst] <;> simp [consts] at h)
   | rel r v => ext i; simp [Term.subst_singleAt_invConst (h i)]
@@ -191,7 +191,7 @@ theorem Formula.subst_singleAt_invConst {p : 𝓛.Formula (n + k + 1)} (h : c �
   | imp p q => simp [subst_singleAt_invConst h.left, subst_singleAt_invConst h.right]
   | all p => rw [←Subst.singleAt, subst_singleAt_invConst (k := k + 1) h]
 
-theorem Formula.invConst_eq_shiftAt {p : 𝓛.Formula (n + k)} (h : c ∉ p.consts) :
+theorem Formula.invConst_eq_shiftAt {p : L.Formula (n + k)} (h : c ∉ p.consts) :
   p.invConst k c = p[Subst.shiftAt k]ₚ := by
   cases p with (simp [invConst] <;> simp [consts] at h)
   | rel r v => ext i; simp [Term.invConst_eq_shiftAt (h i)]
@@ -199,7 +199,7 @@ theorem Formula.invConst_eq_shiftAt {p : 𝓛.Formula (n + k)} (h : c ∉ p.cons
   | imp p q => simp [invConst_eq_shiftAt h.left, invConst_eq_shiftAt h.right]
   | all p => simp [invConst_eq_shiftAt (k := k + 1) h, Subst.shiftAt]
 
-theorem Formula.invConst_subst {p : 𝓛.Formula (n + k)} {σ : 𝓛.Subst (n + k) (n' + k')} :
+theorem Formula.invConst_subst {p : L.Formula (n + k)} {σ : L.Subst (n + k) (n' + k')} :
   (p[σ]ₚ).invConst k' c = (p.invConst k c)[Subst.insertAt k ((·.invConst k' c) ∘ σ) #(Fin.embedAt k')]ₚ := by
   cases p with simp [invConst]
   | rel => ext; simp [Term.invConst_subst]
@@ -215,7 +215,7 @@ theorem Formula.invConst_subst {p : 𝓛.Formula (n + k)} {σ : 𝓛.Subst (n + 
       · simp [h, Subst.insertAt_app_embedAt]
       · simp [h, Subst.insertAt_app_insertAt, Term.invConst_shift]
 
-theorem Formula.invConst_shift {p : 𝓛.Formula (n + k)} :
+theorem Formula.invConst_shift {p : L.Formula (n + k)} :
   (↑ₚp).invConst (k + 1) c = ↑ₚ(p.invConst k c) := by
   rw [shift, invConst_subst]
   congr; funext x; simp [Function.comp, invConst, Fin.embedAt]
@@ -223,7 +223,7 @@ theorem Formula.invConst_shift {p : 𝓛.Formula (n + k)} :
   · simp [h, Subst.insertAt_app_embedAt]
   · simp [h, Subst.insertAt_app_insertAt, Term.invConst, Fin.insertAt]
 
-theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.Term (n + k)} :
+theorem Formula.invConst_subst_single {p : L.Formula (n + k + 1)} {t : L.Term (n + k)} :
   (p[↦ₛ t]ₚ).invConst k c = (p.invConst (k + 1) c)[↦ₛ (t.invConst k c)]ₚ := by
   rw [invConst_subst (k := k + 1)]
   congr; clear p; funext x
@@ -235,8 +235,8 @@ theorem Formula.invConst_subst_single {p : 𝓛.Formula (n + k + 1)} {t : 𝓛.T
     · simp [h, Subst.insertAt_app_embedAt]
     · simp [h, Subst.insertAt_app_insertAt, Term.invConst]
 
-lemma Axiom.inv_const {p : 𝓛.Formula (n + k)} :
-  p ∈ 𝓛.Axiom → Γ ⊢ p.invConst k c := by
+lemma Axiom.inv_const {p : L.Formula (n + k)} :
+  p ∈ L.Axiom → Γ ⊢ p.invConst k c := by
   intro h
   cases h with simp [Formula.invConst, Formula.invConst_andN, Formula.invConst_shift, Formula.invConst_subst_single]
   | @eq_congr_func m _ v₁ v₂ f =>
@@ -246,7 +246,7 @@ lemma Axiom.inv_const {p : 𝓛.Formula (n + k)} :
   | all h => pintro; exact inv_const (k := k + 1) h
   | _ => apply Proof.ax; constructor
 
-lemma Proof.inv_const {p : 𝓛.Formula (n + k)} (h₁ : ∀ p ∈ Γ, c ∉ p.consts) :
+lemma Proof.inv_const {p : L.Formula (n + k)} (h₁ : ∀ p ∈ Γ, c ∉ p.consts) :
   Γ ⊢ p → (·[Subst.shiftAt k]ₚ) '' Γ ⊢ p.invConst k c := by
   intro h
   induction h with
@@ -254,7 +254,7 @@ lemma Proof.inv_const {p : 𝓛.Formula (n + k)} (h₁ : ∀ p ∈ Γ, c ∉ p.c
   | ax h => exact Axiom.inv_const h
   | mp _ _ ih₁ ih₂ => simp at ih₁; exact mp ih₁ ih₂
 
-theorem Proof.const_generalization {Γ : 𝓛.FormulaSet n}
+theorem Proof.const_generalization {Γ : L.FormulaSet n}
   (h₁ : ∀ p ∈ Γ, c ∉ p.consts) (h₂ : c ∉ p.consts) :
   Γ ⊢ p[↦ₛ c]ₚ → Γ ⊢ ∀' p := by
   intro h
@@ -264,21 +264,21 @@ theorem Proof.const_generalization {Γ : 𝓛.FormulaSet n}
 
 
 
-inductive henkinStep.Func (𝓛 : Language) (n : ℕ) : ℕ → Type u
-| inj : 𝓛.Func m → Func 𝓛 n m
-| wit : 𝓛.Formula (n + 1) → Func 𝓛 n 0
+inductive henkinStep.Func (L : Language) (n : ℕ) : ℕ → Type u
+| inj : L.Func m → Func L n m
+| wit : L.Formula (n + 1) → Func L n 0
 
-def henkinStep (𝓛 : Language) (n : ℕ) : Language where
-  Func := henkinStep.Func 𝓛 n
-  Rel := 𝓛.Rel
+def henkinStep (L : Language) (n : ℕ) : Language where
+  Func := henkinStep.Func L n
+  Rel := L.Rel
 
 namespace henkinStep
 
-variable {𝓛 : Language}
+variable {L : Language}
 
-def wit (p : 𝓛.Formula (n + 1)) : (𝓛.henkinStep n).Const := .wit p
+def wit (p : L.Formula (n + 1)) : (L.henkinStep n).Const := .wit p
 
-@[simps] def hom : 𝓛 →ᴸ 𝓛.henkinStep n where
+@[simps] def hom : L →ᴸ L.henkinStep n where
   onFunc f := .inj f
   onRel r := r
 
@@ -295,17 +295,17 @@ theorem wit_not_in_homFormula : wit p ∉ (hom.onFormula q).consts := by
   | imp _ _ ih₁ ih₂ => simp [ih₁, ih₂]
   | all _ ih => simp [ih]
 
-def invTerm : (k : ℕ) → (𝓛.henkinStep n).Term (m + k) → 𝓛.Term (m + k + 1)
+def invTerm : (k : ℕ) → (L.henkinStep n).Term (m + k) → L.Term (m + k + 1)
 | k, #x => #(Fin.insertAt k x)
 | k, (.inj f) ⬝ᶠ v => f ⬝ᶠ λ i => invTerm k (v i)
 | k, (.wit _) ⬝ᶠ _ => #(Fin.embedAt k)
 
-theorem invTerm_homTerm : invTerm k (hom.onTerm t : (𝓛.henkinStep n).Term _) = t[Subst.shiftAt k]ₜ := by
+theorem invTerm_homTerm : invTerm k (hom.onTerm t : (L.henkinStep n).Term _) = t[Subst.shiftAt k]ₜ := by
   induction t with simp [Hom.onTerm, invTerm]
   | var x => simp [Subst.shiftAt_app]
   | func f v ih => ext; simp [ih]
 
-theorem invTerm_subst {σ : (𝓛.henkinStep n).Subst (m + k) (m' + k')} :
+theorem invTerm_subst {σ : (L.henkinStep n).Subst (m + k) (m' + k')} :
   invTerm k' (t[σ]ₜ) = (invTerm k t)[Subst.insertAt k ((invTerm k' ·) ∘ σ) #(Fin.embedAt k')]ₜ := by
   induction t with
   | var x => simp [invTerm, Function.comp, Subst.insertAt_app_insertAt]
@@ -321,33 +321,33 @@ theorem invTerm_shift : invTerm (k + 1) (↑ₜt) = ↑ₜ(invTerm k t) := by
   · simp [h, Subst.insertAt_app_embedAt]
   · simp [h, Subst.insertAt_app_insertAt, invTerm, Fin.insertAt]
 
-def invFormula : (k : ℕ) → (𝓛.henkinStep n).Formula (m + k) → 𝓛.Formula (m + k + 1)
+def invFormula : (k : ℕ) → (L.henkinStep n).Formula (m + k) → L.Formula (m + k + 1)
 | k, r ⬝ʳ v => r ⬝ʳ λ i => invTerm k (v i)
 | k, t₁ ≐ t₂ => invTerm k t₁ ≐ invTerm k t₂
 | k, ⊥ => ⊥
 | k, p ⇒ q => invFormula k p ⇒ invFormula k q
 | k, ∀' p => ∀' (invFormula (k + 1) p)
-@[simp] theorem invFormula_false : invFormula k (⊥ : (𝓛.henkinStep n).Formula (m + k)) = ⊥ := by
+@[simp] theorem invFormula_false : invFormula k (⊥ : (L.henkinStep n).Formula (m + k)) = ⊥ := by
   rw [←Formula.false_eq]; simp only [invFormula]
-@[simp] theorem invFormula_imp {p q : (𝓛.henkinStep n).Formula (m + k)} :
+@[simp] theorem invFormula_imp {p q : (L.henkinStep n).Formula (m + k)} :
   invFormula k (p ⇒ q) = invFormula k p ⇒ invFormula k q := by
   rw [←Formula.imp_eq]; simp only [invFormula]
 @[simp] theorem invFormula_neg : invFormula k (~ p) = ~ invFormula k p := by
   rw [←Formula.neg_eq, invFormula_imp, invFormula_false]; rfl
 
-theorem invFormula_andN {v : Vec ((𝓛.henkinStep n).Formula (m + k)) l} :
+theorem invFormula_andN {v : Vec ((L.henkinStep n).Formula (m + k)) l} :
   invFormula k (⋀ i, v i) = ⋀ i, invFormula k (v i) := by
   induction l with simp [Formula.andN]
   | zero => simp [Top.top]
   | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
 
-theorem invFormula_homFormula : invFormula k (hom.onFormula p : (𝓛.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
+theorem invFormula_homFormula : invFormula k (hom.onFormula p : (L.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
   | rel | eq => simp [invTerm_homTerm]
   | imp p q => simp [invFormula_homFormula (p := p), invFormula_homFormula (p := q)]
   | all p => simp [invFormula_homFormula (k := k + 1) (p := p), Subst.shiftAt]
 
-theorem invFormula_subst {σ : (𝓛.henkinStep n).Subst (m + k) (m' + k')} :
+theorem invFormula_subst {σ : (L.henkinStep n).Subst (m + k) (m' + k')} :
   invFormula k' (p[σ]ₚ) = (invFormula k p)[Subst.insertAt k ((invTerm k' ·) ∘ σ) #(Fin.embedAt k')]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]
   | rel | eq => simp [invTerm_subst]
@@ -380,7 +380,7 @@ theorem invFormula_subst_single : invFormula k (p[↦ₛ t]ₚ) = (invFormula (k
     · simp [h, Subst.insertAt_app_embedAt]
     · simp [h, Subst.insertAt_app_insertAt, invTerm]
 
-theorem inv_axiom {p : (𝓛.henkinStep n).Formula (m + k)} : p ∈ (𝓛.henkinStep n).Axiom → Γ ⊢ invFormula k p := by
+theorem inv_axiom {p : (L.henkinStep n).Formula (m + k)} : p ∈ (L.henkinStep n).Axiom → Γ ⊢ invFormula k p := by
   intro h
   cases h with simp [invFormula, invFormula_andN, invFormula_shift, invFormula_subst_single]
   | @eq_congr_func m _ v₁ v₂ f =>
@@ -397,19 +397,19 @@ theorem inv_proof : hom.onFormula '' Δ ⊢ p → Δ ⊢ ∀' (invFormula 0 p) :
   | ax h => pintro; exact inv_axiom (k := 0) h
   | mp _ _ ih₁ ih₂ => simp [invFormula_imp (k := 0)] at ih₁; exact (Proof.ax .forall_imp).mp₂ ih₁ ih₂
 
-theorem hom_consistent {Γ : 𝓛.FormulaSet m} (h : Γ ⊢ ∃' ⊤) :
-  Consistent Γ → Consistent (hom.onFormula '' Γ : (𝓛.henkinStep n).FormulaSet m) := by
+theorem hom_consistent {Γ : L.FormulaSet m} (h : Γ ⊢ ∃' ⊤) :
+  Consistent Γ → Consistent (hom.onFormula '' Γ : (L.henkinStep n).FormulaSet m) := by
   intro h₁ h₂
   apply inv_proof at h₂
   simp [invFormula_false (k := 0)] at h₂
   exact h₁ ((Proof.iff_mpr.mp Proof.neg_forall_iff).mp₂ h h₂)
 
-inductive axioms : (𝓛.henkinStep n).FormulaSet n where
+inductive axioms : (L.henkinStep n).FormulaSet n where
 | henkin (p) : axioms (∃' (hom.onFormula p) ⇒ (hom.onFormula p)[↦ₛ (wit p)]ₚ)
 
 end henkinStep
 
-def FormulaSet.henkinStep (Γ : 𝓛.FormulaSet n) : (𝓛.henkinStep n).FormulaSet n :=
+def FormulaSet.henkinStep (Γ : L.FormulaSet n) : (L.henkinStep n).FormulaSet n :=
   henkinStep.hom.onFormula '' Γ ∪ henkinStep.axioms
 
 theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
@@ -450,22 +450,22 @@ theorem FormulaSet.henkinStep.consistent (h : Γ ⊢ ∃' ⊤) :
     · simp [Formula.consts_neg]; apply henkinStep.wit_not_in_homFormula
     · exact Proof.and_right.mp h₄
 
-def henkinChain (𝓛 : Language) (n : ℕ) : ℕ → Language
-| 0 => 𝓛
-| i + 1 => (𝓛.henkinChain n i).henkinStep n
+def henkinChain (L : Language) (n : ℕ) : ℕ → Language
+| 0 => L
+| i + 1 => (L.henkinChain n i).henkinStep n
 
-def henkinize (𝓛 : Language) (n : ℕ) : Language := (DirectedSystem.ofChain (𝓛.henkinChain n) (λ _ => henkinStep.hom)).directLimit
+def henkinize (L : Language) (n : ℕ) : Language := (DirectedSystem.ofChain (L.henkinChain n) (λ _ => henkinStep.hom)).directLimit
 
 namespace FormulaSet
 
-def henkinChain (Γ : 𝓛.FormulaSet n) : (i : ℕ) → (𝓛.henkinChain n i).FormulaSet n
+def henkinChain (Γ : L.FormulaSet n) : (i : ℕ) → (L.henkinChain n i).FormulaSet n
 | 0 => Γ
 | i + 1 => (Γ.henkinChain i).henkinStep
 
-def henkinize (Γ : 𝓛.FormulaSet n) : (𝓛.henkinize n).FormulaSet n :=
+def henkinize (Γ : L.FormulaSet n) : (L.henkinize n).FormulaSet n :=
   ⋃i, (DirectedSystem.homLimit _ i).onFormula '' Γ.henkinChain i
 
-variable {Γ : 𝓛.FormulaSet n}
+variable {Γ : L.FormulaSet n}
 
 theorem henkinize.supset_henkin : Γ.henkinize ⊆ Δ → Henkin Δ := by
   intro h₁ p h₂

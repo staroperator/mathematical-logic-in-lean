@@ -23,51 +23,51 @@ inductive Ty where
 
 namespace Language
 
-variable {𝓛 : Language}
+variable {L : Language}
 
-inductive Term (𝓛 : Language) : List Ty → Type where
-| var : Γ.Fin Ty.var → 𝓛.Term Γ
-| fconst : 𝓛.Func n → (Fin n → 𝓛.Term Γ) → 𝓛.Term Γ
-| fvar : Γ.Fin (Ty.func n) → (Fin n → 𝓛.Term Γ) → 𝓛.Term Γ
+inductive Term (L : Language) : List Ty → Type where
+| var : Γ.Fin Ty.var → L.Term Γ
+| fconst : L.Func n → (Fin n → L.Term Γ) → L.Term Γ
+| fvar : Γ.Fin (Ty.func n) → (Fin n → L.Term Γ) → L.Term Γ
 prefix:max "#" => Term.var
 infix:70 " ⬝ᶠ " => Term.fconst
 infix:70 " ⬝ᶠᵛ " => Term.fvar
 
-inductive Formula (𝓛 : Language) : List Ty → Type where
-| rconst {Γ n} : 𝓛.Rel n → (Fin n → 𝓛.Term Γ) → 𝓛.Formula Γ
-| rvar {Γ n} : Γ.Fin (Ty.rel n) → (Fin n → 𝓛.Term Γ) → 𝓛.Formula Γ
-| eq : 𝓛.Term Γ → 𝓛.Term Γ → 𝓛.Formula Γ
-| false : 𝓛.Formula Γ
-| imp : 𝓛.Formula Γ → 𝓛.Formula Γ → 𝓛.Formula Γ
-| all : 𝓛.Formula (Ty.var :: Γ) → 𝓛.Formula Γ
-| allf {Γ} (n) : 𝓛.Formula (Ty.func n :: Γ) → 𝓛.Formula Γ
-| allr {Γ} (n) : 𝓛.Formula (Ty.rel n :: Γ) → 𝓛.Formula Γ
+inductive Formula (L : Language) : List Ty → Type where
+| rconst {Γ n} : L.Rel n → (Fin n → L.Term Γ) → L.Formula Γ
+| rvar {Γ n} : Γ.Fin (Ty.rel n) → (Fin n → L.Term Γ) → L.Formula Γ
+| eq : L.Term Γ → L.Term Γ → L.Formula Γ
+| false : L.Formula Γ
+| imp : L.Formula Γ → L.Formula Γ → L.Formula Γ
+| all : L.Formula (Ty.var :: Γ) → L.Formula Γ
+| allf {Γ} (n) : L.Formula (Ty.func n :: Γ) → L.Formula Γ
+| allr {Γ} (n) : L.Formula (Ty.rel n :: Γ) → L.Formula Γ
 
 namespace Formula
 
 infix:70 " ⬝ʳ " => rconst
 infix:70 " ⬝ʳᵛ " => rvar
 infix:60 (priority := high) " ≐ " => eq
-instance : PropNotation (𝓛.Formula Γ) where
+instance : PropNotation (L.Formula Γ) where
   false := false
   imp := imp
 
 notation "∀' " => all
 notation "∀ᶠ " => allf
 notation "∀ʳ " => allr
-def ex (p : 𝓛.Formula (_ :: Γ)) := ~ ∀' (~ p)
-def exf (n) (p : 𝓛.Formula (_ :: Γ)) := ~ ∀ᶠ n (~ p)
-def exr (n) (p : 𝓛.Formula (_ :: Γ)) := ~ ∀ʳ n (~ p)
+def ex (p : L.Formula (_ :: Γ)) := ~ ∀' (~ p)
+def exf (n) (p : L.Formula (_ :: Γ)) := ~ ∀ᶠ n (~ p)
+def exr (n) (p : L.Formula (_ :: Γ)) := ~ ∀ʳ n (~ p)
 notation "∃' " => ex
 notation "∃ᶠ " => exf
 notation "∃ʳ " => exr
 
-@[simp] theorem false_eq : false = (⊥ : 𝓛.Formula n) := rfl
+@[simp] theorem false_eq : false = (⊥ : L.Formula n) := rfl
 @[simp] theorem imp_eq : imp p q = p ⇒ q := rfl
 
 end Formula
 
-abbrev Sentence (𝓛 : Language) := 𝓛.Formula []
-abbrev Theory (𝓛 : Language) := Set 𝓛.Sentence
+abbrev Sentence (L : Language) := L.Formula []
+abbrev Theory (L : Language) := Set L.Sentence
 
 end SecondOrder.Language

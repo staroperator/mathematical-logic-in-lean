@@ -41,7 +41,7 @@ namespace PA₂
 
 attribute [local simp] Structure.interp Structure.satisfy Structure.satisfySentence Structure.Assignment.cons Vec.eq_nil Vec.eq_one Vec.eq_two
 
-def 𝓝 : PA₂.Model where
+def N : PA₂.Model where
   Dom := ℕ
   interpFunc
   | .zero, _ => 0
@@ -59,42 +59,42 @@ def 𝓝 : PA₂.Model where
       | zero => exact h₁
       | succ n ih => exact h₂ _ ih
 
-variable {𝓜 : PA₂.Model}
+variable {M : PA₂.Model}
 
-instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
-instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
-instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
+instance : Zero M := ⟨M.interpFunc .zero []ᵥ⟩
+instance : Add M := ⟨(M.interpFunc .add [·, ·]ᵥ)⟩
+instance : Mul M := ⟨(M.interpFunc .mul [·, ·]ᵥ)⟩
 
-def succ (u : 𝓜) := 𝓜.interpFunc .succ [u]ᵥ
-def ofNat : ℕ → 𝓜
+def succ (u : M) := M.interpFunc .succ [u]ᵥ
+def ofNat : ℕ → M
 | 0 => 0
 | n + 1 => succ (ofNat n)
 
-theorem ofNat_injective : Function.Injective (@ofNat 𝓜) := by
+theorem ofNat_injective : Function.Injective (@ofNat M) := by
   intro n m h₁
   by_contra h₂
   apply Nat.lt_or_gt_of_ne at h₂
   wlog h₃ : n < m
   · simp [h₃] at h₂
-    apply this (𝓜 := 𝓜) _ _ h₂
+    apply this (M := M) _ _ h₂
     · rw [h₁]
     · simp [h₂]
   clear h₂
   cases' m with m <;> simp [Nat.lt_succ] at h₃
   induction n generalizing m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .ax_succ_ne_zero
+    have := M.satisfy_theory _ .ax_succ_ne_zero
     simp [Peano.succ] at this
     exact this _ h₁.symm
   | succ n ih =>
-    have := 𝓜.satisfy_theory _ .ax_succ_inj
+    have := M.satisfy_theory _ .ax_succ_inj
     simp [Peano.succ] at this; apply this at h₁
     cases' m with m <;> simp at h₃
     exact ih _ h₁ h₃
 
-theorem ofNat_surjective : Function.Surjective (@ofNat 𝓜) := by
+theorem ofNat_surjective : Function.Surjective (@ofNat M) := by
   intro u
-  have := 𝓜.satisfy_theory _ .ax_ind
+  have := M.satisfy_theory _ .ax_ind
   simp [Peano.succ] at this
   apply this (r := λ v => ∃ n, ofNat n = v 0)
   · exists 0
@@ -103,31 +103,31 @@ theorem ofNat_surjective : Function.Surjective (@ofNat 𝓜) := by
     rw [ofNat, h₁]
     rfl
 
-theorem ofNat_add : @ofNat 𝓜 (n + m) = ofNat n + ofNat m := by
+theorem ofNat_add : @ofNat M (n + m) = ofNat n + ofNat m := by
   symm
   induction m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .ax_add_zero
+    have := M.satisfy_theory _ .ax_add_zero
     simp at this; apply this
   | succ m ih =>
-    have := 𝓜.satisfy_theory _ .ax_add_succ
+    have := M.satisfy_theory _ .ax_add_succ
     simp [Peano.succ] at this
     apply (this _ _).trans
     simp_rw [Nat.add_succ, ofNat, ←ih]; rfl
 
-theorem ofNat_mul : @ofNat 𝓜 (n * m) = ofNat n * ofNat m := by
+theorem ofNat_mul : @ofNat M (n * m) = ofNat n * ofNat m := by
   symm
   induction m with
   | zero =>
-    have := 𝓜.satisfy_theory _ .ax_mul_zero
+    have := M.satisfy_theory _ .ax_mul_zero
     simp at this; apply this
   | succ m ih =>
-    have := 𝓜.satisfy_theory _ .ax_mul_succ
+    have := M.satisfy_theory _ .ax_mul_succ
     simp [Peano.succ] at this
     apply (this _ _).trans
     simp [Nat.mul_succ, ofNat_add, ←ih]; rfl
 
-noncomputable def model_iso_𝓝 (𝓜 : PA₂.Model) : 𝓝 ≃ᴹ 𝓜.toStructure where
+noncomputable def model_iso_N (M : PA₂.Model) : N ≃ᴹ M.toStructure where
   toEquiv := Equiv.ofBijective ofNat ⟨ofNat_injective, ofNat_surjective⟩
   on_func
   | .zero, v => by simp; rfl
@@ -137,6 +137,6 @@ noncomputable def model_iso_𝓝 (𝓜 : PA₂.Model) : 𝓝 ≃ᴹ 𝓜.toStruc
   on_rel r := nomatch r
 
 noncomputable def categorical : PA₂.Categorical
-| 𝓜₁, 𝓜₂ => .trans (.symm (model_iso_𝓝 𝓜₁)) (model_iso_𝓝 𝓜₂)
+| M₁, M₂ => .trans (.symm (model_iso_N M₁)) (model_iso_N M₂)
 
 end SecondOrder.Language.Theory.PA₂

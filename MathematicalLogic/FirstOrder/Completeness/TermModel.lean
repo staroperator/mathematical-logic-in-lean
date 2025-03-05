@@ -12,19 +12,19 @@ theorem Quotient.liftOnVec_mk {s : Setoid α} {f : Vec α n → β} {h} :
 
 namespace FirstOrder.Language.FormulaSet
 
-variable {𝓛 : Language}
+variable {L : Language}
 
-def TermSetoid (Γ : 𝓛.FormulaSet n) : Setoid (𝓛.Term n) where
+def TermSetoid (Γ : L.FormulaSet n) : Setoid (L.Term n) where
   r t₁ t₂ := Γ ⊢ t₁ ≐ t₂
   iseqv.refl _ := Proof.eq_refl
   iseqv.symm := Proof.eq_symm.mp
   iseqv.trans := Proof.eq_trans.mp₂
 
-def TermModel (Γ : 𝓛.FormulaSet n) := Quotient (TermSetoid Γ)
+def TermModel (Γ : L.FormulaSet n) := Quotient (TermSetoid Γ)
 
-variable {Γ : 𝓛.FormulaSet n}
+variable {Γ : L.FormulaSet n}
 
-@[simps] instance : 𝓛.IsStructure (TermModel Γ) where
+@[simps] instance : L.IsStructure (TermModel Γ) where
   interpFunc f v :=
     Quotient.liftOnVec v (⟦f ⬝ᶠ ·⟧)
       (by intros v₁ v₂ h; simp; apply Quotient.sound; papply Proof.eq_congr_func; exact Proof.andN_intro h)
@@ -34,7 +34,7 @@ variable {Γ : 𝓛.FormulaSet n}
 
 namespace TermModel
 
-variable {Γ : 𝓛.FormulaSet n} {σ : 𝓛.Subst m n}
+variable {Γ : L.FormulaSet n} {σ : L.Subst m n}
 
 theorem interp_term : ⟦ t ⟧ₜ Γ.TermModel, (⟦σ ·⟧) = ⟦t[σ]ₜ⟧ := by
   induction t with simp

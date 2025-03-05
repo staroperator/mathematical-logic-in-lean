@@ -28,26 +28,26 @@ namespace FirstOrder.Language
 
 universe u v w
 
-structure Hom (𝓛₁ 𝓛₂ : Language) where
-  onFunc : ∀ {n}, 𝓛₁.Func n → 𝓛₂.Func n
-  onRel : ∀ {n}, 𝓛₁.Rel n → 𝓛₂.Rel n
+structure Hom (L₁ L₂ : Language) where
+  onFunc : ∀ {n}, L₁.Func n → L₂.Func n
+  onRel : ∀ {n}, L₁.Rel n → L₂.Rel n
 infix:50 " →ᴸ " => Hom
 
 namespace Hom
 
-variable {𝓛 𝓛₁ 𝓛₂ 𝓛₃ : Language} {φ : 𝓛₁ →ᴸ 𝓛₂}
+variable {L L₁ L₂ L₃ : Language} {φ : L₁ →ᴸ L₂}
 
 @[ext] theorem ext
-  (h₁ : ∀ n (f : 𝓛₁.Func n), φ.onFunc f = ψ.onFunc f)
-  (h₂ : ∀ n (r : 𝓛₁.Rel n), φ.onRel r = ψ.onRel r) : φ = ψ := by
+  (h₁ : ∀ n (f : L₁.Func n), φ.onFunc f = ψ.onFunc f)
+  (h₂ : ∀ n (r : L₁.Rel n), φ.onRel r = ψ.onRel r) : φ = ψ := by
   cases φ; cases ψ; simp
   constructor <;> funext <;> apply_assumption
 
-@[simps] def id : 𝓛 →ᴸ 𝓛 where
+@[simps] def id : L →ᴸ L where
   onFunc f := f
   onRel r := r
 
-@[simps] def comp (φ₂ : 𝓛₂ →ᴸ 𝓛₃) (φ₁ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁ →ᴸ 𝓛₃ where
+@[simps] def comp (φ₂ : L₂ →ᴸ L₃) (φ₁ : L₁ →ᴸ L₂) : L₁ →ᴸ L₃ where
   onFunc f := φ₂.onFunc (φ₁.onFunc f)
   onRel r := φ₂.onRel (φ₁.onRel r)
 infixl:90 " ∘ᴸ " => comp
@@ -56,7 +56,7 @@ theorem comp_id : φ ∘ᴸ id = φ := by ext <;> simp
 theorem id_comp : id ∘ᴸ φ = φ := by ext <;> simp
 theorem comp_assoc : φ₃ ∘ᴸ φ₂ ∘ᴸ φ₁ = φ₃ ∘ᴸ (φ₂ ∘ᴸ φ₁) := by ext <;> simp
 
-def onTerm (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Term n → 𝓛₂.Term n
+def onTerm (φ : L₁ →ᴸ L₂) : L₁.Term n → L₂.Term n
 | #x => #x
 | f ⬝ᶠ v => φ.onFunc f ⬝ᶠ λ i => φ.onTerm (v i)
 
@@ -75,7 +75,7 @@ theorem onTerm_subst : φ.onTerm (t[σ]ₜ) = (φ.onTerm t)[φ.onTerm ∘ σ]ₜ
 theorem onTerm_shift : φ.onTerm (↑ₜt) = ↑ₜ(φ.onTerm t) := by
   simp [Term.shift, onTerm_subst]; rfl
 
-def onFormula (φ : 𝓛₁ →ᴸ 𝓛₂) : 𝓛₁.Formula n → 𝓛₂.Formula n
+def onFormula (φ : L₁ →ᴸ L₂) : L₁.Formula n → L₂.Formula n
 | r ⬝ʳ v => φ.onRel r ⬝ʳ λ i => φ.onTerm (v i)
 | t₁ ≐ t₂ => φ.onTerm t₁ ≐ φ.onTerm t₂
 | ⊥ => ⊥
@@ -86,7 +86,7 @@ theorem onFormula_neg : φ.onFormula (~ p) = ~ φ.onFormula p := rfl
 
 theorem onFormula_and : φ.onFormula (p ⩑ q) = φ.onFormula p ⩑ φ.onFormula q := rfl
 
-theorem onFormula_andN {v : Vec (𝓛₁.Formula n) m} : φ.onFormula (⋀ i, v i) = ⋀ i, φ.onFormula (v i) := by
+theorem onFormula_andN {v : Vec (L₁.Formula n) m} : φ.onFormula (⋀ i, v i) = ⋀ i, φ.onFormula (v i) := by
   induction m with try simp [onFormula, onFormula_and, Formula.andN]
   | zero => rfl
   | succ m ih => simp [ih]; rfl
@@ -105,7 +105,7 @@ theorem comp_onFormula : (φ₂ ∘ᴸ φ₁).onFormula p = φ₂.onFormula (φ�
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [ih]
 
-theorem onFormula_subst {σ : 𝓛₁.Subst n m} : φ.onFormula (p[σ]ₚ) = (φ.onFormula p)[φ.onTerm ∘ σ]ₚ := by
+theorem onFormula_subst {σ : L₁.Subst n m} : φ.onFormula (p[σ]ₚ) = (φ.onFormula p)[φ.onTerm ∘ σ]ₚ := by
   induction p generalizing m with simp [onFormula]
   | rel r v => ext; simp [onTerm_subst]
   | eq t₁ t₂ => simp [onTerm_subst]
@@ -119,7 +119,7 @@ theorem onFormula_shift : φ.onFormula (↑ₚp) = ↑ₚ(φ.onFormula p) := by
 theorem onFormula_subst_single : φ.onFormula (p[↦ₛ t]ₚ) = (φ.onFormula p)[↦ₛ (φ.onTerm t)]ₚ := by
   simp [onFormula_subst]; congr; funext x; cases x using Fin.cases <;> rfl
 
-theorem on_axiom : p ∈ 𝓛₁.Axiom → φ.onFormula p ∈ 𝓛₂.Axiom := by
+theorem on_axiom : p ∈ L₁.Axiom → φ.onFormula p ∈ L₂.Axiom := by
   intro h
   induction h <;> simp [onFormula, onFormula_subst_single, onFormula_shift, onFormula_andN]
   case all ih => exact .all ih
@@ -132,26 +132,26 @@ theorem on_proof : Γ ⊢ p → φ.onFormula '' Γ ⊢ φ.onFormula p := by
   | ax h => exact .ax (on_axiom h)
   | mp _ _ ih₁ ih₂ => exact .mp ih₁ ih₂
 
-@[simps] def reduct (φ : 𝓛₁ →ᴸ 𝓛₂) (𝓜 : 𝓛₂.Structure) : 𝓛₁.Structure where
-  Dom := 𝓜
-  interpFunc f v := 𝓜.interpFunc (φ.onFunc f) v
-  interpRel r v := 𝓜.interpRel (φ.onRel r) v
+@[simps] def reduct (φ : L₁ →ᴸ L₂) (M : L₂.Structure) : L₁.Structure where
+  Dom := M
+  interpFunc f v := M.interpFunc (φ.onFunc f) v
+  interpRel r v := M.interpRel (φ.onRel r) v
 
-variable {𝓜 : 𝓛₂.Structure}
+variable {M : L₂.Structure}
 
-theorem interp_onTerm : ⟦ φ.onTerm t ⟧ₜ 𝓜, ρ = ⟦ t ⟧ₜ φ.reduct 𝓜, ρ := by
+theorem interp_onTerm : ⟦ φ.onTerm t ⟧ₜ M, ρ = ⟦ t ⟧ₜ φ.reduct M, ρ := by
   induction t with simp [onTerm]
   | func f v ih => congr; funext; apply ih
 
-theorem satisfy_onFormula : 𝓜 ⊨[ρ] φ.onFormula p ↔ φ.reduct 𝓜 ⊨[ρ] p := by
+theorem satisfy_onFormula : M ⊨[ρ] φ.onFormula p ↔ φ.reduct M ⊨[ρ] p := by
   induction p with simp [onFormula]
   | rel | eq => simp [interp_onTerm] <;> rfl
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih => simp [ih]
 
 theorem on_satisfiable : Satisfiable.{u} (φ.onFormula '' Γ) → Satisfiable.{u} Γ := by
-  intro ⟨𝓜, ρ, h₁⟩
-  exists φ.reduct 𝓜, ρ
+  intro ⟨M, ρ, h₁⟩
+  exists φ.reduct M, ρ
   intro p h₂
   rw [←satisfy_onFormula]
   apply h₁
@@ -163,16 +163,16 @@ end Hom
 
 variable {ι : Type} [Preorder ι] [IsDirected ι (· ≤ ·)]
 
-structure DirectedSystem (𝓛 : ι → Language) where
-  hom : ∀ i j, i ≤ j → 𝓛 i →ᴸ 𝓛 j
+structure DirectedSystem (L : ι → Language) where
+  hom : ∀ i j, i ≤ j → L i →ᴸ L j
   hom_id : ∀ {i} h, hom i i h = .id
   hom_comp : ∀ {i j k} h₁ h₂ h₃, hom j k h₂ ∘ᴸ hom i j h₁ = hom i k h₃
 
 namespace DirectedSystem
 
-variable {𝓛 : ι → Language} (φ : DirectedSystem 𝓛)
+variable {L : ι → Language} (φ : DirectedSystem L)
 
-def setoidFunc (n) : Setoid (Σ i, (𝓛 i).Func n) where
+def setoidFunc (n) : Setoid (Σ i, (L i).Func n) where
   r := λ ⟨i, f⟩ ⟨j, g⟩ =>
     ∃ k, ∃ (h₁ : i ≤ k) (h₂ : j ≤ k), (φ.hom i k h₁).onFunc f = (φ.hom j k h₂).onFunc g
   iseqv.refl := λ ⟨i, f⟩ => by exists i, le_refl i, le_refl i
@@ -186,7 +186,7 @@ def setoidFunc (n) : Setoid (Σ i, (𝓛 i).Func n) where
     simp_rw [←Hom.comp_onFunc]
     rw [φ.hom_comp _ _ (le_trans h₂ h₄), φ.hom_comp _ _ (le_trans h₂ h₄)]
 
-def setoidRel (n) : Setoid (Σ i, (𝓛 i).Rel n) where
+def setoidRel (n) : Setoid (Σ i, (L i).Rel n) where
   r := λ ⟨i, r⟩ ⟨j, s⟩ =>
     ∃ k, ∃ (h₁ : i ≤ k) (h₂ : j ≤ k), (φ.hom i k h₁).onRel r = (φ.hom j k h₂).onRel s
   iseqv.refl := λ ⟨i, r⟩ => by exists i, le_refl i, le_refl i
@@ -204,17 +204,17 @@ def directLimit : Language where
   Func n := Quotient (φ.setoidFunc n)
   Rel n := Quotient (φ.setoidRel n)
 
-def homLimit (i : ι) : 𝓛 i →ᴸ φ.directLimit where
+def homLimit (i : ι) : L i →ᴸ φ.directLimit where
   onFunc f := ⟦⟨i, f⟩⟧
   onRel r := ⟦⟨i, r⟩⟧
 
-variable {φ : DirectedSystem 𝓛}
+variable {φ : DirectedSystem L}
 
 theorem homLimit_comp_hom {h : i ≤ j} : φ.homLimit j ∘ᴸ φ.hom i j h = φ.homLimit i := by
   ext <;> simp [homLimit] <;> apply Quotient.sound <;> exists j, le_refl j, h
     <;> simp [←Hom.comp_onFunc, ←Hom.comp_onRel] <;> rw [φ.hom_comp]
 
-theorem term_hom_eq_of_homLimit_eq [Nonempty ι] (t₁ : (𝓛 i).Term n) (t₂ : (𝓛 j).Term n)
+theorem term_hom_eq_of_homLimit_eq [Nonempty ι] (t₁ : (L i).Term n) (t₂ : (L j).Term n)
   (h : (φ.homLimit i).onTerm t₁ = (φ.homLimit j).onTerm t₂) :
   ∃ k h₁ h₂, (φ.hom i k h₁).onTerm t₁ = (φ.hom j k h₂).onTerm t₂ := by
   generalize h' : (φ.homLimit j).onTerm t₂ = t at h
@@ -236,7 +236,7 @@ theorem term_hom_eq_of_homLimit_eq [Nonempty ι] (t₁ : (𝓛 i).Term n) (t₂ 
     · rw [←φ.hom_comp h₅ h₈, ←φ.hom_comp h₅' h₈]; simp [h₅'']
     · ext x; rw [←φ.hom_comp (h₆ x) ((h₇ x).trans h₈'), ←φ.hom_comp (h₆' x) ((h₇ x).trans h₈')]; simp [Hom.comp_onTerm, h₆'']
 
-theorem formula_hom_eq_of_homLimit_eq [Nonempty ι] (p : (𝓛 i).Formula n) (q : (𝓛 j).Formula n)
+theorem formula_hom_eq_of_homLimit_eq [Nonempty ι] (p : (L i).Formula n) (q : (L j).Formula n)
   (h : (φ.homLimit i).onFormula p = (φ.homLimit j).onFormula q) :
   ∃ k h₁ h₂, (φ.hom i k h₁).onFormula p = (φ.hom j k h₂).onFormula q := by
   generalize h' : (φ.homLimit j).onFormula q = r at h
@@ -332,7 +332,7 @@ theorem formula_of_homLimit [h : Nonempty ι] (p : φ.directLimit.Formula n) :
   | all p ih => rcases ih with ⟨i, q, h⟩; exists i, ∀' q; simp [Hom.onFormula, h]
 
 theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
-  ∃ i q, p = (φ.homLimit i).onFormula q ∧ q ∈ (𝓛 i).Axiom := by
+  ∃ i q, p = (φ.homLimit i).onFormula q ∧ q ∈ (L i).Axiom := by
   induction h with
   | @imp_self _ p₁ p₂ =>
     rcases formula_of_homLimit p₁ with ⟨i₁, q₁, h₁⟩
@@ -500,7 +500,7 @@ theorem proof_of_homLimit [Nonempty ι] (h : Γ ⊢ p) :
       rw [h'']
       exact Hom.on_proof h₆'
 
-theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (𝓛 i).FormulaSet n} {Δ : (𝓛 i).FormulaSet n}
+theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (L i).FormulaSet n} {Δ : (L i).FormulaSet n}
   (h₁ : ∀ i j h, (φ.hom i j h).onFormula '' Γ i ⊆ Γ j)
   (h₂ : (φ.homLimit i).onFormula '' Δ ⊆ ⋃i, (φ.homLimit i).onFormula '' Γ i)
   (h : Δ.Finite) :
@@ -527,7 +527,7 @@ theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (𝓛 i).Formu
       apply Set.Subset.trans (Set.image_subset _ h₅)
       apply h₁
 
-def ofChain (𝓛 : ℕ → Language) (φ : ∀ i, 𝓛 i →ᴸ 𝓛 (i + 1)) : DirectedSystem 𝓛 where
+def ofChain (L : ℕ → Language) (φ : ∀ i, L i →ᴸ L (i + 1)) : DirectedSystem L where
   hom i j h := Nat.leRecOn h (φ _ ∘ᴸ ·) .id
   hom_id := by simp [Nat.leRecOn_self]
   hom_comp {i j k} h₁ h₂ h₃ := by
@@ -539,12 +539,12 @@ def ofChain (𝓛 : ℕ → Language) (φ : ∀ i, 𝓛 i →ᴸ 𝓛 (i + 1)) :
       simp at this
       rw [Hom.comp_assoc, this]
 
-theorem ofChain_hom_succ {𝓛 : ℕ → Language} {φ : ∀ i, 𝓛 i →ᴸ 𝓛 (i + 1)} :
-  (ofChain 𝓛 φ).hom i i.succ h = φ i := by simp [ofChain, Nat.leRecOn_succ', Hom.comp_id]
+theorem ofChain_hom_succ {L : ℕ → Language} {φ : ∀ i, L i →ᴸ L (i + 1)} :
+  (ofChain L φ).hom i i.succ h = φ i := by simp [ofChain, Nat.leRecOn_succ', Hom.comp_id]
 
-theorem monotone_chain {𝓛 : ℕ → Language} {φ : ∀ i, 𝓛 i →ᴸ 𝓛 (i + 1)} {Γ : (i : ℕ) → (𝓛 i).FormulaSet n}
+theorem monotone_chain {L : ℕ → Language} {φ : ∀ i, L i →ᴸ L (i + 1)} {Γ : (i : ℕ) → (L i).FormulaSet n}
   (h₁ : ∀ i, (φ i).onFormula '' Γ i ⊆ Γ (i + 1)) :
-  ∀ i j h, ((ofChain 𝓛 φ).hom i j h).onFormula '' Γ i ⊆ Γ j := by
+  ∀ i j h, ((ofChain L φ).hom i j h).onFormula '' Γ i ⊆ Γ j := by
   intro i j h
   induction h with
   | refl => simp_rw [hom_id]; simp [Hom.id_onFormula]

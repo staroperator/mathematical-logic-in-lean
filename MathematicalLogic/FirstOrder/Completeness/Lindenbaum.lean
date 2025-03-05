@@ -3,9 +3,9 @@ import MathematicalLogic.FirstOrder.Proof
 
 namespace FirstOrder.Language.FormulaSet
 
-variable {𝓛 : Language}
+variable {L : Language}
 
-lemma consistent_chain_upper_bound (S : Set (𝓛.FormulaSet n))
+lemma consistent_chain_upper_bound (S : Set (L.FormulaSet n))
   (h₁ : ∀ Γ ∈ S, Consistent Γ) (h₂ : IsChain Set.Subset S) (h₃ : S.Nonempty) :
   ∃ Γ, Consistent Γ ∧ ∀ Δ ∈ S, Δ ⊆ Γ := by
   exists ⋃₀ S
@@ -46,7 +46,7 @@ lemma consistent_chain_upper_bound (S : Set (𝓛.FormulaSet n))
     apply Set.subset_sUnion_of_mem
     exact h
 
-theorem lindenbaum (Γ : 𝓛.FormulaSet n) (h : Consistent Γ) :
+theorem lindenbaum (Γ : L.FormulaSet n) (h : Consistent Γ) :
   ∃ Δ, Γ ⊆ Δ ∧ Consistent Δ ∧ Complete Δ := by
   apply zorn_subset_nonempty _ consistent_chain_upper_bound at h
   rcases h with ⟨Δ, h₁, h₂, h₃⟩

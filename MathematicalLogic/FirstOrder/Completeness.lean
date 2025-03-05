@@ -5,7 +5,7 @@ import MathematicalLogic.FirstOrder.Completeness.TermModel
 
 namespace FirstOrder.Language
 
-variable {𝓛 : Language} {Γ : 𝓛.FormulaSet n}
+variable {L : Language} {Γ : L.FormulaSet n}
 
 theorem Satisfiable.of_consistent : Consistent Γ → Satisfiable Γ := by
   intro h₁
@@ -37,7 +37,7 @@ theorem completeness : Γ ⊨ p → Γ ⊢ p := by
   by_contra h₂
   rw [←Consistent.append] at h₂
   apply Satisfiable.of_consistent at h₂
-  rcases h₂ with ⟨𝓜, ρ, h₂⟩
+  rcases h₂ with ⟨M, ρ, h₂⟩
   have h₃ := h₂ (~ p) (Set.mem_insert _ _)
   apply h₃
   apply h₁
@@ -67,22 +67,22 @@ theorem Satisfiable.compactness : Satisfiable.{u} Γ ↔ ∀ Δ ⊆ Γ, Δ.Finit
     rw [←consistent_iff_satisfiable] at h₄
     contradiction
 
-theorem Theory.complete_iff_elementary_equivalent {𝓣 : 𝓛.Theory} :
-  Complete 𝓣 ↔ ∀ (𝓜 : 𝓣.Model) (𝓝 : 𝓣.Model), 𝓜 ≃ᴱ (𝓝 : 𝓛.Structure) := by
+theorem Theory.complete_iff_elementary_equivalent {T : L.Theory} :
+  Complete T ↔ ∀ (M : T.Model) (N : T.Model), M ≃ᴱ (N : L.Structure) := by
   constructor
-  · intro h 𝓜 𝓝 p
+  · intro h M N p
     cases h p with
     | inl h₁ => simp [soundness h₁]
     | inr h₁ => rw [←not_iff_not]; simp [←satisfy_neg, soundness h₁]
   · intro h p
     by_contra h₁; rw [not_or] at h₁; rcases h₁ with ⟨h₁, h₂⟩
     rw [←Consistent.append_neg] at h₁; apply Satisfiable.of_consistent at h₁
-    rw [satisfiable_iff] at h₁; rcases h₁ with ⟨⟨𝓜, h₁⟩⟩
+    rw [satisfiable_iff] at h₁; rcases h₁ with ⟨⟨M, h₁⟩⟩
     have h₁' := h₁ (~ p) (Or.inl rfl)
     simp [←Consistent.append] at h₂; apply Satisfiable.of_consistent at h₂
-    rw [satisfiable_iff] at h₂; rcases h₂ with ⟨⟨𝓝, h₂⟩⟩
+    rw [satisfiable_iff] at h₂; rcases h₂ with ⟨⟨N, h₂⟩⟩
     have h₂' := h₂ p (Or.inl rfl)
-    have h₃ := h ⟨𝓜, λ p h => h₁ p (Or.inr h)⟩ ⟨𝓝, λ p h => h₂ p (Or.inr h)⟩ p
+    have h₃ := h ⟨M, λ p h => h₁ p (Or.inr h)⟩ ⟨N, λ p h => h₂ p (Or.inr h)⟩ p
     simp at h₃; simp [←h₃] at h₂'
     contradiction
 

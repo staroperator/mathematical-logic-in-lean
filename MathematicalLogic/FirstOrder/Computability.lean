@@ -8,11 +8,11 @@ open Primrec
 
 section
 
-variable {𝓛 : Language} [∀ n, Encodable (𝓛.Func n)]
+variable {L : Language} [∀ n, Encodable (L.Func n)]
 
 def Term.funcPR : Primrec 3 :=
   succ.comp₁ (mul.comp₂ (const 2) (pair.comp₂ (proj 0) (pair.comp₂ (proj 1) (proj 2))))
-@[simp] theorem Term.funcPR_eval {v : Vec (𝓛.Term n) m} :
+@[simp] theorem Term.funcPR_eval {v : Vec (L.Term n) m} :
   funcPR [m, Encodable.encode f, Encodable.encode v]ᵥ = Encodable.encode (f ⬝ᶠ v) := by
   simp [funcPR, Term.encode_func]
 
@@ -26,7 +26,7 @@ def Term.substPR : Primrec 2 :=
               (snd.comp₁ (snd.comp₁ (div2.comp₁ (proj 0))))
               (proj 1))))))
       (vget.comp₂ (proj 2) (div2.comp₁ (proj 0)))))
-theorem Term.substPR_eval {t : 𝓛.Term n} {σ : 𝓛.Subst n m} :
+theorem Term.substPR_eval {t : L.Term n} {σ : L.Subst n m} :
   substPR [Encodable.encode t, Encodable.encode σ]ᵥ = Encodable.encode (t[σ]ₜ) := by
   induction t with
   | var x => rw [substPR, covrec_eval]; simp [Vec.encode_eq, Term.encode_var]; rw [vget_eval]
@@ -41,25 +41,25 @@ theorem Term.substPR_eval {t : 𝓛.Term n} {σ : 𝓛.Subst n m} :
 
 def Subst.shiftPR : Primrec 1 :=
   vmk (mul.comp₂ (const 2) (succ.comp₁ (proj 0)))
-theorem Subst.shiftPR_eval : shiftPR [n]ᵥ = Encodable.encode (shift : 𝓛.Subst n (n + 1)) := by
+theorem Subst.shiftPR_eval : shiftPR [n]ᵥ = Encodable.encode (shift : L.Subst n (n + 1)) := by
   simp [shiftPR, vmk_eval, Vec.encode_eq, Term.encode_var]
 
 def Term.shiftPR : Primrec 2 :=
   substPR.comp₂ (proj 1) (Subst.shiftPR.comp₁ (proj 0))
-theorem Term.shiftPR_eval {t : 𝓛.Term n} :
+theorem Term.shiftPR_eval {t : L.Term n} :
   shiftPR [n, Encodable.encode t]ᵥ = Encodable.encode (↑ₜt) := by
-  simp [shiftPR, Subst.shiftPR_eval (𝓛 := 𝓛), Term.substPR_eval, Term.shift]
+  simp [shiftPR, Subst.shiftPR_eval (L := L), Term.substPR_eval, Term.shift]
 
 def Subst.liftPR : Primrec 3 :=
   pair.comp₂ zero ((vmap (Term.shiftPR.swap)).comp₃ (proj 0) (proj 2) (proj 1))
-theorem Subst.liftPR_eval {σ : 𝓛.Subst n m} :
+theorem Subst.liftPR_eval {σ : L.Subst n m} :
   liftPR [n, m, Encodable.encode σ]ᵥ = Encodable.encode (⇑ₛσ) := by
   simp [liftPR, lift]
   simp [Vec.encode_eq, vmap_eval, Term.shiftPR_eval, Term.encode_var]
 
 def Subst.liftNPR : Primrec 4 :=
   (proj 2).prec (liftPR.comp₃ (add.comp₂ (proj 2) (proj 0)) (add.comp₂ (proj 3) (proj 0)) (proj 1))
-theorem Subst.liftNPR_eval {σ : 𝓛.Subst n m} :
+theorem Subst.liftNPR_eval {σ : L.Subst n m} :
   liftNPR [k, n, m, Encodable.encode σ]ᵥ = Encodable.encode (⇑ₛ^[k] σ) := by
   simp [liftNPR]
   induction k generalizing n m σ with simp [liftN]
@@ -68,57 +68,57 @@ theorem Subst.liftNPR_eval {σ : 𝓛.Subst n m} :
 
 def Subst.singlePR : Primrec 2 :=
   pair.comp₂ (proj 1) ((vmk (mul.comp₂ (const 2) (proj 0))).comp₁ (proj 0))
-theorem Subst.singlePR_eval {t : 𝓛.Term n} :
-  singlePR [n, Encodable.encode t]ᵥ = Encodable.encode (↦ₛ t : 𝓛.Subst (n + 1) n) := by
+theorem Subst.singlePR_eval {t : L.Term n} :
+  singlePR [n, Encodable.encode t]ᵥ = Encodable.encode (↦ₛ t : L.Subst (n + 1) n) := by
   simp [singlePR, vmk_eval, Subst.single]
   simp [Vec.encode_eq, Term.encode_var]
 
 def Subst.assignPR : Primrec 2 :=
   pair.comp₂ (proj 1) ((vmk (mul.comp₂ (const 2) (succ.comp₁ (proj 0)))).comp₁ (proj 0))
-theorem Subst.assignPR_eval {t : 𝓛.Term (n + 1)} :
-  assignPR [n, Encodable.encode t]ᵥ = Encodable.encode (≔ₛ t : 𝓛.Subst (n + 1) (n + 1)) := by
+theorem Subst.assignPR_eval {t : L.Term (n + 1)} :
+  assignPR [n, Encodable.encode t]ᵥ = Encodable.encode (≔ₛ t : L.Subst (n + 1) (n + 1)) := by
   simp [assignPR, vmk_eval, Subst.assign]
   simp [Vec.encode_eq, Term.encode_var]
 
 
 
-variable [∀ n, Encodable (𝓛.Rel n)]
+variable [∀ n, Encodable (L.Rel n)]
 
 def Formula.relPR : Primrec 3 :=
   add.comp₂ (mul.comp₂ (const 4) (pair.comp₂ (proj 0) (pair.comp₂ (proj 1) (proj 2)))) (const 1)
-@[simp] theorem Formula.relPR_eval {v : Vec (𝓛.Term n) m} :
+@[simp] theorem Formula.relPR_eval {v : Vec (L.Term n) m} :
   relPR [m, Encodable.encode r, Encodable.encode v]ᵥ = Encodable.encode (r ⬝ʳ v) := by
   simp [relPR, Formula.encode_rel]
 
 def Formula.eqPR : Primrec 2 :=
   add.comp₂ (mul.comp₂ (const 4) (pair.comp₂ (proj 0) (proj 1))) (const 2)
-@[simp] theorem Formula.eqPR_eval {t₁ t₂ : 𝓛.Term n} :
+@[simp] theorem Formula.eqPR_eval {t₁ t₂ : L.Term n} :
   eqPR [Encodable.encode t₁, Encodable.encode t₂]ᵥ = Encodable.encode (t₁ ≐ t₂) := by
   simp [eqPR, Formula.encode_eq]
 
 def Formula.impPR : Primrec 2 :=
   add.comp₂ (mul.comp₂ (const 4) (pair.comp₂ (proj 0) (proj 1))) (const 3)
-@[simp] theorem Formula.impPR_eval {p q : 𝓛.Formula n} :
+@[simp] theorem Formula.impPR_eval {p q : L.Formula n} :
   impPR [Encodable.encode p, Encodable.encode q]ᵥ = Encodable.encode (p ⇒ q) := by
   simp [impPR, Formula.encode_imp]
 
 def Formula.negPR : Primrec 1 :=
   impPR.comp₂ (proj 0) zero
-@[simp] theorem Formula.negPR_eval {p : 𝓛.Formula n} :
+@[simp] theorem Formula.negPR_eval {p : L.Formula n} :
   negPR [Encodable.encode p]ᵥ = Encodable.encode (~ p) := by
   simp [negPR]
-  nth_rw 2 [←Formula.encode_false (𝓛 := 𝓛)]
+  nth_rw 2 [←Formula.encode_false (L := L)]
   rw [impPR_eval]; rfl
 
 def Formula.allPR : Primrec 1 :=
   add.comp₂ (mul.comp₂ (const 4) (proj 0)) (const 4)
-@[simp] theorem Formula.allPR_eval {p : 𝓛.Formula (n + 1)} :
+@[simp] theorem Formula.allPR_eval {p : L.Formula (n + 1)} :
   allPR [Encodable.encode p]ᵥ = Encodable.encode (∀' p) := by
   simp [allPR, Formula.encode_all]
 
 def Formula.andPR : Primrec 2 :=
   negPR.comp₁ (impPR.comp₂ (proj 0) (negPR.comp₁ (proj 1)))
-@[simp] theorem Formula.andPR_eval {p q : 𝓛.Formula n} :
+@[simp] theorem Formula.andPR_eval {p q : L.Formula n} :
   andPR [Encodable.encode p, Encodable.encode q]ᵥ = Encodable.encode (p ⩑ q) := by
   simp [andPR, PropNotation.and]
 
@@ -126,7 +126,7 @@ def Formula.andNPR : Primrec 2 :=
   ((Formula.negPR.comp₁ zero).prec (Formula.andPR.comp₂
     (vget.comp₂ (proj 3) (sub.comp₂ (proj 2) (succ.comp₁ (proj 0))))
     (proj 1))).comp₃ (proj 0) (proj 0) (proj 1)
-@[simp] theorem Formula.andNPR_eval {v : Vec (𝓛.Formula n) m} :
+@[simp] theorem Formula.andNPR_eval {v : Vec (L.Formula n) m} :
   andNPR [m, Encodable.encode v]ᵥ = Encodable.encode (⋀ i, v i) := by
   simp [andNPR]
   generalize h : prec _ _ = f
@@ -148,7 +148,7 @@ def Formula.andNPR : Primrec 2 :=
       ←Nat.sub_add_comm (n := m - k) (Nat.le_sub_of_add_le (by simp [Nat.add_comm, h₁])),
       Nat.sub_add_cancel (Nat.le_add_right_of_le (Nat.le_sub_of_add_le (by simp [Nat.add_comm, h₁])))]
 
-def Formula.depth : 𝓛.Formula n → ℕ
+def Formula.depth : L.Formula n → ℕ
 | p ⇒ q => max p.depth q.depth
 | ∀' p => p.depth + 1
 | _ => 0
@@ -162,7 +162,7 @@ def Formula.depthPR : Primrec 1 :=
       (ite (Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 0))
         (succ.comp₁ (vget.comp₂ (proj 1) (pred.comp₁ (div.comp₂ (proj 0) (const 4)))))
         zero)))
-theorem Formula.depthPR_eval {p : 𝓛.Formula n} :
+theorem Formula.depthPR_eval {p : L.Formula n} :
   depthPR [Encodable.encode p]ᵥ = p.depth := by
   induction p with simp [depth]
   | imp p q ih₁ ih₂ =>
@@ -228,11 +228,11 @@ def Formula.substPR : Primrec 4 :=
                   (pred.comp₁ (div.comp₂ (proj 0) (const 4)))
                   (pred.comp₁ (proj 1))))) (const 4))))))
   ))).comp₆ (proj 2) (depthPR.comp₁ (proj 2)) (depthPR.comp₁ (proj 2)) (proj 0) (proj 1) (proj 3)
-theorem Formula.substPR_eval {p : 𝓛.Formula n} {σ : 𝓛.Subst n m} :
+theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
   substPR [n, m, Encodable.encode p, Encodable.encode σ]ᵥ = Encodable.encode (p[σ]ₚ) := by
   simp [substPR, Vec.eq_four]; simp
   generalize h : covrec _ = f
-  suffices ∀ d k l (p : 𝓛.Formula l) (h₁ : l = n + k), d ≥ p.depth →
+  suffices ∀ d k l (p : L.Formula l) (h₁ : l = n + k), d ≥ p.depth →
     f [(Encodable.encode p).pair d, d + k, n, m, Encodable.encode σ]ᵥ = Encodable.encode ((h₁ ▸ p)[⇑ₛ^[k] σ]ₚ) by
     simp [depthPR_eval]
     specialize this p.depth 0 n p rfl (by rfl)
@@ -279,19 +279,19 @@ theorem Formula.substPR_eval {p : 𝓛.Formula n} {σ : 𝓛.Subst n m} :
 
 def Formula.shiftPR : Primrec 2 :=
   substPR.comp₄ (proj 0) (succ.comp₁ (proj 0)) (proj 1) (Subst.shiftPR.comp₁ (proj 0))
-theorem Formula.shiftPR_eval {p : 𝓛.Formula n} :
+theorem Formula.shiftPR_eval {p : L.Formula n} :
   shiftPR [n, Encodable.encode p]ᵥ = Encodable.encode (↑ₚp) := by
-  simp [shiftPR, Subst.shiftPR_eval (𝓛 := 𝓛), substPR_eval, Formula.shift]
+  simp [shiftPR, Subst.shiftPR_eval (L := L), substPR_eval, Formula.shift]
 
 def Formula.substSinglePR : Primrec 3 :=
   substPR.comp₄ (succ.comp₁ (proj 0)) (proj 0) (proj 1) (Subst.singlePR.comp₂ (proj 0) (proj 2))
-theorem Formula.substSinglePR_eval {p : 𝓛.Formula (n + 1)} {t : 𝓛.Term n} :
+theorem Formula.substSinglePR_eval {p : L.Formula (n + 1)} {t : L.Term n} :
   substSinglePR [n, Encodable.encode p, Encodable.encode t]ᵥ = Encodable.encode (p[↦ₛ t]ₚ) := by
   simp [substSinglePR, Subst.singlePR_eval, substPR_eval]
 
 def Formula.substAssignPR : Primrec 3 :=
   substPR.comp₄ (succ.comp₁ (proj 0)) (succ.comp₁ (proj 0)) (proj 1) (Subst.assignPR.comp₂ (proj 0) (proj 2))
-theorem Formula.substAssignPR_eval {p : 𝓛.Formula (n + 1)} {t : 𝓛.Term (n + 1)} :
+theorem Formula.substAssignPR_eval {p : L.Formula (n + 1)} {t : L.Term (n + 1)} :
   substAssignPR [n, Encodable.encode p, Encodable.encode t]ᵥ = Encodable.encode (p[≔ₛ t]ₚ) := by
   simp [substAssignPR, Subst.assignPR_eval, substPR_eval]
 
@@ -301,30 +301,30 @@ end
 
 section
 
-variable (𝓛 : Language) [∀ n, Encodable (𝓛.Func n)] [∀ n, Encodable (𝓛.Rel n)]
+variable (L : Language) [∀ n, Encodable (L.Func n)] [∀ n, Encodable (L.Rel n)]
 
--- should be replaced with `FinEncodable (𝓛.Func n)` and `FinEncodable (𝓛.Rel n)` in the future
+-- should be replaced with `FinEncodable (L.Func n)` and `FinEncodable (L.Rel n)` in the future
 class PrimCodable where
   isFuncPR : Primrec 2
-  isFuncPR_eval_pos_iff : ∀ {n m}, 0 < isFuncPR [n, m]ᵥ ↔ ∃ (f : 𝓛.Func n), m = Encodable.encode f
+  isFuncPR_eval_pos_iff : ∀ {n m}, 0 < isFuncPR [n, m]ᵥ ↔ ∃ (f : L.Func n), m = Encodable.encode f
   isRelPR : Primrec 2
-  isRelPR_eval_pos_iff : ∀ {n m}, 0 < isRelPR [n, m]ᵥ ↔ ∃ (r : 𝓛.Rel n), m = Encodable.encode r
+  isRelPR_eval_pos_iff : ∀ {n m}, 0 < isRelPR [n, m]ᵥ ↔ ∃ (r : L.Rel n), m = Encodable.encode r
 
 open PrimCodable
 
-variable [𝓛.PrimCodable]
+variable [L.PrimCodable]
 
 def isTermPR : Primrec 2 :=
   (covrec (
     ite (odd.comp₁ (proj 0))
       (andv [
-        (isFuncPR 𝓛).comp₂ (fst.comp₁ (div2.comp₁ (proj 0))) (fst.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))),
+        (isFuncPR L).comp₂ (fst.comp₁ (div2.comp₁ (proj 0))) (fst.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))),
         isvec.comp₂ (fst.comp₁ (div2.comp₁ (proj 0))) (snd.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))),
         vand.comp₂ (fst.comp₁ (div2.comp₁ (proj 0)))
           (vmap'.comp₃ (fst.comp₁ (div2.comp₁ (proj 0))) (snd.comp₁ (snd.comp₁ (div2.comp₁ (proj 0)))) (proj 1))
       ]ᵥ)
       (lt (div2.comp₁ (proj 0)) (proj 2)))).swap
-theorem isTermPR_eval_pos_iff : 0 < 𝓛.isTermPR [n, m]ᵥ ↔ ∃ (t : 𝓛.Term n), m = Encodable.encode t := by
+theorem isTermPR_eval_pos_iff : 0 < L.isTermPR [n, m]ᵥ ↔ ∃ (t : L.Term n), m = Encodable.encode t := by
   constructor
   · intro h; simp [isTermPR] at h
     induction' m using Nat.strong_induction_on with m ih
@@ -377,10 +377,10 @@ def isFormulaPR : Primrec 2 :=
       (const 1)
       (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 1))
         (andv [
-          (isRelPR 𝓛).comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (fst.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4)))),
+          (isRelPR L).comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (fst.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4)))),
           isvec.comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4))) (snd.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4)))),
           vand.comp₂ (fst.comp₁ (div.comp₂ (proj 0) (const 4)))
-              ((vmap 𝓛.isTermPR.swap).comp₃
+              ((vmap L.isTermPR.swap).comp₃
                 (fst.comp₁ (div.comp₂ (proj 0) (const 4)))
                 (snd.comp₁ (snd.comp₁ (div.comp₂ (proj 0) (const 4))))
                 (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
@@ -388,10 +388,10 @@ def isFormulaPR : Primrec 2 :=
         ]ᵥ)
         (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 2))
           (and
-            (𝓛.isTermPR.comp₂
+            (L.isTermPR.comp₂
               (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
               (fst.comp₁ (div.comp₂ (proj 0) (const 4))))
-            (𝓛.isTermPR.comp₂
+            (L.isTermPR.comp₂
               (add.comp₂ (proj 4) (sub.comp₂ (proj 3) (proj 1)))
               (snd.comp₁ (div.comp₂ (proj 0) (const 4)))))
           (ite (eq (mod.comp₂ (proj 0) (const 4)) (const 3))
@@ -402,12 +402,12 @@ def isFormulaPR : Primrec 2 :=
               (sign.comp₁ (proj 1))
               (vget.comp₂ (proj 2) (pair.comp₂ (pred.comp₁ (div.comp₂ (proj 0) (const 4))) (pred.comp₁ (proj 1))))))))
     )))).comp₄ (proj 1) (Formula.depthPR.comp₁ (proj 1)) (Formula.depthPR.comp₁ (proj 1)) (proj 0)
-theorem isFormulaPR_eval_pos_iff : 0 < 𝓛.isFormulaPR [n, m]ᵥ ↔ ∃ (p : 𝓛.Formula n), m = Encodable.encode p := by
+theorem isFormulaPR_eval_pos_iff : 0 < L.isFormulaPR [n, m]ᵥ ↔ ∃ (p : L.Formula n), m = Encodable.encode p := by
   simp [isFormulaPR, Vec.tail, Function.comp_def]
   rw [Vec.eq_two λ _ => _]; simp
   generalize h : covrec _ = f
   suffices ∀ d k l (h₁ : l = n + k),
-    f [m.pair d, d + k, n]ᵥ > 0 ↔ ∃ (p : 𝓛.Formula l), m = Encodable.encode p ∧ d ≥ p.depth by
+    f [m.pair d, d + k, n]ᵥ > 0 ↔ ∃ (p : L.Formula l), m = Encodable.encode p ∧ d ≥ p.depth by
     specialize this (Formula.depthPR.eval [m]ᵥ) 0
     simp at this; rw [this]
     constructor
@@ -520,22 +520,22 @@ theorem isFormulaPR_eval_pos_iff : 0 < 𝓛.isFormulaPR [n, m]ᵥ ↔ ∃ (p : �
           simp
         · simp
 
-def isSentencePR : Primrec 1 := 𝓛.isFormulaPR.comp₂ (const 0) (proj 0)
-theorem isSentencePR_eval_pos_iff : 0 < 𝓛.isSentencePR [k]ᵥ ↔ ∃ (p : 𝓛.Sentence), k = Encodable.encode p := by
+def isSentencePR : Primrec 1 := L.isFormulaPR.comp₂ (const 0) (proj 0)
+theorem isSentencePR_eval_pos_iff : 0 < L.isSentencePR [k]ᵥ ↔ ∃ (p : L.Sentence), k = Encodable.encode p := by
   simp [isSentencePR, isFormulaPR_eval_pos_iff]
 
 def isAxiomPR : Primrec 2 :=
   (paired (covrec (unpaired
     (orv [
       bdExists (proj 0) (bdExists (proj 1) (andv [
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
         eq (proj 2) (Formula.impPR.comp₂ (proj 1) (Formula.impPR.comp₂ (proj 0) (proj 1)))
       ]ᵥ)),
       bdExists (proj 0) (bdExists (proj 1) (bdExists (proj 2) (andv [
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 2),
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 1),
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 0),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 2),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 1),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 0),
         eq (proj 3) (Formula.impPR.comp₂
           (Formula.impPR.comp₂ (proj 2) (Formula.impPR.comp₂ (proj 1) (proj 0)))
           (Formula.impPR.comp₂
@@ -543,45 +543,45 @@ def isAxiomPR : Primrec 2 :=
             (Formula.impPR.comp₂ (proj 2) (proj 0))))
       ]ᵥ))),
       bdExists (proj 0) (bdExists (proj 1) (andv [
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
         eq (proj 2) (Formula.impPR.comp₂
           (Formula.impPR.comp₂ (Formula.negPR.comp₁ (proj 1)) (Formula.negPR.comp₁ (proj 0)))
           (Formula.impPR.comp₂ (proj 0) (proj 1)))
       ]ᵥ)),
       bdExists (proj 0) (bdExists (succ.comp₁ (proj 1)) (andv [
-        𝓛.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 1),
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
+        L.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 1),
+        L.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
         eq (proj 2) (Formula.impPR.comp₂
           (Formula.allPR.comp₁ (proj 1))
           (Formula.substSinglePR.comp₃ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1) (proj 0)))
       ]ᵥ)),
       bdExists (proj 0) (andv [
-        𝓛.isFormulaPR.comp₂ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2))) (proj 0),
+        L.isFormulaPR.comp₂ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2))) (proj 0),
         eq (proj 1) (Formula.impPR.comp₂ (proj 0) (Formula.allPR.comp₁ (Formula.shiftPR.comp₂ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2))) (proj 0))))
       ]ᵥ),
       bdExists (proj 0) (bdExists (proj 1) (andv [
-        𝓛.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 1),
-        𝓛.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 0),
+        L.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 1),
+        L.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3)))) (proj 0),
         eq (proj 2) (Formula.impPR.comp₂
           (Formula.allPR.comp₁ (Formula.impPR.comp₂ (proj 1) (proj 0)))
           (Formula.impPR.comp₂ (Formula.allPR.comp₁ (proj 1)) (Formula.allPR.comp₁ (proj 0))))
       ]ᵥ)),
       bdExists (proj 0) (andv [
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2))) (proj 0),
+        L.isTermPR.comp₂ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2))) (proj 0),
         eq (proj 1) (Formula.eqPR.comp₂ (proj 0) (proj 0))
       ]ᵥ),
       bdExists (proj 0) (bdExists (proj 1) (andv [
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
+        L.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 1),
+        L.isTermPR.comp₂ (add.comp₂ (proj 6) (sub.comp₂ (proj 5) (proj 3))) (proj 0),
         eq (proj 2) (Formula.impPR.comp₂
           (Formula.eqPR.comp₂ (proj 1) (proj 0))
           (Formula.eqPR.comp₂ (proj 0) (proj 1)))
       ]ᵥ)),
       bdExists (proj 0) (bdExists (proj 1) (bdExists (proj 2) (andv [
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 2),
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 1),
-        𝓛.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 0),
+        L.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 2),
+        L.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 1),
+        L.isTermPR.comp₂ (add.comp₂ (proj 7) (sub.comp₂ (proj 6) (proj 4))) (proj 0),
         eq (proj 3) (Formula.impPR.comp₂
           (Formula.eqPR.comp₂ (proj 2) (proj 1))
           (Formula.impPR.comp₂
@@ -589,11 +589,11 @@ def isAxiomPR : Primrec 2 :=
             (Formula.eqPR.comp₂ (proj 2) (proj 0))))
       ]ᵥ))),
       bdExists (proj 0) (bdExists (proj 1) (bdExists (proj 2) (bdExists (proj 3) (andv [
-        (isFuncPR 𝓛).comp₂ (proj 3) (proj 2),
+        (isFuncPR L).comp₂ (proj 3) (proj 2),
         isvec.comp₂ (proj 3) (proj 1),
-        vand.comp₂ (proj 3) ((vmap 𝓛.isTermPR.swap).comp₃ (proj 3) (proj 1) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
+        vand.comp₂ (proj 3) ((vmap L.isTermPR.swap).comp₃ (proj 3) (proj 1) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
         isvec.comp₂ (proj 3) (proj 0),
-        vand.comp₂ (proj 3) ((vmap 𝓛.isTermPR.swap).comp₃ (proj 3) (proj 0) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
+        vand.comp₂ (proj 3) ((vmap L.isTermPR.swap).comp₃ (proj 3) (proj 0) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
         eq (proj 4) (Formula.impPR.comp₂
           (Formula.andNPR.comp₂ (proj 3)
             ((vmk (Formula.eqPR.comp₂
@@ -604,11 +604,11 @@ def isAxiomPR : Primrec 2 :=
             (Term.funcPR.comp₃ (proj 3) (proj 2) (proj 0))))
       ]ᵥ)))),
       bdExists (proj 0) (bdExists (proj 1) (bdExists (proj 2) (bdExists (proj 3) (andv [
-        (isRelPR 𝓛).comp₂ (proj 3) (proj 2),
+        (isRelPR L).comp₂ (proj 3) (proj 2),
         isvec.comp₂ (proj 3) (proj 1),
-        vand.comp₂ (proj 3) ((vmap 𝓛.isTermPR.swap).comp₃ (proj 3) (proj 1) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
+        vand.comp₂ (proj 3) ((vmap L.isTermPR.swap).comp₃ (proj 3) (proj 1) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
         isvec.comp₂ (proj 3) (proj 0),
-        vand.comp₂ (proj 3) ((vmap 𝓛.isTermPR.swap).comp₃ (proj 3) (proj 0) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
+        vand.comp₂ (proj 3) ((vmap L.isTermPR.swap).comp₃ (proj 3) (proj 0) (add.comp₂ (proj 8) (sub.comp₂ (proj 7) (proj 5)))),
         eq (proj 4) (Formula.impPR.comp₂
           (Formula.andNPR.comp₂ (proj 3)
             ((vmk (Formula.eqPR.comp₂
@@ -619,7 +619,7 @@ def isAxiomPR : Primrec 2 :=
             (Formula.relPR.comp₃ (proj 3) (proj 2) (proj 0))))
       ]ᵥ)))),
       bdExists (proj 0) (andv [
-        𝓛.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2)))) (proj 0),
+        L.isFormulaPR.comp₂ (succ.comp₁ (add.comp₂ (proj 5) (sub.comp₂ (proj 4) (proj 2)))) (proj 0),
         vget.comp₂ (proj 3) (pair.comp₂ (proj 0) (pred.comp₁ (proj 2))),
         eq (proj 1) (Formula.allPR.comp₁ (proj 0))
       ]ᵥ)
@@ -627,13 +627,13 @@ def isAxiomPR : Primrec 2 :=
 
 set_option maxHeartbeats 1300000
 
-theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero 𝓛] {p : 𝓛.Formula n} :
-  0 < 𝓛.isAxiomPR [n, Encodable.encode p]ᵥ ↔ p ∈ 𝓛.Axiom := by
+theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
+  0 < L.isAxiomPR [n, Encodable.encode p]ᵥ ↔ p ∈ L.Axiom := by
   simp [isAxiomPR, Vec.tail, Function.comp_def]
   rw [Vec.eq_two λ _ => _]; simp
   generalize h : covrec _ = f
-  suffices ∀ d k l (p : 𝓛.Formula l) (h₁ : l = n + k), d ≥ p.depth →
-      (0 < f [(Encodable.encode p).pair d, d + k, n]ᵥ ↔ p ∈ 𝓛.Axiom) by
+  suffices ∀ d k l (p : L.Formula l) (h₁ : l = n + k), d ≥ p.depth →
+      (0 < f [(Encodable.encode p).pair d, d + k, n]ᵥ ↔ p ∈ L.Axiom) by
     specialize this p.depth 0 n p rfl (by rfl)
     simp at this; rw [Formula.depthPR_eval, this]
   intros d k l p h₁ h₂
@@ -790,16 +790,16 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero 𝓛] {p : 𝓛.Formula n} :
       refine ⟨m, ?_, Encodable.encode f, ?_, Encodable.encode v₁, ?_, Encodable.encode v₂, ?_, ?_⟩
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_eq_left.trans'
-        exact Term.encode_lt_func_m (𝓛 := 𝓛)
+        exact Term.encode_lt_func_m (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_eq_left.trans'
-        exact Term.encode_lt_func_f (𝓛 := 𝓛)
+        exact Term.encode_lt_func_f (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_eq_left.trans'
-        exact Term.encode_lt_func_v (𝓛 := 𝓛)
+        exact Term.encode_lt_func_v (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_eq_right.trans'
-        exact Term.encode_lt_func_v (𝓛 := 𝓛)
+        exact Term.encode_lt_func_v (L := L)
       · simp [Fin.forall_fin_succ, isFuncPR_eval_pos_iff, isTermPR_eval_pos_iff, isvec_eval_pos_iff, vmap_eval, vand_eval_pos_iff, Vec.encode_eq]
         simp [←Vec.encode_eq, vmk_eval]
         simp [Vec.encode_eq, vget_eval]
@@ -809,16 +809,16 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero 𝓛] {p : 𝓛.Formula n} :
       refine ⟨m, ?_, Encodable.encode r, ?_, Encodable.encode v₁, ?_, Encodable.encode v₂, ?_, ?_⟩
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_left.trans'
-        exact Formula.encode_lt_rel_m (𝓛 := 𝓛)
+        exact Formula.encode_lt_rel_m (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_left.trans'
-        exact Formula.encode_lt_rel_r (𝓛 := 𝓛)
+        exact Formula.encode_lt_rel_r (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_left.trans'
-        exact Formula.encode_lt_rel_v (𝓛 := 𝓛)
+        exact Formula.encode_lt_rel_v (L := L)
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_right.trans'
-        exact Formula.encode_lt_rel_v (𝓛 := 𝓛)
+        exact Formula.encode_lt_rel_v (L := L)
       · simp [Fin.forall_fin_succ, isRelPR_eval_pos_iff, isTermPR_eval_pos_iff, isvec_eval_pos_iff, vmap_eval, vand_eval_pos_iff, Vec.encode_eq]
         simp [←Vec.encode_eq, vmk_eval]
         simp [Vec.encode_eq, vget_eval]

@@ -86,25 +86,25 @@ noncomputable def 𝓡 : Real.Model where
       exists sSup (R [·]ᵥ)
       exact Real.isLUB_sSup ⟨a, h₁⟩ ⟨b, h₂⟩
 
-variable {𝓜 : Real.Model}
+variable {M : Real.Model}
 
-instance : Zero 𝓜 := ⟨𝓜.interpFunc .zero []ᵥ⟩
-instance : One 𝓜 := ⟨𝓜.interpFunc .one []ᵥ⟩
-instance : Add 𝓜 := ⟨(𝓜.interpFunc .add [·, ·]ᵥ)⟩
-instance : Neg 𝓜 := ⟨(𝓜.interpFunc .neg [·]ᵥ)⟩
-instance : Mul 𝓜 := ⟨(𝓜.interpFunc .mul [·, ·]ᵥ)⟩
+instance : Zero M := ⟨M.interpFunc .zero []ᵥ⟩
+instance : One M := ⟨M.interpFunc .one []ᵥ⟩
+instance : Add M := ⟨(M.interpFunc .add [·, ·]ᵥ)⟩
+instance : Neg M := ⟨(M.interpFunc .neg [·]ᵥ)⟩
+instance : Mul M := ⟨(M.interpFunc .mul [·, ·]ᵥ)⟩
 
-theorem add_comm (a b : 𝓜) : a + b = b + a := by
-  have := 𝓜.satisfy_theory _ .ax_add_comm a b
+theorem add_comm (a b : M) : a + b = b + a := by
+  have := M.satisfy_theory _ .ax_add_comm a b
   simp at this; exact this
 
-theorem add_zero (a : 𝓜) : a + 0 = a := by
-  have := 𝓜.satisfy_theory _ .ax_add_zero a
+theorem add_zero (a : M) : a + 0 = a := by
+  have := M.satisfy_theory _ .ax_add_zero a
   simp at this; exact this
 
-instance : AddCommGroup 𝓜 where
+instance : AddCommGroup M where
   add_assoc a b c := by
-    have := 𝓜.satisfy_theory _ .ax_add_assoc a b c
+    have := M.satisfy_theory _ .ax_add_assoc a b c
     simp at this; exact this
   add_comm := add_comm
   zero_add a := by
@@ -112,40 +112,40 @@ instance : AddCommGroup 𝓜 where
   add_zero a := add_zero a
   neg_add_cancel a := by
     rw [add_comm (-a) a]
-    have := 𝓜.satisfy_theory _ .ax_add_neg a
+    have := M.satisfy_theory _ .ax_add_neg a
     simp at this; exact this
   nsmul := nsmulRec
   zsmul := zsmulRec
 
-theorem mul_comm (a b : 𝓜) : a * b = b * a := by
-  have := 𝓜.satisfy_theory _ .ax_mul_comm a b
+theorem mul_comm (a b : M) : a * b = b * a := by
+  have := M.satisfy_theory _ .ax_mul_comm a b
   simp at this; exact this
 
-theorem mul_one (a : 𝓜) : a * 1 = a := by
-  have := 𝓜.satisfy_theory _ .ax_mul_one a
+theorem mul_one (a : M) : a * 1 = a := by
+  have := M.satisfy_theory _ .ax_mul_one a
   simp at this; exact this
 
-theorem left_distrib (a b c : 𝓜) : a * (b + c) = a * b + a * c := by
-  have := 𝓜.satisfy_theory _ .ax_left_distrib a b c
+theorem left_distrib (a b c : M) : a * (b + c) = a * b + a * c := by
+  have := M.satisfy_theory _ .ax_left_distrib a b c
   simp at this; exact this
 
-theorem mul_zero (a : 𝓜) : a * 0 = 0 := by
+theorem mul_zero (a : M) : a * 0 = 0 := by
   apply add_left_cancel (a := a * 0)
   rw [←left_distrib, add_zero, add_zero]
 
-theorem has_inv (a : 𝓜) : a ≠ 0 → ∃ b, a * b = 1 := by
-  have := 𝓜.satisfy_theory _ .ax_has_inv a
+theorem has_inv (a : M) : a ≠ 0 → ∃ b, a * b = 1 := by
+  have := M.satisfy_theory _ .ax_has_inv a
   simp at this; exact this
 
 open Classical
 
-noncomputable instance : Inv 𝓜 where
+noncomputable instance : Inv M where
   inv a := if h : a = 0 then 0 else Classical.choose (has_inv a h)
 
-noncomputable instance : Field 𝓜 where
+noncomputable instance : Field M where
   neg_add_cancel := neg_add_cancel
   mul_assoc a b c := by
-    have := 𝓜.satisfy_theory _ .ax_mul_assoc a b c
+    have := M.satisfy_theory _ .ax_mul_assoc a b c
     simp at this; exact this
   mul_comm a b := mul_comm a b
   mul_one a := mul_one a
@@ -161,34 +161,34 @@ noncomputable instance : Field 𝓜 where
   zero_mul a := by rw [mul_comm, mul_zero]
   exists_pair_ne := by
     exists 0, 1
-    have := 𝓜.satisfy_theory _ .ax_zero_ne_one
+    have := M.satisfy_theory _ .ax_zero_ne_one
     simp at this; exact this
   zsmul := zsmulRec
   qsmul := _
   nnqsmul := _
 
-instance : LE 𝓜 := ⟨(𝓜.interpRel .le [·, ·]ᵥ)⟩
+instance : LE M := ⟨(M.interpRel .le [·, ·]ᵥ)⟩
 
-noncomputable instance : LinearOrder 𝓜 where
+noncomputable instance : LinearOrder M where
   le_refl a := by
-    have := 𝓜.satisfy_theory _ .ax_le_refl a
+    have := M.satisfy_theory _ .ax_le_refl a
     simp [OrderedField.le] at this; exact this
   le_antisymm a b := by
-    have := 𝓜.satisfy_theory _ .ax_le_antisymm a b
+    have := M.satisfy_theory _ .ax_le_antisymm a b
     simp [OrderedField.le] at this; exact this
   le_trans a b := by
-    have := 𝓜.satisfy_theory _ .ax_le_trans a b
+    have := M.satisfy_theory _ .ax_le_trans a b
     simp [OrderedField.le] at this; exact this
   le_total a b := by
-    have := 𝓜.satisfy_theory _ .ax_le_total a b
+    have := M.satisfy_theory _ .ax_le_total a b
     simp [OrderedField.le] at this; exact this
   decidableLE := _
 
-theorem add_le_add_right (a b c : 𝓜) : a ≤ b → a + c ≤ b + c := by
-  have := 𝓜.satisfy_theory _ .ax_add_le_add a b c
+theorem add_le_add_right (a b c : M) : a ≤ b → a + c ≤ b + c := by
+  have := M.satisfy_theory _ .ax_add_le_add a b c
   simp [OrderedField.le] at this; exact this
 
-lemma zero_le_neg_iff (a : 𝓜) : 0 ≤ -a ↔ a ≤ 0 := by
+lemma zero_le_neg_iff (a : M) : 0 ≤ -a ↔ a ≤ 0 := by
   constructor
   · intro h
     apply add_le_add_right _ _ a at h
@@ -199,11 +199,11 @@ lemma zero_le_neg_iff (a : 𝓜) : 0 ≤ -a ↔ a ≤ 0 := by
     rw [zero_add, add_neg_cancel] at h
     exact h
 
-theorem mul_le_mul_right (a b c : 𝓜) : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
-  have := 𝓜.satisfy_theory _ .ax_mul_le_mul a b c
+theorem mul_le_mul_right (a b c : M) : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
+  have := M.satisfy_theory _ .ax_mul_le_mul a b c
   simp [OrderedField.le] at this; exact this
 
-noncomputable instance : LinearOrderedField 𝓜 where
+noncomputable instance : LinearOrderedField M where
   mul_comm := mul_comm
   inv_zero := inv_zero
   mul_inv_cancel a := mul_inv_cancel₀
@@ -217,7 +217,7 @@ noncomputable instance : LinearOrderedField 𝓜 where
   zero_le_one := by
     by_contra h₁
     simp at h₁
-    have h₂ : (0 : 𝓜) ≤ -1 := by
+    have h₂ : (0 : M) ≤ -1 := by
       rw [zero_le_neg_iff 1]
       exact le_of_lt h₁
     have h₃ := lt_of_lt_of_le h₁ h₂
@@ -231,13 +231,13 @@ noncomputable instance : LinearOrderedField 𝓜 where
       rw [zero_mul] at h₃; exact h₃
     · simp [ne_of_gt h₁, ne_of_gt h₂]
 
-theorem exists_lub (s : Set 𝓜) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
+theorem exists_lub (s : Set M) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
   intro ⟨x, h₁⟩ ⟨y, h₂⟩
-  have := 𝓜.satisfy_theory _ .ax_exists_lub
+  have := M.satisfy_theory _ .ax_exists_lub
   simp [OrderedField.le] at this
   exact this (·.head ∈ s) x h₁ y h₂
 
-noncomputable def ofReal (x : ℝ) : 𝓜 :=
+noncomputable def ofReal (x : ℝ) : M :=
   Classical.choose
     (exists_lub { ↑y | (y : ℚ) (_ : ↑y ≤ x) }
       ((exists_rat_lt x).elim λ y h => ⟨y, y, le_of_lt h, rfl⟩)
@@ -246,23 +246,23 @@ noncomputable def ofReal (x : ℝ) : 𝓜 :=
 
 variable {x y z : ℝ}
 
-theorem ofReal_isLUB : IsLUB { ↑y | (y : ℚ) (_ : ↑y ≤ x) } (@ofReal 𝓜 x) := Classical.choose_spec _
+theorem ofReal_isLUB : IsLUB { ↑y | (y : ℚ) (_ : ↑y ≤ x) } (@ofReal M x) := Classical.choose_spec _
 
-theorem ofReal_rat {q : ℚ} : @ofReal 𝓜 q = q := by
+theorem ofReal_rat {q : ℚ} : @ofReal M q = q := by
   apply ofReal_isLUB.unique
   constructor
   · intro y; simp; intro z h₁ h₂; simp [←h₂, h₁]
   · intro y h₁; simp [upperBounds] at h₁; exact h₁ q (by rfl)
 
-theorem ofReal_zero : @ofReal 𝓜 0 = 0 := by
-  have := @ofReal_rat 𝓜 0
+theorem ofReal_zero : @ofReal M 0 = 0 := by
+  have := @ofReal_rat M 0
   simp at this; exact this
 
-theorem ofReal_one : @ofReal 𝓜 1 = 1 := by
-  have := @ofReal_rat 𝓜 1
+theorem ofReal_one : @ofReal M 1 = 1 := by
+  have := @ofReal_rat M 1
   simp at this; exact this
 
-theorem ofReal_lt : @ofReal 𝓜 x < ofReal y ↔ x < y := by
+theorem ofReal_lt : @ofReal M x < ofReal y ↔ x < y := by
   constructor
   · intro h₁
     simp [isLUB_lt_iff ofReal_isLUB, upperBounds] at h₁
@@ -286,17 +286,17 @@ theorem ofReal_lt : @ofReal 𝓜 x < ofReal y ↔ x < y := by
       simp at h₃
       exists r, le_of_lt h₄
 
-theorem ofReal_le : @ofReal 𝓜 x ≤ ofReal y ↔ x ≤ y := by
+theorem ofReal_le : @ofReal M x ≤ ofReal y ↔ x ≤ y := by
   rw [←not_iff_not, not_le, not_le, ofReal_lt]
 
-theorem ofReal_injective : Function.Injective (@ofReal 𝓜) := by
+theorem ofReal_injective : Function.Injective (@ofReal M) := by
   intro x y h
   apply le_antisymm <;> rw [←ofReal_le, h]
 
-lemma exists_nat_gt (a : 𝓜) : ∃ (n : ℕ), a < n := by
+lemma exists_nat_gt (a : M) : ∃ (n : ℕ), a < n := by
   by_contra h₁
   push_neg at h₁
-  let s : Set 𝓜 := { ↑n | (n : ℕ) }
+  let s : Set M := { ↑n | (n : ℕ) }
   have h₂ : s.Nonempty := by exists 0; simp [s]
   have h₃ : BddAbove s := by exists a; simp [s, upperBounds]; exact h₁
   rcases exists_lub s h₂ h₃ with ⟨b, h₄⟩
@@ -309,14 +309,14 @@ lemma exists_nat_gt (a : 𝓜) : ∃ (n : ℕ), a < n := by
   simp at h₄
   exact not_lt_of_ge h₄ zero_lt_one
 
-instance : Archimedean 𝓜 where
+instance : Archimedean M where
   arch x y h := by
     rcases exists_nat_gt (x / y) with ⟨n, h'⟩
     simp [div_lt_iff₀ h] at h'
     exists n
     simp [le_of_lt h']
 
-theorem ofReal_surjective : Function.Surjective (@ofReal 𝓜) := by
+theorem ofReal_surjective : Function.Surjective (@ofReal M) := by
   intro a
   let s : Set ℝ := { ↑q | (q : ℚ) (_ : q ≤ a) }
   have h₁ : s.Nonempty := by
@@ -350,7 +350,7 @@ theorem ofReal_surjective : Function.Surjective (@ofReal 𝓜) := by
     exists r
     simp [le_of_lt h₄]
 
-theorem ofReal_add : @ofReal 𝓜 (x + y) = ofReal x + ofReal y := by
+theorem ofReal_add : @ofReal M (x + y) = ofReal x + ofReal y := by
   apply ofReal_isLUB.unique
   constructor
   · intro z; simp; intro q h₁ h₂; subst h₂
@@ -369,7 +369,7 @@ theorem ofReal_add : @ofReal 𝓜 (x + y) = ofReal x + ofReal y := by
   · intro a h₁; simp [upperBounds] at h₁
     apply le_of_forall_rat_lt_imp_le
     intro q h₂
-    let δ := (@ofReal 𝓜 x + @ofReal 𝓜 y - q) / 2
+    let δ := (@ofReal M x + @ofReal M y - q) / 2
     have h₃ : 0 < δ := by simp [δ, h₂]
     rcases exists_rat_btwn (sub_lt_self (ofReal x) h₃) with ⟨r₁, h₄, h₅⟩
     rcases exists_rat_btwn (sub_lt_self (ofReal y) h₃) with ⟨r₂, h₆, h₇⟩
@@ -379,13 +379,13 @@ theorem ofReal_add : @ofReal 𝓜 (x + y) = ofReal x + ofReal y := by
       rw [←Rat.cast_add, Rat.cast_le]
       exact le_of_lt this
     · rw [←Rat.cast_add]; apply h₁; simp
-      apply add_le_add <;> rw [←@ofReal_le 𝓜, ofReal_rat] <;> apply le_of_lt <;> assumption
+      apply add_le_add <;> rw [←@ofReal_le M, ofReal_rat] <;> apply le_of_lt <;> assumption
 
-theorem ofReal_neg : @ofReal 𝓜 (-x) = -ofReal x := by
+theorem ofReal_neg : @ofReal M (-x) = -ofReal x := by
   rw [eq_neg_iff_add_eq_zero, ←ofReal_add, neg_add_cancel, ofReal_zero]
 
-lemma exists_sqrt (a : 𝓜) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
-  let s : Set 𝓜 := { x | 0 ≤ x ∧ x ^ 2 ≤ a }
+lemma exists_sqrt (a : M) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
+  let s : Set M := { x | 0 ≤ x ∧ x ^ 2 ≤ a }
   have h₁ : s.Nonempty := by exists 0; simp [s, h]
   have h₂ : BddAbove s := by
     rcases exists_nat_gt a with ⟨n, h₂⟩
@@ -457,7 +457,7 @@ lemma exists_sqrt (a : 𝓜) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     simp at h₉
     exact not_lt_of_ge h₉ h₇
 
-theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
+theorem ofReal_mul {x y} : @ofReal M (x * y) = ofReal x * ofReal y := by
   wlog h : 0 < x generalizing x y
   · simp at h
     rcases lt_or_eq_of_le h with h | h
@@ -517,7 +517,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
     apply le_of_forall_rat_lt_imp_le
     intro q h₂
     by_cases h₃ : q > 0
-    · rcases exists_sqrt (@ofReal 𝓜 x * @ofReal 𝓜 y / q : 𝓜)
+    · rcases exists_sqrt (@ofReal M x * @ofReal M y / q : M)
         (by
           apply div_nonneg
           · apply mul_nonneg <;> rw [←ofReal_zero, ofReal_le] <;> apply le_of_lt <;> assumption
@@ -540,7 +540,7 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
         apply mul_le_mul
         · rw [←ofReal_rat, ofReal_lt] at h₈; exact le_of_lt h₈
         · rw [←ofReal_rat, ofReal_lt] at h₁₀; exact le_of_lt h₁₀
-        · simp; rw [←Rat.cast_le (K := 𝓜), Rat.cast_zero]
+        · simp; rw [←Rat.cast_le (K := M), Rat.cast_zero]
           apply le_trans' (le_of_lt h₉)
           apply div_nonneg
           · rw [←ofReal_zero, ofReal_le]; exact le_of_lt h'
@@ -551,13 +551,13 @@ theorem ofReal_mul {x y} : @ofReal 𝓜 (x * y) = ofReal x * ofReal y := by
       · simp; exact h₃
       · rw [←Rat.cast_zero]; apply h₁; simp; exact mul_nonneg (le_of_lt h) (le_of_lt h')
 
-theorem ofReal_inv : @ofReal 𝓜 x⁻¹ = (ofReal x)⁻¹ := by
+theorem ofReal_inv : @ofReal M x⁻¹ = (ofReal x)⁻¹ := by
   by_cases h : x = 0
   · simp [h, ofReal_zero]
   · rw [←mul_eq_one_iff_eq_inv₀, ←ofReal_mul, inv_mul_cancel₀ h, ofReal_one]
     intro h'; rw [←ofReal_zero] at h'; exact h (ofReal_injective h')
 
-noncomputable def model_iso_𝓡 (𝓜 : Real.Model) : 𝓡 ≃ᴹ 𝓜.toStructure where
+noncomputable def model_iso_𝓡 (M : Real.Model) : 𝓡 ≃ᴹ M.toStructure where
   toEquiv := Equiv.ofBijective ofReal ⟨ofReal_injective, ofReal_surjective⟩
   on_func
   | .zero, v => by simp; apply ofReal_zero
@@ -569,6 +569,6 @@ noncomputable def model_iso_𝓡 (𝓜 : Real.Model) : 𝓡 ≃ᴹ 𝓜.toStruct
   | .le, v => by rw [Vec.eq_two (_ ∘ _)]; symm; apply ofReal_le
 
 noncomputable def categorical : Real.Categorical
-| 𝓜₁, 𝓜₂ => .trans (.symm (model_iso_𝓡 𝓜₁)) (model_iso_𝓡 𝓜₂)
+| M₁, M₂ => .trans (.symm (model_iso_𝓡 M₁)) (model_iso_𝓡 M₂)
 
 end SecondOrder.Language.Theory.Real
