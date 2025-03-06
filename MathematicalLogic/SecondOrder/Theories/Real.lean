@@ -4,31 +4,31 @@ import Mathlib.Data.Real.Sqrt
 
 namespace SecondOrder.Language
 
-inductive OrderedField.Func : ℕ → Type where
+private inductive orderedRing.Func : ℕ → Type where
 | zero : Func 0
 | one : Func 0
 | add : Func 2
 | neg : Func 1
 | mul : Func 2
 
-inductive OrderedField.Rel : ℕ → Type where
+private inductive orderedRing.Rel : ℕ → Type where
 | le : Rel 2
 
-def OrderedField : Language where
-  Func := OrderedField.Func
-  Rel := OrderedField.Rel
+def orderedRing : Language where
+  Func := orderedRing.Func
+  Rel := orderedRing.Rel
 
 namespace OrderedField
 
-instance : Zero (OrderedField.Term Γ) := ⟨.zero ⬝ᶠ []ᵥ⟩
-instance : One (OrderedField.Term Γ) := ⟨.one ⬝ᶠ []ᵥ⟩
-instance : Add (OrderedField.Term Γ) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
-instance : Neg (OrderedField.Term Γ) := ⟨(.neg ⬝ᶠ [·]ᵥ)⟩
-instance : Sub (OrderedField.Term Γ) := ⟨(· + -·)⟩
-instance : Mul (OrderedField.Term Γ) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
+instance : Zero (orderedRing.Term Γ) := ⟨.zero ⬝ᶠ []ᵥ⟩
+instance : One (orderedRing.Term Γ) := ⟨.one ⬝ᶠ []ᵥ⟩
+instance : Add (orderedRing.Term Γ) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
+instance : Neg (orderedRing.Term Γ) := ⟨(.neg ⬝ᶠ [·]ᵥ)⟩
+instance : Sub (orderedRing.Term Γ) := ⟨(· + -·)⟩
+instance : Mul (orderedRing.Term Γ) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 
-def le (t₁ t₂ : OrderedField.Term Γ) : OrderedField.Formula Γ := .le ⬝ʳ [t₁, t₂]ᵥ
-scoped infix:60 " ⪁ " => le
+def le (t₁ t₂ : orderedRing.Term Γ) : orderedRing.Formula Γ := .le ⬝ʳ [t₁, t₂]ᵥ
+scoped infix:60 " ⪯ " => le
 
 end OrderedField
 
@@ -36,7 +36,7 @@ namespace Theory
 
 open OrderedField
 
-inductive Real : OrderedField.Theory where
+inductive Real : orderedRing.Theory where
 | ax_add_assoc : Real (∀' (∀' (∀' (#2 + #1 + #0 ≐ #2 + (#1 + #0)))))
 | ax_add_comm : Real (∀' (∀' (#1 + #0 ≐ #0 + #1)))
 | ax_add_zero : Real (∀' (#0 + 0 ≐ #0))
@@ -47,13 +47,13 @@ inductive Real : OrderedField.Theory where
 | ax_has_inv : Real (∀' (~ #0 ≐ 0 ⇒ ∃' (#1 * #0 ≐ 1)))
 | ax_left_distrib : Real (∀' (∀' (∀' (#2 * (#1 + #0) ≐ #2 * #1 + #2 * #0))))
 | ax_zero_ne_one : Real (~ 0 ≐ 1)
-| ax_le_refl : Real (∀' (#0 ⪁ #0))
-| ax_le_antisymm : Real (∀' (∀' (#1 ⪁ #0 ⇒ #0 ⪁ #1 ⇒ #1 ≐ #0)))
-| ax_le_trans : Real (∀' (∀' (∀' (#2 ⪁ #1 ⇒ #1 ⪁ #0 ⇒ #2 ⪁ #0))))
-| ax_le_total : Real (∀' (∀' (#1 ⪁ #0 ⩒ #0 ⪁ #1)))
-| ax_add_le_add : Real (∀' (∀' (∀' (#2 ⪁ #1 ⇒ #2 + #0 ⪁ #1 + #0))))
-| ax_mul_le_mul : Real (∀' (∀' (∀' (#2 ⪁ #1 ⇒ 0 ⪁ #0 ⇒ #2 * #0 ⪁ #1 * #0))))
-| ax_exists_lub : Real (∀ʳ 1 (∃' (1 ⬝ʳᵛ [#0]ᵥ) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1)) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1) ⩑ ∀' (∀' (3 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪁ #1) ⇒ #1 ⪁ #0))))
+| ax_le_refl : Real (∀' (#0 ⪯ #0))
+| ax_le_antisymm : Real (∀' (∀' (#1 ⪯ #0 ⇒ #0 ⪯ #1 ⇒ #1 ≐ #0)))
+| ax_le_trans : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ #1 ⪯ #0 ⇒ #2 ⪯ #0))))
+| ax_le_total : Real (∀' (∀' (#1 ⪯ #0 ⩒ #0 ⪯ #1)))
+| ax_add_le_add : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ #2 + #0 ⪯ #1 + #0))))
+| ax_mul_le_mul : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ 0 ⪯ #0 ⇒ #2 * #0 ⪯ #1 * #0))))
+| ax_exists_lub : Real (∀ʳ 1 (∃' (1 ⬝ʳᵛ [#0]ᵥ) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1)) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⩑ ∀' (∀' (3 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⇒ #1 ⪯ #0))))
 
 namespace Real
 

@@ -205,7 +205,7 @@ elab "pclear" n:(ppSpace colGt num) : tactic => do
 macro "pclears" : tactic => `(tactic| repeat pclear 0)
 
 /-- Swap the `n`-th assumption and the `m`-th assumption. -/
-elab "pswap" n:num m:num : tactic => do
+elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
   let mut n := n.getNat
   let mut m := m.getNat
   if n = m then return
@@ -221,7 +221,7 @@ elab "pswap" n:num m:num : tactic => do
   replaceMainGoal [mainGoal]
 
 /-- Replaces the `n`-th assumption with a new propositon, and generate a new goal to prove `Γ, ⋯ ⊢ p`. -/
-macro "preplace" n:num t:term : tactic =>
+macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
 
 def isTheory? (n : Expr) (Γ : Expr) : Option Expr :=
@@ -362,7 +362,7 @@ elab "papply" t:(ppSpace colGt term) l:(location)? d:(depth)? : tactic => withMa
       replaceMainGoal (newMainGoal :: newGoals)
 
 /-- Apply the `n`-th assumption using `Proof.mp`. -/
-syntax "papplya" num (location)? : tactic
+syntax "papplya" (ppSpace colGt num) (location)? : tactic
 
 macro_rules
 | `(tactic| papplya $n) => do `(tactic| papply $(← hypTerm n.getNat))

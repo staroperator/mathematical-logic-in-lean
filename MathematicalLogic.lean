@@ -18,6 +18,9 @@ import MathematicalLogic.FirstOrder.Completeness.TermModel
 import MathematicalLogic.FirstOrder.Completeness
 import MathematicalLogic.FirstOrder.Encoding
 import MathematicalLogic.FirstOrder.Computability
+
+import MathematicalLogic.FirstOrder.Theories.Order.Theory
+
 import MathematicalLogic.FirstOrder.Theories.Peano.Theory
 
 import MathematicalLogic.SecondOrder.Syntax
