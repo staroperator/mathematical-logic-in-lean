@@ -32,18 +32,29 @@ inductive Proof (Γ : L.FormulaSet n) : L.Formula n → Prop where
 | mp : Proof Γ (p ⇒ q) → Proof Γ p → Proof Γ q
 infix:50 " ⊢ " => Proof
 
-namespace Proof
+/--
+  Theory `T₁` is a sub theory of `T₂` if `T₂` can proves all formulas in `T₁`.
+  
+  Note: we define `Subtheory` for `FormulaSet`. -/
+class Subtheory (Γ Δ : L.FormulaSet n) where
+  subtheory : ∀ p ∈ Γ, Δ ⊢ p
+infix:50 " ⊆ᵀ " => Subtheory
 
-variable {n} {Γ : L.FormulaSet n}
+theorem Subtheory.of_subset : Γ ⊆ Δ → Γ ⊆ᵀ Δ :=
+  λ h => ⟨λ _ h' => .hyp (h h')⟩
+
+namespace Proof
 
 theorem hyp_append : Γ,' p ⊢ p := hyp FormulaSet.mem_append
 
-theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := by
-  intros h₁ h₂
+theorem cut : Γ ⊆ᵀ Δ → Γ ⊢ p → Δ ⊢ p := by
+  intro h₁ h₂
   induction h₂ with
-  | hyp h => exact hyp (h₁ h)
+  | hyp h => exact h₁.subtheory _ h
   | ax h => exact ax h
   | mp _ _ ih₁ ih₂ => exact mp ih₁ ih₂
+
+theorem weaken : Γ ⊆ Δ → Γ ⊢ p → Δ ⊢ p := λ h => cut (.of_subset h)
 
 theorem weaken_append : Γ ⊢ p → Γ,' q ⊢ p := weaken FormulaSet.subset_append
 
@@ -64,7 +75,7 @@ theorem deduction : Γ ⊢ p ⇒ q ↔ Γ,' p ⊢ q := by
     | ax h => exact mp (ax .imp_imp_self) (ax h)
     | mp _ _ ih₁ ih₂ => exact mp (mp (ax .imp_distrib) ih₁) ih₂
 
-theorem cut (h₁ : Γ ⊢ p) (h₂ : Γ,' p ⊢ q) : Γ ⊢ q := mp (deduction.mpr h₂) h₁
+theorem cut_append (h₁ : Γ ⊢ p) (h₂ : Γ,' p ⊢ q) : Γ ⊢ q := mp (deduction.mpr h₂) h₁
 
 theorem subst : Γ ⊢ p → (·[σ]ₚ) '' Γ ⊢ p[σ]ₚ := by
   intro h
@@ -104,15 +115,50 @@ theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
 
 theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
 
-namespace Tactics
+end Proof
+
+namespace Subtheory
+
+instance refl : Γ ⊆ᵀ Γ where
+  subtheory _ h := .hyp h
+
+theorem trans (h₁ : Γ₁ ⊆ᵀ Γ₂) (h₂ : Γ₂ ⊆ᵀ Γ₃) : Γ₁ ⊆ᵀ Γ₃ where
+  subtheory _ h := .cut h₂ (h₁.subtheory _ h)
+
+theorem append (h : Γ ⊆ᵀ Δ) : Γ ⊆ᵀ Δ,' p := h.trans (of_subset FormulaSet.subset_append)
+
+theorem append_append (h : Γ ⊆ᵀ Δ) : Γ,' p ⊆ᵀ Δ,' p where
+  subtheory
+  | _, .inl rfl => .hyp_append
+  | _, .inr h' => .weaken_append (h.subtheory _ h')
+
+theorem shift (h : Γ ⊆ᵀ Δ) : ↑ᴳΓ ⊆ᵀ ↑ᴳΔ where
+  subtheory _ h' := by
+    simp [FormulaSet.shift] at h'
+    rcases h' with ⟨p, h', rfl⟩
+    exact .shift (h.subtheory p h')
+
+theorem shiftN (h : Γ ⊆ᵀ Δ) : ↑ᴳ^[m] Γ ⊆ᵀ ↑ᴳ^[m] Δ := by
+  induction m with
+  | zero => exact h
+  | succ m ih => exact shift ih
+
+theorem shiftT {T₁ T₂ : L.Theory} (h : T₁ ⊆ᵀ T₂) : ↑ᵀ^[n] T₁ ⊆ᵀ ↑ᵀ^[n] T₂ := by
+  induction n with
+  | zero => exact h
+  | succ n ih => exact shift ih
+
+end Subtheory
+
+namespace Proof.Tactic
 
 open Lean Syntax Meta Elab Tactic
 
-/-- Introduce a new hypothesis through `Proof.deduction`, or introduce a new variable through `Proof.forall_intro`. -/
+/-- Introduce a new hypothesis or a new variable. -/
 macro "pintro" : tactic => `(tactic|
   first
   | eapply deduction.mpr
-  | (eapply forall_intro; try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append]))
+  | (eapply forall_intro; try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append, Theory.shift_shiftN, Theory.shiftN_shiftN]))
 
 /-- Revert a hypothesis through deduction theorem. -/
 macro "prevert" : tactic => `(tactic| eapply deduction.mp)
@@ -141,11 +187,11 @@ macro "passumption" n:(ppSpace colGt num)? : tactic => do
 
 /-- For goal `Γ ⊢ p`, `phave q` proves `Γ ⊢ q` first and then proves `Γ, q ⊢ p`. -/
 macro "phave" t:(ppSpace colGt term) : tactic =>
-  `(tactic| refine cut (p := $t) ?_ ?_)
+  `(tactic| refine cut_append (p := $t) ?_ ?_)
 
 /-- For goal `Γ ⊢ p`, `psuffices q` proves `Γ, q ⊢ p` first and then proves `Γ ⊢ q`. -/
 macro "psuffices" t:(ppSpace colGt term) : tactic =>
-  `(tactic| (refine cut (p := $t) ?_ ?_; swap))
+  `(tactic| (refine cut_append (p := $t) ?_ ?_; swap))
 
 /-- Remove the `n`-th assumption. -/
 elab "pclear" n:(ppSpace colGt num) : tactic => do
@@ -178,16 +224,47 @@ elab "pswap" n:num m:num : tactic => do
 macro "preplace" n:num t:term : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
 
-/-- Unify `Γ ⊆ Δ` as `Γ, p₁, ⋯, pₙ = Δ`. Return `some t` (`t` is a syntax term of type `Γ ⊆ Δ`) if succeed, and `none` if fail. -/
-private partial def isSubsetOf (Γ Δ : Expr) : MetaM (Option (TSyntax `term)) := do
-  let s ← MonadBacktrack.saveState
-  if ← isDefEq Γ Δ then
-    return some (← `(Set.Subset.refl _))
-  MonadBacktrack.restoreState s
-  if let some (_, _, Δ', _) := Δ.app4? ``FormulaSet.append then
-    if let some t ← isSubsetOf Γ Δ' then
-      return some (← `(Set.Subset.trans $t FormulaSet.subset_append))
-  return none
+def isTheory? (n : Expr) (Γ : Expr) : Option Expr :=
+  if n.isConstOf `Nat.zero then Γ
+  else if let some (_, _, T) := Γ.app3? ``Theory.shiftN then T
+  else none
+
+partial def formulaList (Γ : Expr) : Expr × List Expr :=
+  if let some (_, _, Γ', p) := Γ.app4? ``FormulaSet.append then
+    let (Δ, l) := formulaList Γ'
+    (Δ, l ++ [p])
+  else
+    (Γ, [])
+
+/-- Unify `Γ` as a subtheory of `Δ`; if succeed, return a term of type `Γ ⊆ᵀ Δ`. -/
+partial def isSubtheoryOf (L n Γ Δ : Expr) : MetaM (Option Expr) := do
+  let mut (Γ, l₁) := formulaList Γ
+  let mut (Δ, l₂) := formulaList Δ
+  if l₁.length > l₂.length then failure
+  let mut weakenTerm := mkApp3 (.const ``Subtheory.refl []) L n Γ
+  if Γ.isMVar then
+    -- if Γ is a mvar, we try to unify `Γ` as large as possible
+    let (l₂', l₂'') := l₂.splitAt (l₂.length - l₁.length)
+    for q in l₂' do
+      Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ q
+    Γ.mvarId!.assign Δ
+    l₂ := l₂''
+  else if let (some T₁, some T₂) := (isTheory? n Γ, isTheory? n Δ) then
+    weakenTerm := mkApp5 (.const ``Subtheory.shiftT []) L n T₁ T₂
+      (← synthInstance (mkApp4 (.const ``Subtheory []) L (.const `Nat.zero []) T₁ T₂))
+  else
+    let .true := (← isDefEq Γ Δ) | failure
+  for (p, q) in l₁.zipRight l₂ do
+    match p with
+    | some p =>
+      let .true := (← isDefEq p q) | failure
+      weakenTerm := mkApp6 (.const ``Subtheory.append_append []) L n Γ Δ p weakenTerm
+      Γ := mkApp4 (.const ``FormulaSet.append []) L n Γ p
+      Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ p
+    | none =>
+      weakenTerm := mkApp6 (.const ``Subtheory.append []) L n Γ Δ q weakenTerm
+      Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ q
+  return some weakenTerm
 
 /--
   `f` should be a term of type `Γ ⊢ p₁ ⇒ p₂ ⇒ ⋯ ⇒ pₙ`, and `goal` should be a type `Δ ⊢ pₙ` (in whnf) where `Γ ⊆ Δ`.
@@ -201,10 +278,8 @@ private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × 
   let some (L', n', Δ, _) := goal.app4? ``Proof | throwError m!"{goal} is not a proof"
   let true := ← isDefEq L L' | throwError m!"failed to unify {L} and {L'}"
   let true := ← isDefEq n n' | throwError m!"failed to unify {n} and {n'}"
-  let some weakenTerm := ← isSubsetOf Γ Δ | throwError m!"failed to unify {Γ} as a subset of {Δ}"
-  let weakenTerm ←
-    elabTermEnsuringType weakenTerm (some (mkApp3 (.const ``Set.Subset [0]) (mkApp2 (.const ``Formula []) L n) Γ Δ)) true
-  let mut proofTerm := mkApp7 (.const ``weaken []) L n Γ Δ p weakenTerm (mkAppN f fmvars)
+  let some weakenTerm ← isSubtheoryOf L n Γ Δ | throwError m!"{Γ} is not a subtheory of {Δ}"
+  let mut proofTerm := mkApp7 (.const ``cut []) L n Γ Δ p weakenTerm (mkAppN f fmvars)
   let mut newMVarIds := []
   let mut goalFormula := p
   repeat do
@@ -273,7 +348,7 @@ elab "papply" t:(ppSpace colGt term) l:(location)? d:(depth)? : tactic => withMa
       let n := l.raw[1].toNat
       let [goal, newMainGoal] ← evalTacticAt
         (← `(tactic| (
-          eapply cut
+          eapply cut_append
           on_goal 2 =>
             pswap 0 $(mkNatLit (n+1))
             pclear 0
@@ -294,10 +369,9 @@ macro_rules
 | `(tactic| papplya $n at $l) => do `(tactic| papply $(← hypTerm n.getNat) at $l)
 
 /-- Close the goal with given proof term. -/
-macro "pexact" t:(ppSpace colGt term) : tactic =>
-  `(tactic| papply $t with 0)
+macro "pexact" t:(ppSpace colGt term) : tactic => `(tactic| papply $t with 0)
 
-end Tactics
+end Tactic
 
 theorem composition : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ r) ⇒ p ⇒ r := by
   pintros
@@ -314,12 +388,6 @@ theorem false_elim : Γ ⊢ ⊥ ⇒ p := by
   pintro
   exact true_intro
 
-theorem contradiction : Γ ⊢ ~ p ⇒ p ⇒ q := by
-  pintros
-  papply false_elim
-  papplya 1
-  passumption
-
 theorem imp_double_neg : Γ ⊢ p ⇒ ~ ~ p := by
   pintros
   papplya 0
@@ -329,14 +397,20 @@ theorem double_neg_imp : Γ ⊢ ~ ~ p ⇒ p := by
   papply imp_contra
   pexact imp_double_neg
 
+namespace Tactic
+
+/-- Proof by contradiction. -/
+macro "pcontra" : tactic => `(tactic| (papply double_neg_imp; pintro))
+
+end Tactic
+
 theorem and_intro : Γ ⊢ p ⇒ q ⇒ p ⩑ q := by
   pintros
   papplya 0 <;> passumption
 
 theorem and_left : Γ ⊢ p ⩑ q ⇒ p := by
   pintro
-  papply double_neg_imp
-  pintro
+  pcontra
   papplya 1
   pintros
   papply false_elim
@@ -345,34 +419,29 @@ theorem and_left : Γ ⊢ p ⩑ q ⇒ p := by
 
 theorem and_right : Γ ⊢ p ⩑ q ⇒ q := by
   pintro
-  papply double_neg_imp
-  pintro
+  pcontra
   papplya 1
   pintro
   passumption
 
 theorem or_inl : Γ ⊢ p ⇒ p ⩒ q := by
   pintros
-  papply contradiction <;> passumption
+  papply false_elim
+  papplya 0
+  passumption
 
 theorem or_inr : Γ ⊢ q ⇒ p ⩒ q := ax .imp_imp_self
 
 theorem or_elim : Γ ⊢ p ⩒ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
   pintros
-  papply double_neg_imp
-  pintro
+  pcontra
   papplya 0
   papplya 2
-  psuffices ~ p
-  · papply contradiction
-    · passumption 1
-    · papplya 2
-      papplya 4
-      passumption
-  · pintro
-    papplya 1
-    papplya 3
-    passumption
+  pcontra
+  papplya 1
+  papplya 2
+  papplya 4
+  passumption
 
 theorem or_elim' : Γ ⊢ (p ⇒ r) ⇒ (q ⇒ r) ⇒ p ⩒ q ⇒ r := by
   pintros; papply or_elim <;> passumption
@@ -485,7 +554,7 @@ theorem neg_or_iff : Γ ⊢ ~ (p ⩒ q) ⇔ ~ p ⩑ ~ q := by
 theorem neg_or_iff_imp : Γ ⊢ ~ p ⩒ q ⇔ (p ⇒ q) := by
   papply iff_intro
   · papply or_elim'
-    · pexact contradiction
+    · pintros; papply false_elim; papplya 1; passumption
     · pintros; passumption
   · pintros
     papplya 1
@@ -509,6 +578,21 @@ theorem and_imp_iff : Γ ⊢ (p ⩑ q ⇒ r) ⇔ (p ⇒ q ⇒ r) := by
   papply iff_intro
   · pintros; papplya 2; papply and_intro <;> passumption
   · pintros; papplya 1 <;> [papply and_left; papply and_right] <;> passumption
+
+theorem and_comm : Γ ⊢ p ⩑ q ⇔ q ⩑ p := by
+  papply iff_intro <;> pintro <;> papply and_intro
+    <;> first | papply and_right; passumption 0 | papply and_left; passumption 0
+
+theorem and_assoc : Γ ⊢ (p ⩑ q) ⩑ r ⇔ p ⩑ q ⩑ r := by
+  papply iff_intro <;> pintro <;> papply and_intro <;> (try papply and_intro)
+   <;> aesop (add unsafe tactic (by papply and_left), unsafe tactic (by papply and_right), safe tactic (by passumption 0))
+
+theorem or_comm : Γ ⊢ p ⩒ q ⇔ q ⩒ p := by
+  papply iff_intro <;> papply or_elim' <;> first | pexact or_inl | pexact or_inr
+
+theorem or_assoc : Γ ⊢ (p ⩒ q) ⩒ r ⇔ p ⩒ q ⩒ r := by
+  papply iff_intro <;> papply or_elim' <;> (try papply or_elim' with 2) <;> pintro
+   <;> aesop (add unsafe tactic (by papply or_inl), unsafe tactic (by papply or_inr), safe tactic (by passumption 0))
 
 theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   pintro
@@ -536,8 +620,7 @@ theorem exists_intro (t) : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
 
 theorem exists_elim : Γ ⊢ ∃' p ⇒ (∀' (p ⇒ ↑ₚq)) ⇒ q := by
   pintros
-  papply double_neg_imp
-  pintros
+  pcontra
   papplya 2
   papply forall_imp (p := p ⇒ ↑ₚq)
   · pintros; simp
@@ -551,8 +634,7 @@ theorem exists_elim' : Γ ⊢ (∀' (p ⇒ ↑ₚq)) ⇒ ∃' p ⇒ q := by
 
 theorem exists_self : Γ ⊢ ∃' ↑ₚp ⇒ p := by
   pintro
-  papply double_neg_imp
-  pintro
+  pcontra
   papplya 1
   papply forall_self (p := ~ p)
   passumption
@@ -643,15 +725,17 @@ theorem existsN_elim' : Γ ⊢ ∀^[m] (p ⇒ ↑ₚ^[m] q) ⇒ ∃^[m] p ⇒ q 
 
 theorem eq_refl : Γ ⊢ t ≐ t := ax .eq_refl
 
+theorem eq_symm : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₁ := ax .eq_symm
+
+theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := ax .eq_trans
+
+namespace Tactic
+
 /-- Close the proof goal `t ≐ t` or `p ⇔ p` using reflexitivity. -/
 macro "prefl" : tactic => `(tactic| first | pexact eq_refl | pexact iff_refl)
 
-theorem eq_symm : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₁ := ax .eq_symm
-
 /-- If the proof goal is `t₁ ≐ t₂` or `p ⇔ q`, replace it with `t₂ ≐ t₁` or `q ⇔ p` using symmetry. -/
 macro "psymm" : tactic => `(tactic| first | papply eq_symm | papply iff_symm)
-
-theorem eq_trans : Γ ⊢ t₁ ≐ t₂ ⇒ t₂ ≐ t₃ ⇒ t₁ ≐ t₃ := ax .eq_trans
 
 /--
   If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals,
@@ -663,6 +747,8 @@ macro "ptrans" t:(ppSpace colGt term)? : tactic =>
   match t with
   | some t => `(tactic| first | papply eq_trans (t₂ := $t) | papply iff_trans (q := $t))
   | none => `(tactic| first | papply eq_trans | papply iff_trans)
+
+end Tactic
 
 theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
 
@@ -703,7 +789,7 @@ theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ �
     papply andN_elim (v := λ i => v₁ i ≐ v₂ i)
     passumption
 
-theorem eq_subst_iff (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
+theorem eq_subst_iff {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
   induction p generalizing n with simp
   | rel r v =>
     papply eq_congr_rel_iff; apply andN_intro; intro; apply eq_subst_term; exact h
@@ -790,7 +876,7 @@ theorem RwFormula.rewrite : RwFormula Γ p q → Γ ⊢ q → Γ ⊢ p := by
   · exact h
   · exact h₁
 
-namespace Tactics
+namespace Tactic
 
 open Lean Parser Syntax Meta Elab Tactic
 
@@ -860,13 +946,14 @@ elab_rules : tactic
       pruneSolvedGoals
 | `(tactic| prw [$rules,*] at $n:num) => do
   for rule in rules.getElems do
-    let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| eapply cut)) (← getMainGoal) | throwError "prw failed"
-    let [rwGoal] ← evalTacticAt (← `(tactic| eapply RwFormula.rewrite; (on_goal 2 => passumption $n); eapply RwFormula.symm)) rwGoal | throwError "prw failed"
+    let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| eapply cut_append)) (← getMainGoal) | throwError "prw failed"
+    let [rwGoal] ← evalTacticAt
+      (← `(tactic| eapply RwFormula.rewrite; (on_goal 2 => passumption $n); eapply RwFormula.symm)) rwGoal | throwError "prw failed"
     let newGoals ← prwSolve rule rwGoal
     let mainGoal :: _ ← evalTacticAt (← `(tactic| (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0))) mainGoal | throwError "prw failed"
     setGoals ([mainGoal] ++ newGoals)
 
-end Tactics
+end Tactic
 
 theorem ne_symm : Γ ⊢ ~ t₁ ≐ t₂ ⇒ ~ t₂ ≐ t₁ := by
   pintros
@@ -968,8 +1055,7 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
     pexact h₂
   · intro h₁ h₂
     apply h₁
-    papply double_neg_imp
-    pintro
+    pcontra
     exact h₂
 
 theorem Consistent.undisprovable : Consistent Γ → Γ ⊢ p → Γ ⊬ ~ p := by

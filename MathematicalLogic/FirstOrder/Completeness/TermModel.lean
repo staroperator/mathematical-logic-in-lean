@@ -54,7 +54,7 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
     · intro h
       rcases h₂ (p[σ]ₚ) with h' | h'
       · pintro; pexact h h'
-      · papply Proof.contradiction; exact h'
+      · pintro; papply Proof.false_elim; papply h'; passumption
     · exact Proof.mp
   | all p ih =>
     constructor
