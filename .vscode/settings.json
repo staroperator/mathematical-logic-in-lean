@@ -3,6 +3,7 @@
         "dotand": "⩑",
         "dotor": "⩒",
         "dotle": "⪁",
-        "dotlt": "⋖"
+        "dotlt": "⋖",
+        "preceq": "⪯"
     }
 }

@@ -264,9 +264,12 @@ macro:max p:term noWs "[" σ:term "]ₚ" : term => `(subst $p $σ)
 @[simp] theorem subst_ex : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
 
 theorem subst_andN {v : Vec (L.Formula n) m} : (⋀ i, v i)[σ]ₚ = ⋀ i, (v i)[σ]ₚ := by
-  induction m with
-  | zero => rfl
-  | succ n ih => simp [andN, Vec.head, Vec.tail, Function.comp_def, ih]
+  induction m with simp [andN, Vec.head, Vec.tail, Function.comp_def]
+  | succ b ih => simp [ih]
+
+theorem subst_orN {v : Vec (L.Formula n) m} : (⋁ i, v i)[σ]ₚ = ⋁ i, (v i)[σ]ₚ := by
+  induction m with simp [orN, Vec.head, Vec.tail, Function.comp_def]
+  | succ m ih => simp [ih]
 
 theorem subst_allN : (∀^[m] p)[σ]ₚ = ∀^[m] (p[⇑ₛ^[m] σ]ₚ) := by
   induction m with simp [allN, Subst.liftN]
@@ -408,7 +411,7 @@ prefix:max "↑ᴳ" => FormulaSet.shift
 @[simp] theorem FormulaSet.shift_empty : ↑ᴳ(∅ : L.FormulaSet n) = ∅ := Set.image_empty _
 @[simp] theorem FormulaSet.shift_append : ↑ᴳ(Γ,' p) = ↑ᴳΓ,' ↑ₚp := Set.image_insert_eq
 
-@[reducible] def FormulaSet.shiftN : (m : ℕ) → L.FormulaSet n → L.FormulaSet (n + m)
+def FormulaSet.shiftN : (m : ℕ) → L.FormulaSet n → L.FormulaSet (n + m)
 | 0, Γ => Γ
 | m + 1, Γ => ↑ᴳ(Γ.shiftN m)
 notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
@@ -422,11 +425,16 @@ notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
 
 abbrev Theory (L : Language) := Set L.Sentence
 
-@[reducible] def Theory.shiftN : (n : ℕ) → L.Theory → L.FormulaSet n
+def Theory.shiftT : (n : ℕ) → L.Theory → L.FormulaSet n
 | 0, T => T
-| n + 1, T => ↑ᴳ(T.shiftN n)
-notation "↑ᵀ^[" n "]" => Theory.shiftN n
-@[simp] theorem Theory.shift_shiftN : ↑ᴳ (↑ᵀ^[n] T) = ↑ᵀ^[n + 1] T := rfl
+| n + 1, T => ↑ᴳ(T.shiftT n)
+notation "↑ᵀ^[" n "]" => Theory.shiftT n
+@[simp] theorem Theory.shift_eq : ↑ᴳT = ↑ᵀ^[1] T := rfl
+@[simp] theorem Theory.shift_shiftN : ↑ᴳ(↑ᵀ^[n] T) = ↑ᵀ^[n + 1] T := rfl
+@[simp] theorem Theory.shiftN_eq : ↑ᴳ^[n] T = ↑ᵀ^[0+n] T := by
+  induction n with simp [FormulaSet.shiftN]
+  | zero => rfl
+  | succ n ih => simp [ih]; rfl
 @[simp] theorem Theory.shiftN_shiftN : ↑ᴳ^[m] (↑ᵀ^[n] T) = ↑ᵀ^[n + m] T := by
   induction m with simp [FormulaSet.shiftN]
   | succ m ih => simp [ih]; rfl

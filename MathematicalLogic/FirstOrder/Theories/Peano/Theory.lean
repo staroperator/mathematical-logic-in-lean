@@ -55,10 +55,10 @@ theorem succ_ofNat : S (ofNat a : peano.Term n) = ofNat (a + 1) := rfl
 @[simp] theorem shift_mul : ↑ₜ(t₁ * t₂) = ↑ₜt₁ * ↑ₜt₂ := subst_mul
 
 instance : Order peano where
-  leDef := ∃' (#1 + #0 ≐ #2)
-  ltDef := ∃' (S #1 + #0 ≐ #2)
+  leDef := ∃' (#0 + #1 ≐ #2)
+  ltDef := ∃' (#0 + S #1 ≐ #2)
 
-theorem le_def : t₁ ⪯ t₂ = ∃' (↑ₜt₁ + #0 ≐ ↑ₜt₂) := by simp [Order.le, Order.leDef]
+theorem le_def : t₁ ⪯ t₂ = ∃' (#0 + ↑ₜt₁ ≐ ↑ₜt₂) := by simp [Order.le, Order.leDef]
 
 theorem lt_def : t₁ ≺ t₂ = S t₁ ⪯ t₂ := by simp [Order.lt, Order.ltDef, le_def]
 
@@ -105,83 +105,249 @@ namespace Proof
 
 end Proof
 
+open Proof
+
 namespace Theory
 
-/-- Theory of Peano arithmetic. -/
-inductive PA : peano.Theory where
-| ax_succ_ne_zero : PA (∀' (~ S #0 ≐ 0))
-| ax_succ_inj : PA (∀' ∀' ((S #0 ≐ S #1) ⇒ #0 ≐ #1))
-| ax_add_zero : PA (∀' (#0 + 0 ≐ #0))
-| ax_add_succ : PA (∀' ∀' (#0 + S #1 ≐ S (#0 + #1)))
-| ax_mul_zero : PA (∀' (#0 * 0 ≐ 0))
-| ax_mul_succ : PA (∀' ∀' (#0 * S #1 ≐ #0 * #1 + #0))
-| ax_ind {n} {p : peano.Formula (n + 1)} :
-  PA (∀* (p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p))
+attribute [local simp] Term.shift_subst_single Term.shift_subst_assign Term.shift_subst_lift
 
-namespace PA
+/-- Robinson's Q. -/
+inductive Q : peano.Theory where
+| ax_succ_ne_zero : Q (∀' (~ S #0 ≐ 0))
+| ax_succ_inj : Q (∀' ∀' ((S #1 ≐ S #0) ⇒ #1 ≐ #0))
+| ax_add_zero : Q (∀' (#0 + 0 ≐ #0))
+| ax_add_succ : Q (∀' ∀' (#1 + S #0 ≐ S (#1 + #0)))
+| ax_mul_zero : Q (∀' (#0 * 0 ≐ 0))
+| ax_mul_succ : Q (∀' ∀' (#1 * S #0 ≐ #1 * #0 + #1))
+| ax_zero_or_succ : Q (∀' (#0 ≐ 0 ⩒ ∃' (#1 ≐ S #0)))
 
-open Proof
-attribute [local simp] Term.shift_subst_single Term.shift_subst_assign
+namespace Q
 
-theorem succ_ne_zero (t) :
-  ↑ᵀ^[n] PA ⊢ ~ S t ≐ 0 := by
-  have h := hyp ax_succ_ne_zero
-  apply Theory.foralls_elim [t]ᵥ at h
-  simp at h; exact h
+theorem succ_ne_zero (t) : ↑ᵀ^[n] Q ⊢ ~ S t ≐ 0 := by
+  have := foralls_elim [t]ᵥ (hyp ax_succ_ne_zero)
+  simp at this; exact this
 
-theorem succ_inj :
-  ↑ᵀ^[n] PA ⊢ S t₁ ≐ S t₂ ⇒ t₁ ≐ t₂ := by
-  have h := hyp ax_succ_inj
-  apply Theory.foralls_elim [t₁, t₂]ᵥ at h
-  simp at h; exact h
+theorem succ_inj : ↑ᵀ^[n] Q ⊢ S t₁ ≐ S t₂ ⇒ t₁ ≐ t₂ := by
+  have := foralls_elim [t₂, t₁]ᵥ (hyp ax_succ_inj)
+  simp at this; exact this
 
-theorem add_zero (t) :
-  ↑ᵀ^[n] PA ⊢ t + 0 ≐ t := by
-  have h := hyp ax_add_zero
-  apply Theory.foralls_elim [t]ᵥ at h
-  simp at h; exact h
+theorem add_zero (t) : ↑ᵀ^[n] Q ⊢ t + 0 ≐ t := by
+  have := foralls_elim [t]ᵥ (hyp ax_add_zero)
+  simp at this; exact this
 
-theorem add_succ (t₁ t₂) :
-  ↑ᵀ^[n] PA ⊢ t₁ + S t₂ ≐ S (t₁ + t₂) := by
-  have h := hyp ax_add_succ
-  apply Theory.foralls_elim [t₁, t₂]ᵥ at h
-  simp at h; exact h
+theorem add_succ (t₁ t₂) : ↑ᵀ^[n] Q ⊢ t₁ + S t₂ ≐ S (t₁ + t₂) := by
+  have := foralls_elim [t₂, t₁]ᵥ (hyp ax_add_succ)
+  simp at this; exact this
 
-theorem mul_zero (t) :
-  ↑ᵀ^[n] PA ⊢ t * 0 ≐ 0 := by
-  have h := hyp ax_mul_zero
-  apply Theory.foralls_elim [t]ᵥ at h
-  simp at h; exact h
+theorem mul_zero (t) : ↑ᵀ^[n] Q ⊢ t * 0 ≐ 0 := by
+  have := foralls_elim [t]ᵥ (hyp ax_mul_zero)
+  simp at this; exact this
 
-theorem mul_succ (t₁ t₂) :
-  ↑ᵀ^[n] PA ⊢ t₁ * S t₂ ≐ t₁ * t₂ + t₁ := by
-  have h := hyp ax_mul_succ
-  apply Theory.foralls_elim [t₁, t₂]ᵥ at h
-  simp [Term.shift_subst_single] at h; exact h
+theorem mul_succ (t₁ t₂) : ↑ᵀ^[n] Q ⊢ t₁ * S t₂ ≐ t₁ * t₂ + t₁ := by
+  have := foralls_elim [t₂, t₁]ᵥ (hyp ax_mul_succ)
+  simp at this; exact this
 
-theorem ind :
-  ↑ᵀ^[n] PA ⊢ p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p := by
-  have h := hyp (ax_ind (p := p))
-  apply Theory.foralls_elim .id at h
-  simp [Formula.subst_id] at h
-  exact h
+theorem zero_or_succ (t) : ↑ᵀ^[n] Q ⊢ t ≐ 0 ⩒ ∃' (↑ₜt ≐ S #0) := by
+  have := foralls_elim [t]ᵥ (hyp ax_zero_or_succ)
+  simp at this; exact this
 
-theorem add_ofNat {a b : ℕ} : ↑ᵀ^[n] PA ⊢ a + b ≐ (a + b : ℕ) := by
+theorem eq_succ_of_ne_zero : ↑ᵀ^[n] Q ⊢ ~ t ≐ 0 ⇒ ∃' (↑ₜt ≐ S #0) := zero_or_succ _
+
+lemma add_eq_zero_left : ↑ᵀ^[n] Q ⊢ t₁ + t₂ ≐ 0 ⇒ t₁ ≐ 0 := by
+  pintro
+  papply or_elim
+  · pexact zero_or_succ t₂
+  · pintro; prw [←add_zero t₁, ←0, 1, 0]; prefl
+  · papply exists_elim'
+    pintros; simp
+    papply false_elim
+    papply succ_ne_zero (↑ₜt₁ + #0)
+    prw [←add_succ, ←0]
+    passumption
+
+theorem zero_le : ↑ᵀ^[n] Q ⊢ 0 ⪯ t := by
+  papply exists_intro t; simp
+  prw [add_zero]
+  prefl
+
+theorem succ_le_succ_iff : ↑ᵀ^[n] Q ⊢ S t₁ ⪯ S t₂ ⇔ t₁ ⪯ t₂ := by
+  papply iff_intro
+  · papply exists_elim'
+    pintros 2; simp
+    papply exists_intro #0; simp
+    papply succ_inj
+    prw [←0, add_succ]
+    prefl
+  · papply exists_elim'
+    pintros 2; simp
+    papply exists_intro #0; simp
+    prw [←0, add_succ]
+    prefl
+
+theorem lt_succ_iff : ↑ᵀ^[n] Q ⊢ t₁ ≺ S t₂ ⇔ t₁ ⪯ t₂ := by
+  simp [lt_def]
+  pexact succ_le_succ_iff
+
+theorem succ_lt_succ_iff : ↑ᵀ^[n] Q ⊢ S t₁ ≺ S t₂ ⇔ t₁ ≺ t₂ := by
+  simp [lt_def]
+  pexact succ_le_succ_iff
+
+theorem not_lt_zero (t) : ↑ᵀ^[n] Q ⊢ ~ t ≺ 0 := by
+  pintro
+  papply exists_elim
+  · passumption 0
+  · pintro; simp; prw [add_succ]; pexact succ_ne_zero
+
+variable {a b m : ℕ}
+
+theorem add_ofNat :
+  ↑ᵀ^[n] Q ⊢ a + b ≐ (a + b : ℕ) := by
   induction b with simp [ofNat]
   | zero => apply add_zero
   | succ b ih => prw [add_succ, ih]; prefl
 
-theorem mul_ofNat {a b : ℕ} : ↑ᵀ^[n] PA ⊢ a * b ≐ (a * b : ℕ) := by
+theorem mul_ofNat :
+  ↑ᵀ^[n] Q ⊢ a * b ≐ (a * b : ℕ) := by
   induction b with simp [ofNat]
   | zero => apply mul_zero
   | succ b ih => prw [mul_succ, ih, add_ofNat]; prefl
+
+theorem le_ofNat : a ≤ b → ↑ᵀ^[n] Q ⊢ a ⪯ b := by
+  intro h
+  papply exists_intro (ofNat (b - a))
+  simp
+  prw [add_ofNat]
+  rw [Nat.sub_add_cancel h]
+  prefl
+
+theorem lt_ofNat : a < b → ↑ᵀ^[n] Q ⊢ a ≺ b := by
+  intro h
+  simp [lt_def, succ_ofNat]
+  exact le_ofNat h
+
+theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ m ⇔ ⋁ (i : Fin m), t ≐ ofNat i := by
+  papply iff_intro
+  · induction m generalizing n with
+    | zero =>
+      pintro
+      papply false_elim
+      papply not_lt_zero t
+      passumption
+    | succ m ih =>
+      pintro
+      papply or_elim
+      · pexact zero_or_succ t
+      · pintro
+        papply orN_intro 0
+        passumption
+      · papply exists_elim'
+        pintros 2; simp
+        phave #0 ≺ ofNat m
+        · prw [←succ_lt_succ_iff, ←0]
+          passumption
+        · papply ih at 0
+          prevert
+          papply orN_elim'
+          intro i
+          pintro
+          simp [Formula.shift, Formula.subst_orN]
+          papply orN_intro i.succ
+          simp [←succ_ofNat]; rw [←Term.shift]
+          prw [1, 0]
+          prefl
+  · papply orN_elim'
+    intro ⟨i, h⟩
+    pintro
+    prw [0]
+    pexact lt_ofNat h
+
+theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ m ⇒ p) ⇔ ⋀ (i : Fin m), p[↦ₛ ofNat i]ₚ := by
+  papply iff_intro
+  · pintro
+    apply andN_intro
+    intro ⟨i, h⟩
+    papply forall_elim (ofNat i) at 0; simp
+    papplya 0
+    pexact lt_ofNat h
+  · induction m generalizing n with
+    | zero => pintros; papply false_elim; papply not_lt_zero; passumption
+    | succ m ih =>
+      pintros; simp [Formula.shift, Formula.subst_andN]
+      papply or_elim
+      · pexact zero_or_succ #0
+      · pintro
+        papply andN_elim 0 at 2
+        simp [←Formula.subst_comp, Subst.single_comp]
+        conv => arg 2; rw [←Formula.subst_id p]
+        papply eq_subst
+        · passumption
+        · intro i
+          cases i using Fin.cases with simp
+          | zero => prw [0]; prefl
+          | succ => prefl
+      · papply exists_elim'
+        pintros; simp [Formula.shift, Formula.subst_andN]
+        phave ∀' (#0 ≺ m ⇒ p[S #0 ∷ᵥ λ i => #(i.addNat 3)]ₚ)
+        · papply ih
+          papply andN_intro
+          intro i
+          papply andN_elim i.succ at 2
+          simp [Formula.shift, ←Formula.subst_comp, Subst.comp_def]; simp_vec
+          passumption
+        · papply forall_elim #0 at 0
+          simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
+          papply eq_subst
+          · papplya 0
+            prw [←succ_lt_succ_iff, ←1]
+            passumption
+          · intro i
+            cases i using Fin.cases with simp
+            | zero => prw [1]; prefl
+            | succ => prefl
+
+end Q
+
+open Q
+
+/-- Peano arithmetic. -/
+inductive PA : peano.Theory where
+| ax_succ_ne_zero : PA (∀' (~ S #0 ≐ 0))
+| ax_succ_inj : PA (∀' ∀' ((S #1 ≐ S #0) ⇒ #1 ≐ #0))
+| ax_add_zero : PA (∀' (#0 + 0 ≐ #0))
+| ax_add_succ : PA (∀' ∀' (#1 + S #0 ≐ S (#1 + #0)))
+| ax_mul_zero : PA (∀' (#0 * 0 ≐ 0))
+| ax_mul_succ : PA (∀' ∀' (#1 * S #0 ≐ #1 * #0 + #1))
+| ax_ind {n} {p : peano.Formula (n + 1)} : PA (∀* (p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p))
+
+namespace PA
+
+theorem ind : ↑ᵀ^[n] PA ⊢ p[↦ₛ 0]ₚ ⇒ (∀' (p ⇒ p[≔ₛ S #0]ₚ)) ⇒ ∀' p := by
+  have := foralls_elim .id (hyp (ax_ind (p := p)))
+  simp [Formula.subst_id] at this; exact this
+
+theorem zero_or_succ (t) : ↑ᵀ^[n] PA ⊢ t ≐ 0 ⩒ ∃' (↑ₜt ≐ S #0) := by
+  psuffices ∀' (#0 ≐ 0 ⩒ ∃' (#1 ≐ S #0))
+  · papply forall_elim t at 0
+    simp; passumption
+  · papply ind <;> simp
+    · papply or_inl; prefl
+    · pintros 2
+      papply or_inr
+      papply exists_intro #0; simp
+      prefl
+
+instance : Q ⊆ᵀ PA where
+  subtheory _ h := by
+    cases h with
+    | ax_zero_or_succ => pintro; pexact zero_or_succ #0
+    | _ => apply hyp; constructor
 
 lemma zero_add (t) : ↑ᵀ^[n] PA ⊢ 0 + t ≐ t := by
   psuffices ∀' (0 + #0 ≐ #0)
   · papply forall_elim t at 0
     simp; passumption
   · papply ind <;> simp
-    · apply add_zero
+    · prw [add_zero]; prefl
     · pintros; prw [add_succ, 0]; prefl
 
 lemma succ_add (t₁ t₂) : ↑ᵀ^[n] PA ⊢ S t₁ + t₂ ≐ S (t₁ + t₂) := by
@@ -226,14 +392,15 @@ theorem add_right_cancel (t) : ↑ᵀ^[n] PA ⊢ t₁ + t ≐ t₂ + t ⇒ t₁ 
       passumption
 
 theorem add_left_cancel (t) : ↑ᵀ^[n] PA ⊢ t + t₁ ≐ t + t₂ ⇒ t₁ ≐ t₂ := by
-  prw [add_comm]; exact add_right_cancel t
+  prw [add_comm]
+  pexact add_right_cancel t
 
 theorem zero_mul (t) : ↑ᵀ^[n] PA ⊢ 0 * t ≐ 0 := by
   psuffices ∀' (0 * #0 ≐ 0)
   · papply forall_elim t at 0
     simp; passumption
   · papply ind <;> simp
-    · apply mul_zero
+    · prw [mul_zero]; prefl
     · pintros; prw [mul_succ, 0, add_zero]; prefl
 
 theorem succ_mul (t₁ t₂) : ↑ᵀ^[n] PA ⊢ S t₁ * t₂ ≐ t₁ * t₂ + t₂ := by
@@ -275,51 +442,12 @@ theorem mul_assoc (t₁ t₂ t₃) : ↑ᵀ^[n] PA ⊢ t₁ * (t₂ * t₃) ≐ 
     · prw [mul_zero, mul_zero]; prefl
     · pintros; prw [mul_succ, left_distrib, 0]; prefl
 
-theorem zero_or_succ (t) : ↑ᵀ^[n] PA ⊢ t ≐ 0 ⩒ ∃' (↑ₜt ≐ S #0) := by
-  psuffices ∀' (#0 ≐ 0 ⩒ ∃' (#1 ≐ S #0))
-  · papply forall_elim t at 0
-    simp; passumption
-  · papply ind <;> simp
-    · papply or_inl; prefl
-    · pintros 2
-      papply or_inr
-      papply exists_intro #0; simp
-      prefl
-
-theorem eq_succ_of_ne_zero : ↑ᵀ^[n] PA ⊢ ~ t ≐ 0 ⇒ ∃' (↑ₜt ≐ S #0) := zero_or_succ _
-
-lemma add_eq_zero_left : ↑ᵀ^[n] PA ⊢ t₁ + t₂ ≐ 0 ⇒ t₁ ≐ 0 := by
-  pintro
-  papply or_elim
-  · pexact zero_or_succ t₂
-  · pintro; prw [←add_zero t₁, ←0, 1, 0]; prefl
-  · papply exists_elim'
-    pintros; simp
-    papply false_elim
-    papply succ_ne_zero (↑ₜt₁ + #0)
-    prw [←add_succ, ←0]
-    passumption
-
 lemma add_eq_zero_right : ↑ᵀ^[n] PA ⊢ t₁ + t₂ ≐ 0 ⇒ t₂ ≐ 0 := by
-  prw [add_comm]; exact add_eq_zero_left
-
-theorem le_ofNat {a b : ℕ} : a ≤ b → ↑ᵀ^[n] PA ⊢ a ⪯ b := by
-  intro h
-  papply exists_intro (ofNat (b - a))
-  simp
-  prw [add_ofNat]
-  rw [Nat.add_sub_cancel' h]
-  prefl
-
-theorem lt_ofNat {a b : ℕ} : a < b → ↑ᵀ^[n] PA ⊢ a ≺ b := by
-  intro h
-  simp [lt_def, succ_ofNat]
-  exact le_ofNat h
+  prw [add_comm]; pexact add_eq_zero_left
 
 theorem le_refl : ↑ᵀ^[n] PA ⊢ t ⪯ t := by
-  papply exists_intro 0
-  simp
-  prw [add_zero]
+  papply exists_intro 0; simp
+  prw [zero_add]
   prefl
 
 theorem le_antisymm : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₁ ⇒ t₁ ≐ t₂ := by
@@ -327,32 +455,21 @@ theorem le_antisymm : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₁ ⇒ t₁
   pintros 2
   papply exists_elim'
   pintros 2
-  simp [Term.shift_subst_lift]; repeat rw [←Term.shift]
-  phave #1 ≐ 0
-  · papply add_eq_zero_left (t₂ := #0)
-    papply add_left_cancel (t := ↑ₜ↑ₜt₁)
-    prw [add_assoc, 1, 0, add_zero]
-    prefl
-  prw [←add_zero ↑ₜ↑ₜt₁, ←0, 2]
-  prefl
+  simp; repeat rw [←Term.shift]
+  prw [←zero_add ↑ₜ↑ₜt₁, ←1, add_assoc] at 0
+  papply add_right_cancel at 0
+  papply add_eq_zero_right at 0
+  prw [0, zero_add] at 1
+  passumption
 
 theorem le_trans : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₃ ⇒ t₁ ⪯ t₃ := by
   papply exists_elim'
   pintros 2
   papply exists_elim'
   pintros 2
-  papply exists_intro (#1 + #0)
-  simp [Term.shift_subst_lift]; repeat rw [←Term.shift]
-  prw [add_assoc, 1, 0]
-  prefl
-
-theorem zero_le : ↑ᵀ^[n] PA ⊢ 0 ⪯ t := by
-  papply exists_intro t; simp
-  apply zero_add
-
-theorem le_succ_self : ↑ᵀ^[n] PA ⊢ t ⪯ S t := by
-  papply exists_intro (S 0); simp
-  prw [add_succ, add_zero]
+  papply exists_intro (#0 + #1)
+  simp; repeat rw [←Term.shift]
+  prw [←add_assoc, 1, 0]
   prefl
 
 theorem lt_iff_le_not_le : ↑ᵀ^[n] PA ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₂ ⪯ t₁ := by
@@ -361,14 +478,14 @@ theorem lt_iff_le_not_le : ↑ᵀ^[n] PA ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑
     pintros 2; simp
     papply and_intro
     · papply exists_intro (S #0); simp
-      prw [add_succ, ←succ_add, 0]
+      prw [succ_add, ←add_succ, 0]
       prefl
     · papply exists_elim'; simp
       pintros; simp
-      papply succ_ne_zero (#1 + #0)
-      papply add_left_cancel ↑ₜ↑ₜt₁
-      prw [add_zero, add_succ, ←succ_add, add_assoc, 1, 0]
-      prefl 
+      prw [←zero_add ↑ₜ↑ₜt₂, ←0, add_succ, ←succ_add, add_assoc, succ_add] at 1
+      papply add_right_cancel at 1
+      papply succ_ne_zero
+      passumption
   · prw [and_imp_iff]
     papply exists_elim'; simp
     pintros 3
@@ -377,7 +494,7 @@ theorem lt_iff_le_not_le : ↑ᵀ^[n] PA ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑
     · pintro
       papply false_elim
       papplya 1
-      prw [←2, 0, add_zero]
+      prw [←2, 0, zero_add]
       pexact le_refl
     · papply exists_elim'; simp
       pintros 2
@@ -392,6 +509,14 @@ instance : PO ⊆ᵀ PA where
     | ax_le_antisymm => pintros 2; pexact le_antisymm
     | ax_le_trans => pintros 3; pexact le_trans
     | ax_lt_iff_le_not_le => pintros 2; pexact lt_iff_le_not_le
+
+theorem lt_succ_self : ↑ᵀ^[n] PA ⊢ t ≺ S t := by
+  prw [lt_succ_iff]
+  pexact le_refl
+
+theorem le_succ_self : ↑ᵀ^[n] PA ⊢ t ⪯ S t := by
+  papply PO.le_of_lt
+  pexact lt_succ_self
 
 theorem le_total : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⩒ t₂ ⪯ t₁ := by
   psuffices ∀' (#0 ⪯ ↑ₜt₂ ⩒ ↑ₜt₂ ⪯ #0)
@@ -425,37 +550,24 @@ theorem le_succ_iff : ↑ᵀ^[n] PA ⊢ t₁ ⪯ S t₂ ⇔ t₁ ⪯ t₂ ⩒ t�
     · pexact zero_or_succ #0
     · pintro
       papply or_inr
-      prw [←1, 0, add_zero]
+      prw [←1, 0, zero_add]
       prefl
     · papply exists_elim'
       pintros 2; simp
       papply or_inl
       papply exists_intro #0; simp
       papply succ_inj
-      prw [←add_succ, ←0, 1]
+      prw [←succ_add, ←0, 1]
       prefl
   · papply or_elim'
-    · pintro
-      papply le_trans
-      · passumption 0
-      · pexact le_succ_self
+    · papply exists_elim'; simp
+      pintros 2
+      papply exists_intro (S #0); simp
+      prw [succ_add, 0]
+      prefl
     · pintro
       prw [0]
       pexact le_refl
-
-theorem succ_le_succ_iff : ↑ᵀ^[n] PA ⊢ S t₁ ⪯ S t₂ ⇔ t₁ ⪯ t₂ := by
-  papply iff_intro
-  · papply exists_elim'
-    pintros 2; simp
-    papply exists_intro #0; simp
-    papply succ_inj
-    prw [←0, succ_add]
-    prefl
-  · papply exists_elim'
-    pintros 2; simp
-    papply exists_intro #0; simp
-    prw [←0, succ_add]
-    prefl
 
 theorem add_le_add : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₃ ⪯ t₄ ⇒ t₁ + t₃ ⪯ t₂ + t₄ := by
   papply exists_elim'
@@ -463,31 +575,47 @@ theorem add_le_add : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₃ ⪯ t₄ ⇒ t₁ 
   papply exists_elim'
   pintros 2; simp
   papply exists_intro (#0 + #1); simp
-  prw [add_assoc, ←add_assoc _ _ #0, 0, add_right_comm, 1]
-  prefl
-
-theorem lt_succ_iff : ↑ᵀ^[n] PA ⊢ t₁ ≺ S t₂ ⇔ t₁ ⪯ t₂ := by
-  simp [lt_def]; exact succ_le_succ_iff
-
-theorem succ_lt_succ_iff : ↑ᵀ^[n] PA ⊢ S t₁ ≺ S t₂ ⇔ t₁ ≺ t₂ := by
-  simp [lt_def]; exact succ_le_succ_iff
-
-theorem not_lt_zero : ↑ᵀ^[n] PA ⊢ ~ t ≺ 0 := by
-  pintro
-  papply exists_elim
-  · passumption 0
-  · pintro; simp; prw [succ_add]; pexact succ_ne_zero
-
-theorem lt_succ_self : ↑ᵀ^[n] PA ⊢ t ≺ S t := by
-  prw [lt_succ_iff]; pexact le_refl
+  prw [add_assoc, ←add_assoc #0, 1, add_right_comm, 0]
+  pexact add_comm
 
 theorem ne_ofNat {a b : ℕ} : a ≠ b → ↑ᵀ^[n] PA ⊢ ~ a ≐ b := by
   intro h
-  rcases lt_or_gt_of_ne h with h | h
+  rcases Nat.lt_or_gt_of_ne h with h | h
   · papply PO.ne_of_lt
     pexact lt_ofNat h
   · papply ne_symm
     papply PO.ne_of_lt
     pexact lt_ofNat h
+
+theorem strong_ind : 
+  ↑ᵀ^[n] PA ⊢ ∀' (∀' (#0 ≺ #1 ⇒ p[#0 ∷ᵥ λ i => #(i.addNat 2)]ₚ) ⇒ p) ⇒ ∀' p := by
+  pintro
+  psuffices ∀' ∀' (#0 ≺ #1 ⇒ p[#0 ∷ᵥ λ i => #(i.addNat 2)]ₚ)
+  · pintros
+    papply forall_elim (S #0) at 0
+    papply forall_elim #0 at 0
+    simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
+    conv => arg 2; rw [←Formula.subst_id p, Vec.eq_cons Subst.id]
+    papplya 0
+    pexact lt_succ_self
+  · papply ind <;> simp [←Formula.subst_comp, Subst.comp_def] <;> simp_vec
+    · pintros
+      papply false_elim
+      papply not_lt_zero
+      passumption 0
+    · pintros
+      simp [Formula.shift, ←Formula.subst_comp, Subst.comp_def]; simp_vec
+      papply forall_elim #0 at 2
+      simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
+      papplya 2
+      pintros
+      simp [Formula.shift, ←Formula.subst_comp, Subst.comp_def]; simp_vec
+      papply forall_elim #0 at 2
+      simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
+      papplya 2
+      papply PO.lt_of_lt_of_le
+      · passumption 0
+      · prw [lt_succ_iff] at 1
+        passumption 1
 
 end FirstOrder.Language.Theory.PA

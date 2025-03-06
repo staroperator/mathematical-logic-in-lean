@@ -158,7 +158,9 @@ open Lean Syntax Meta Elab Tactic
 macro "pintro" : tactic => `(tactic|
   first
   | eapply deduction.mpr
-  | (eapply forall_intro; try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append, Theory.shift_shiftN, Theory.shiftN_shiftN]))
+  | (eapply forall_intro;
+     try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append,
+       Theory.shift_eq, Theory.shift_shiftN, Theory.shiftN_eq, Theory.shiftN_shiftN]))
 
 /-- Revert a hypothesis through deduction theorem. -/
 macro "prevert" : tactic => `(tactic| eapply deduction.mp)
@@ -226,7 +228,7 @@ macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
 
 def isTheory? (n : Expr) (Γ : Expr) : Option Expr :=
   if n.isConstOf `Nat.zero then Γ
-  else if let some (_, _, T) := Γ.app3? ``Theory.shiftN then T
+  else if let some (_, _, T) := Γ.app3? ``Theory.shiftT then T
   else none
 
 partial def formulaList (Γ : Expr) : Expr × List Expr :=
@@ -478,18 +480,24 @@ theorem orN_intro {v : Vec (L.Formula n) m} (i : Fin m) :
     | zero => papply or_inl; passumption 0
     | succ i => papply or_inr; papply ih; passumption 0
 
+theorem orN_elim' {v : Vec (L.Formula n) m} :
+  (∀ i, Γ ⊢ v i ⇒ p) → Γ ⊢ (⋁ i, v i) ⇒ p := by
+  intro h
+  induction m generalizing Γ with
+  | zero =>
+    pexact false_elim
+  | succ m ih =>
+    papply or_elim'
+    · pexact h 0
+    · papply ih
+      intro i
+      exact h i.succ
+
 theorem orN_elim {v : Vec (L.Formula n) m} :
   Γ ⊢ ⋁ i, v i → (∀ i, Γ ⊢ v i ⇒ p) → Γ ⊢ p := by
   intro h₁ h₂
-  induction m generalizing Γ with
-  | zero => papply false_elim; exact h₁
-  | succ m ih =>
-    papply or_elim
-    · exact h₁
-    · exact h₂ 0
-    · pintro; apply ih
-      · passumption
-      · intro i; pclears; exact h₂ i.succ
+  papply orN_elim' h₂
+  exact h₁
 
 theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
 theorem iff_mp : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
@@ -988,6 +996,7 @@ variable {T : L.Theory}
 
 theorem generalization_alls : ↑ᵀ^[n] T ⊢ p ↔ T ⊢ ∀* p := by
   induction n with simp [Formula.alls]
+  | zero => rfl
   | succ n ih => rw [←shift_shiftN, generalization, ih]
 
 theorem foralls_intro : ↑ᵀ^[n] T ⊢ p → T ⊢ ∀* p := generalization_alls.mp
