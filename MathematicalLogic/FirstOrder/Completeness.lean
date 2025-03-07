@@ -29,8 +29,10 @@ theorem Satisfiable.of_consistent : Consistent Γ → Satisfiable Γ := by
     · apply Proof.forall_intro; pintro; exact Proof.true_intro
     · exact h
 
+/-- Consistency is equivalent to satisfiability. -/
 theorem consistent_iff_satisfiable : Consistent Γ ↔ Satisfiable Γ := ⟨Satisfiable.of_consistent, Consistent.of_satisfiable⟩
 
+/-- Completeness theorem. -/
 theorem completeness : Γ ⊨ p → Γ ⊢ p := by
   intro h₁
   papply Proof.double_neg_imp
@@ -55,6 +57,7 @@ theorem Entails.compactness : Γ ⊨ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ �
   apply soundness at h₃
   exists Δ
 
+/-- Compactness theorem. -/
 theorem Satisfiable.compactness : Satisfiable.{u} Γ ↔ ∀ Δ ⊆ Γ, Δ.Finite → Satisfiable.{u} Δ := by
   constructor
   · intros; apply weaken <;> assumption

@@ -5,7 +5,7 @@ namespace FirstOrder.Language
 
 variable {L : Language}
 
-theorem Entails.axiom : p ∈ L.Axiom → Γ ⊨ p := by
+theorem Entails.ax : p ∈ L.Axiom → Γ ⊨ p := by
   intro h M ρ _
   induction h with simp [satisfy_andN]
   | forall_elim =>
@@ -28,27 +28,28 @@ theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
   · exact h
   · apply h₂; exact h
 
+/-- Soundness theorem. -/
 theorem soundness : Γ ⊢ p → Γ ⊨ p := by
   intro h
   induction h with
   | hyp h => intros _ _ h₁; apply h₁; exact h
-  | ax h => exact Entails.axiom h
+  | ax h => exact Entails.ax h
   | mp _ _ ih₁ ih₂ => exact Entails.mp ih₁ ih₂
 
+/-- Satisfiability implies consistency. -/
 theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
   intro ⟨M, ρ, h₁⟩ h₂
   apply soundness at h₂
   apply h₂
   exact h₁
 
-theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) := by
-  apply of_satisfiable
-  exists ⟨Unit, λ _ _ => (), λ _ _ => True⟩, λ _ => ()
-  intro _ h
-  contradiction
+/-- Empty set is consistent. -/
+theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) :=
+  of_satisfiable.{0} .empty
 
 variable {M : Type u} [L.IsStructure M]
 
+/-- The theory of a structure is always complete. -/
 theorem theory.complete : Complete (L.theory M) := by
   intro p
   by_cases h : M ⊨ₛ p

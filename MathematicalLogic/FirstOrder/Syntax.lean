@@ -3,6 +3,12 @@ import MathematicalLogic.Notation
 
 namespace FirstOrder
 
+/--
+  First-order language. `L.Func n` is the type of `n`-ary functions, and `L.Rel n` is the type of
+  `n`-ary relations (predicates).
+  
+  Note: `Func` and `Rel` are `Type`s since there is no need for higher universe level right now.
+  -/
 structure Language where
   Func : ℕ → Type
   Rel : ℕ → Type
@@ -13,6 +19,7 @@ variable {L : Language}
 
 abbrev Const (L : Language) := L.Func 0
 
+/-- `L.Term n` is the type of terms with `n` free variables (indexed by `Fin n`). -/
 inductive Term (L : Language) (n : ℕ) : Type where
 | var : Fin n → L.Term n
 | func : L.Func m → (Fin m → L.Term n) → L.Term n
@@ -48,6 +55,9 @@ instance : SizeOf (L.Term n) := ⟨size⟩
 
 end Term
 
+/--
+  `σ : L.Subst n m` substitutes variable `i : Fin n` into a term `σ i : L.Term m`. This is an alias
+  of `Vec (L.Term m) n`. -/
 abbrev Subst (L : Language) (n m : ℕ) := Vec (L.Term m) n
 
 def Term.subst : L.Term n → L.Subst n m → L.Term m
@@ -76,6 +86,7 @@ theorem Term.subst_comp : t[σ₁ ∘ₛ σ₂]ₜ = t[σ₁]ₜ[σ₂]ₜ := by
   induction t with simp
   | func f v ih => ext; apply ih
 
+/-- `↦ₛ t` substitutes variable `0` to `t` and shifts remained variables `i + 1` back to `i`. -/
 def Subst.single (t : L.Term n) : L.Subst (n + 1) n := t ∷ᵥ id
 prefix:lead "↦ₛ " => Subst.single
 @[simp] theorem Subst.single_app_zero : (↦ₛ t) 0 = t := rfl
@@ -84,10 +95,13 @@ prefix:lead "↦ₛ " => Subst.single
 
 def Subst.shift : L.Subst n (n + 1) := λ x => #x.succ
 @[simp] theorem Subst.shift_app : (shift x : L.Term (n + 1)) = #x.succ := rfl
+
+/-- `↑ₜt` shifts each variable `i` forward to `i + 1`. -/
 def Term.shift (t : L.Term n) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
 @[simp] theorem Term.shift_var : ↑ₜ(#x : L.Term n) = #x.succ := rfl
 
+/-- `≔ₛ t` is similar to `↦ₛ t`, but only substitutes `0` and does not shift `i + 1`. -/
 def Subst.assign (t : L.Term (n + 1)) : L.Subst (n + 1) (n + 1) := t ∷ᵥ shift
 prefix:lead "≔ₛ " => Subst.assign
 @[simp] theorem Subst.assign_app_zero : (≔ₛ t) 0 = t := rfl
@@ -101,6 +115,11 @@ theorem Term.shift_subst_single : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by
   simp [Subst.single]; rw [shift_subst_cons, subst_id]
 theorem Term.shift_subst_assign : (↑ₜt₁)[≔ₛ t₂]ₜ = ↑ₜt₁ := shift_subst_cons
 
+/--
+  `⇑ₛσ` keeps variable `0` unchanged, and performs substitution `σ` on variables greater than `0`
+  (in a view that `0` is eliminated -- therefore `⇑ₛσ (i + 1) = ↑ₜ(σ i)`). `⇑ₛσ` is used for
+  substituting quantifiers (`(∀' p)[σ]ₚ = p[⇑ₛσ]ₚ`) so that bounded variables are not changed by `σ`.
+  -/
 def Subst.lift (σ : L.Subst n m) : L.Subst (n + 1) (m + 1) := #0 ∷ᵥ λ x => ↑ₜ(σ x)
 prefix:max "⇑ₛ" => Subst.lift
 @[simp] theorem Subst.lift_app_zero : ⇑ₛσ 0 = #0 := rfl
@@ -164,8 +183,10 @@ theorem Term.vars_of_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars := by
   induction t with simp [vars]
   | func t v ih => rw [Set.iUnion_comm]; simp_rw [ih]
 
-
-
+/--
+  `L.Formula n` is the type of formulas with `n` free variables (indexed by `Fin n`). The only logical
+  connectives defined in the inductive type are `⊥`, `⇒` and `∀'`; others are derived (see `PropNotation`
+  and `Formula.ex`). -/
 inductive Formula (L : Language) : ℕ → Type where
 | rel : L.Rel m → (Fin m → L.Term n) → L.Formula n
 | eq : L.Term n → L.Term n → L.Formula n
@@ -383,19 +404,25 @@ theorem free_of_subst {σ : L.Subst n m} :
 
 end Formula
 
+/-- A sentence is a closed formula (formula with no free variables). -/
 abbrev Sentence (L : Language) := L.Formula 0
 
 theorem Sentence.subst_nil {p : L.Sentence} {σ : L.Subst 0 0} : p[σ]ₚ = p := by
   nth_rw 2 [←Formula.subst_id p]
   simp [Vec.eq_nil]
 
+/-- The universal closure of a formula. -/
 def Formula.alls : {n : ℕ} → L.Formula n → L.Sentence
 | 0, p => p
 | _ + 1, p => alls (∀' p)
 prefix:max "∀* " => Formula.alls
 
+/-- An abbreviation of `Set (L.Formula n)`. -/
 abbrev FormulaSet (L : Language) (n : ℕ) := Set (L.Formula n)
 
+/--
+  `append Γ p` is the same as `insert p Γ`, but with a nicer notation `Γ,' p` so that
+  when writing proofs, `Γ,' p₁,' ⋯,' pₙ` looks like a list of local hypotheses. -/
 def FormulaSet.append (Γ : L.FormulaSet n) (p : L.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
@@ -423,6 +450,7 @@ notation "↑ᴳ^[" n "]" => FormulaSet.shiftN n
   induction m with simp [shiftN, Formula.shiftN]
   | succ m ih => simp [ih]
 
+/-- A theory is a set of sentences. Those sentences are the axioms of the theory (not the deductive closure). -/
 abbrev Theory (L : Language) := Set L.Sentence
 
 def Theory.shiftT : (n : ℕ) → L.Theory → L.FormulaSet n
@@ -431,7 +459,7 @@ def Theory.shiftT : (n : ℕ) → L.Theory → L.FormulaSet n
 notation "↑ᵀ^[" n "]" => Theory.shiftT n
 @[simp] theorem Theory.shift_eq : ↑ᴳT = ↑ᵀ^[1] T := rfl
 @[simp] theorem Theory.shift_shiftN : ↑ᴳ(↑ᵀ^[n] T) = ↑ᵀ^[n + 1] T := rfl
-@[simp] theorem Theory.shiftN_eq : ↑ᴳ^[n] T = ↑ᵀ^[0+n] T := by
+@[simp] theorem Theory.shiftN_eq : ↑ᴳ^[n] T = ↑ᵀ^[0 + n] T := by
   induction n with simp [FormulaSet.shiftN]
   | zero => rfl
   | succ n ih => simp [ih]; rfl

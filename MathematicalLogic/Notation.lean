@@ -1,5 +1,13 @@
 import Mathlib.Order.Notation
 
+/--
+  Typeclass for propositional notations. Only `⊥` and `⇒` need to be defined; other notations are derived as follows:
+  - Negation `~ p = p ⇒ ⊥`.
+  - True `⊤ = ~ ⊥`.
+  - Disjunction (or) `p ⩒ q = ~ p ⇒ q`.
+  - Conjunction (and) `p ⩑ q = ~ (p ⇒ ~ q)`.
+  - Iff `p ⇔ q = (p ⇒ q) ⩑ (q ⇒ p)`.
+ -/
 class PropNotation (α : Type u) where
   false : α
   imp : α → α → α

@@ -2,6 +2,10 @@ import MathematicalLogic.FirstOrder.Syntax
 
 namespace FirstOrder.Language
 
+/--
+  First-order structures. The name `IsStructure` is to align with `IsModel`, but it's not `Prop`
+  valued.
+  -/
 class IsStructure (L : Language) (M : Type u) where
   interpFunc : L.Func n → Vec M n → M
   interpRel : L.Rel n → Vec M n → Prop
@@ -10,6 +14,7 @@ variable {L : Language} {M : Type u} [L.IsStructure M] {t t₁ t₂ : L.Term n} 
 
 open IsStructure
 
+/-- A term is interpreted by a structures and an assignment of type `Vec M n`. -/
 def interp (M : Type u) [L.IsStructure M] : L.Term n → Vec M n → M
 | #x, ρ => ρ x
 | f ⬝ᶠ v, ρ => interpFunc f λ i => interp M (v i) ρ
@@ -25,6 +30,7 @@ theorem interp_subst : ⟦ t[σ]ₜ ⟧ₜ M, ρ = ⟦ t ⟧ₜ M, λ x => ⟦ �
 theorem interp_shift : ⟦ ↑ₜt ⟧ₜ M, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ M, ρ := by
   simp [Term.shift, interp_subst]
 
+/-- A formula is satisfied by a structure and an assignment if it is interpreted as true. -/
 def satisfy (M : Type u) [L.IsStructure M] : {n : ℕ} → L.Formula n → Vec M n → Prop
 | _, r ⬝ʳ v, ρ => interpRel r λ i => ⟦ v i ⟧ₜ M, ρ
 | _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ
@@ -93,8 +99,8 @@ theorem satisfy_subst_assign {p : L.Formula (n + 1)} {t} :
 theorem satisfy_shift : M ⊨[u ∷ᵥ ρ] ↑ₚp ↔ M ⊨[ρ] p := by
   simp [Formula.shift, satisfy_subst]
 
-abbrev satisfySentence (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ᵥ] p
-infix:50 " ⊨ₛ " => satisfySentence
+abbrev satisfys (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ᵥ] p
+infix:50 " ⊨ₛ " => satisfys
 
 theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
   induction n with simp [Formula.alls]
@@ -105,6 +111,7 @@ theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
     · intro h ρ; rw [Vec.eq_cons ρ]; apply h
     · intro h ρ u; exact h (u ∷ᵥ ρ)
 
+/-- Bundled version of `IsStructure`. -/
 structure Structure (L : Language) where
   Dom : Type u
   interpFunc {n} : L.Func n → Vec Dom n → Dom
@@ -118,8 +125,7 @@ instance {M : L.Structure} : L.IsStructure M := ⟨M.interpFunc, M.interpRel⟩
 
 end Structure
 
-
-
+/-- `Γ ⊨ p` (called `Γ` entails `p`) if any structure that satisfies `Γ` must also satisfy `p`. -/
 def Entails (Γ : L.FormulaSet n) (p : L.Formula n) :=
   ∀ (M : Structure.{u} L) (ρ), (∀ q ∈ Γ, M ⊨[ρ] q) → M ⊨[ρ] p
 
@@ -128,6 +134,10 @@ syntax:50 term " ⊨.{" level "} " term:50 : term
 macro_rules
 | `($Γ ⊨.{$u} $p) => `(Entails.{$u} $Γ $p)
 
+/--
+  `Γ` is satisfiable if there is a structure and an assignment that satisfies all formulas in `Γ`.
+  The assignment is not needed for `Theory` (see `Theory.satisfiable_iff`).
+  -/
 def Satisfiable (Γ : L.FormulaSet n) :=
   ∃ (𝓢 : Structure.{u} L), ∃ ρ, ∀ p ∈ Γ, 𝓢 ⊨[ρ] p
 
@@ -140,11 +150,18 @@ theorem Satisfiable.weaken :
   apply h₁
   exact h₃
 
+/-- Empty set is satisfiable. -/
+theorem Satisfiable.empty : Satisfiable (∅ : L.FormulaSet n) := by
+  exists ⟨PUnit, λ _ v => .unit, λ _ _ => True⟩, λ _ => .unit
+  simp
+
 namespace Theory
 
+/-- A structure `M` is a model of theory `T` if it satisfies all the axioms of `T`. -/
 class IsModel (T : L.Theory) (M : Type u) [L.IsStructure M] : Prop where
   satisfy_theory : ∀ p ∈ T, M ⊨ₛ p
 
+/-- Bundled version of `IsModel`. -/
 structure Model (T : L.Theory) extends L.Structure where
   satisfy_theory : ∀ p ∈ T, toStructure ⊨ₛ p
 
@@ -156,7 +173,7 @@ instance : CoeOut T.Model L.Structure := ⟨(·.toStructure)⟩
 instance : CoeSort T.Model (Type u) := ⟨(·.Dom)⟩
 instance : T.IsModel M := ⟨M.satisfy_theory⟩
 
-def of (M : Type u) [L.IsStructure M] [T.IsModel M] : T.Model := ⟨Structure.of M, IsModel.satisfy_theory⟩
+@[reducible] def of (M : Type u) [L.IsStructure M] [T.IsModel M] : T.Model := ⟨Structure.of M, IsModel.satisfy_theory⟩
 
 end Model
 
@@ -175,14 +192,14 @@ end Theory
 def Satisfiable.of_model {T : L.Theory} (M : Type u) [L.IsStructure M] [T.IsModel M] : Satisfiable.{u} T :=
   Theory.satisfiable_iff.mpr ⟨.of M⟩
 
-def theory (M : Type u) [L.IsStructure M] : L.Theory := { p | M ⊨ₛ p }
+/-- The theory of a structure `M` contains all sentences satisfied by `M` as axioms. -/
+def theory (L : Language) (M : Type u) [L.IsStructure M] : L.Theory := { p | M ⊨ₛ p }
 
 instance : (L.theory M).IsModel M where
   satisfy_theory _ h := h
 
+/-- The theory of a structure is always satisfied by the structure itself. -/
 theorem theory.satisfiable : Satisfiable.{u} (L.theory M) := .of_model M
-
-
 
 namespace Structure
 
@@ -221,12 +238,11 @@ theorem Satisfiable.up : Satisfiable.{u} Γ → Satisfiable.{max u v} Γ := by
   simp [Structure.satisfy_ulift]
   exact h
 
-
-
 namespace Structure
 
 variable {M N : L.Structure}
 
+/-- Two structures are elementary equivalent if they satisfy the same sentences. -/
 def ElementaryEquivalent (M : L.Structure) (N : L.Structure) :=
   ∀ (p : L.Sentence), M ⊨ₛ p ↔ N ⊨ₛ p
 infixr:25 " ≃ᴱ " => ElementaryEquivalent
@@ -260,7 +276,7 @@ theorem on_term (e : M ↪ᴹ N) (t : L.Term n) (ρ : Vec M n) : e (⟦t⟧ₜ M
 def IsElementary (e : M ↪ᴹ N) :=
   ∀ {n} (p : L.Formula n) (ρ : Vec M n), M ⊨[ρ] p ↔ N ⊨[e ∘ ρ] p
 
-/-- Tarski–Vaught test -/
+/-- Tarski–Vaught test. -/
 theorem is_elementary_iff (e : M ↪ᴹ N) :
   e.IsElementary ↔ ∀ {n} (p : L.Formula (n + 1)) (ρ : Vec M n), N ⊨[e ∘ ρ] ∃' p → ∃ u, N ⊨[e u ∷ᵥ e ∘ ρ] p := by
   constructor

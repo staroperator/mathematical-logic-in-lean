@@ -61,6 +61,7 @@ theorem castAdd'_or_addNat (x : Fin (n + m)) : (∃ y, x = castAdd' y n) ∨ ∃
 
 end Fin
 
+/-- `Vec α n` is an abbreviation of `Fin n → α` -- a vector of length `n`. -/
 @[reducible] def Vec (α : Type u) (n : ℕ) := Fin n → α
 
 namespace Vec
@@ -163,8 +164,8 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
 @[simp] theorem rcons_castSucc : rcons v a (Fin.castSucc x) = v x := Fin.snoc_castSucc _ _ _
 
 /--
-  `append v₁ v₂` adds elements in `v₁` before elements in `v₂`, but adds length of `v₁` on the right of `v₂`,
-  contrary to `Fin.append`. -/
+  `append v₁ v₂` adds elements in `v₁ : Vec α n` before elements in `v₂ : Vec α m`, but gets a vector
+  of length `m + n`. This is contrary to `Fin.append` which returns vector of `n + m`. -/
 def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
   match n with
   | 0 => v₂
@@ -246,6 +247,7 @@ theorem max_zero_iff {v : Vec ℕ n} : v.max = 0 ↔ ∀ i, v i = 0 := by
   induction n with simp [max]
   | succ n ih => simp [ih, head, Fin.forall_fin_succ]
 
+/-- `paired [a₁, ⋯, aₙ]ᵥ` is `⟪a₁, ⟪a₂, ⟪⋯, ⟪aₙ, 0⟫⟫⟫` where `⟪x, y⟫` is `Nat.pair`. -/
 def paired : {n : ℕ} → Vec ℕ n → ℕ
 | 0, _ => 0
 | _ + 1, v => v.head.pair v.tail.paired
@@ -267,6 +269,7 @@ theorem paired_le_paired {v₁ v₂ : Vec ℕ n} : (∀ i, v₁ i ≤ v₂ i) �
     · apply h
     · apply ih; intro; apply h
 
+@[simp] theorem paired_nil {v : Vec ℕ 0} : v.paired = 0 := rfl
 @[simp] theorem unpair_paired {v : Vec ℕ (n + 1)} : v.paired.unpair = (v.head, v.tail.paired) := by simp [paired]
 
 section
