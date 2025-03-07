@@ -101,7 +101,7 @@ def Term.shift (t : L.Term n) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
 @[simp] theorem Term.shift_var : ↑ₜ(#x : L.Term n) = #x.succ := rfl
 
-/-- `≔ₛ t` is similar to `↦ₛ t`, but only substitutes `0` and does not shift `i + 1`. -/
+/-- `≔ₛ t` is similar to `↦ₛ t`, but only substitutes variable `0` and does not shift others. -/
 def Subst.assign (t : L.Term (n + 1)) : L.Subst (n + 1) (n + 1) := t ∷ᵥ shift
 prefix:lead "≔ₛ " => Subst.assign
 @[simp] theorem Subst.assign_app_zero : (≔ₛ t) 0 = t := rfl

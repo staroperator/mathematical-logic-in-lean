@@ -4,7 +4,7 @@ namespace FirstOrder.Language
 
 /--
   First-order structures. The name `IsStructure` is to align with `IsModel`, but it's not `Prop`
-  valued.
+  valued. Note: structures do not have to be nonempty.
   -/
 class IsStructure (L : Language) (M : Type u) where
   interpFunc : L.Func n → Vec M n → M
@@ -135,7 +135,7 @@ macro_rules
 | `($Γ ⊨.{$u} $p) => `(Entails.{$u} $Γ $p)
 
 /--
-  `Γ` is satisfiable if there is a structure and an assignment that satisfies all formulas in `Γ`.
+  `Γ` is satisfiable if there is a structure and an assignment that satisfy all formulas in `Γ`.
   The assignment is not needed for `Theory` (see `Theory.satisfiable_iff`).
   -/
 def Satisfiable (Γ : L.FormulaSet n) :=

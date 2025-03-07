@@ -924,6 +924,7 @@ def prwRuleToTactic (rule : TSyntax ``prwRule) : MacroM (TSyntax ``tacticSeq) :=
   | _ => Macro.throwError "unknown syntax for prwRule {rule}"
 
 def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) : TacticM (List MVarId) := do
+  if !(← goal.getType).isAppOf ``RwFormula then throwError "{(← goal.getType)} is not RwFormula"
   let tac ← liftMacroM (prwRuleToTactic rule)
   let prwThms := (prwExt.getState (← MonadEnv.getEnv)).reverse
   let mut newGoals := []
@@ -994,7 +995,7 @@ theorem ne_symm : Γ ⊢ ~ t₁ ≐ t₂ ⇒ ~ t₂ ≐ t₁ := by
   prw [0]
   prefl
 
-theorem ne_comm : Γ ⊢ ~ t₁ ≐ t₂ ⇔ ~ t₂ ≐ t₁ := by
+theorem ne_comm (t₁ t₂) : Γ ⊢ ~ t₁ ≐ t₂ ⇔ ~ t₂ ≐ t₁ := by
   papply iff_intro <;> pexact ne_symm
 
 /-- Compactness theorem (for proofs). -/

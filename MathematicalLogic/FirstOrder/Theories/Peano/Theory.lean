@@ -8,7 +8,7 @@ private inductive peano.Func : ℕ → Type where
 | add : Func 2
 | mul : Func 2
 
-/-- The language of Peano arithmetic. -/
+/-- The language of first-order arithmetic. -/
 def peano : Language where
   Func := peano.Func
   Rel _ := Empty
@@ -36,23 +36,24 @@ scoped notation "⌜" a "⌝" => ofEncode a
 @[simp] theorem succ_eq : (.succ ⬝ᶠ [t₁]ᵥ : peano.Term n) = S t₁ := rfl
 @[simp] theorem add_eq : (.add ⬝ᶠ [t₁, t₂]ᵥ : peano.Term n) = t₁ + t₂ := rfl
 @[simp] theorem mul_eq : (.mul ⬝ᶠ [t₁, t₂]ᵥ : peano.Term n) = t₁ * t₂ := rfl
-theorem succ_ofNat : S (ofNat a : peano.Term n) = ofNat (a + 1) := rfl
+@[simp] theorem ofNat_zero : (ofNat 0 : peano.Term n) = 0 := rfl
+@[simp] theorem ofNat_succ : ofNat (a + 1) = S (ofNat a : peano.Term n) := rfl
 
+@[simp] theorem subst_zero {σ : peano.Subst n m} : 0[σ]ₜ = 0 := by simp [←zero_eq, Vec.eq_nil]
 @[simp] theorem subst_succ : (S t)[σ]ₜ = S (t[σ]ₜ) := by simp [←succ_eq, Vec.eq_one]
-@[simp] theorem subst_ofNat : (ofNat n)[σ]ₜ = ofNat n := by
-  induction n with simp [ofNat]
-  | zero => simp [←zero_eq, Vec.eq_nil]
-  | succ n ih => simp [ih]
-@[simp] theorem subst_ofEncode [Encodable α] {a : α} : (⌜a⌝)[σ]ₜ = ⌜a⌝ := subst_ofNat
-@[simp] theorem subst_zero {σ : peano.Subst n m} : 0[σ]ₜ = 0 := subst_ofNat
 @[simp] theorem subst_add : (t₁ + t₂)[σ]ₜ = t₁[σ]ₜ + t₂[σ]ₜ := by simp [←add_eq, Vec.eq_two]
 @[simp] theorem subst_mul : (t₁ * t₂)[σ]ₜ = t₁[σ]ₜ * t₂[σ]ₜ := by simp [←mul_eq, Vec.eq_two]
-@[simp] theorem shift_ofNat : ↑ₜ(ofNat n : peano.Term m) = ofNat n := subst_ofNat
-@[simp] theorem shift_ofEncode [Encodable α] {a : α} : ↑ₜ(⌜a⌝ : peano.Term n) = ⌜a⌝ := shift_ofNat
+@[simp] theorem subst_ofNat : (ofNat n)[σ]ₜ = ofNat n := by
+  induction n with simp
+  | succ n ih => simp [ih]
+@[simp] theorem subst_ofEncode [Encodable α] {a : α} : (⌜a⌝)[σ]ₜ = ⌜a⌝ := subst_ofNat
+
 @[simp] theorem shift_zero : ↑ₜ(0 : peano.Term n) = 0 := subst_zero
 @[simp] theorem shift_succ : ↑ₜ(S t) = S ↑ₜt := subst_succ
 @[simp] theorem shift_add : ↑ₜ(t₁ + t₂) = ↑ₜt₁ + ↑ₜt₂ := subst_add
 @[simp] theorem shift_mul : ↑ₜ(t₁ * t₂) = ↑ₜt₁ * ↑ₜt₂ := subst_mul
+@[simp] theorem shift_ofNat : ↑ₜ(ofNat n : peano.Term m) = ofNat n := subst_ofNat
+@[simp] theorem shift_ofEncode [Encodable α] {a : α} : ↑ₜ(⌜a⌝ : peano.Term n) = ⌜a⌝ := shift_ofNat
 
 instance : Order peano where
   leDef := ∃' (#0 + #1 ≐ #2)
@@ -109,7 +110,7 @@ open Proof
 
 namespace Theory
 
-attribute [local simp] Term.shift_subst_single Term.shift_subst_assign Term.shift_subst_lift
+attribute [local simp] Term.shift_subst_single Term.shift_subst_assign Term.shift_subst_lift Formula.shift_subst_single
 
 /-- Robinson's Q. -/
 inductive Q : peano.Theory where
@@ -150,6 +151,11 @@ theorem mul_succ (t₁ t₂) : ↑ᵀ^[n] Q ⊢ t₁ * S t₂ ≐ t₁ * t₂ + 
 theorem zero_or_succ (t) : ↑ᵀ^[n] Q ⊢ t ≐ 0 ⩒ ∃' (↑ₜt ≐ S #0) := by
   have := foralls_elim [t]ᵥ (hyp ax_zero_or_succ)
   simp at this; exact this
+
+theorem succ_inj_iff : ↑ᵀ^[n] Q ⊢ S t₁ ≐ S t₂ ⇔ t₁ ≐ t₂ := by
+  papply iff_intro
+  · pexact succ_inj
+  · pintro; prw [0]; prefl
 
 theorem eq_succ_of_ne_zero : ↑ᵀ^[n] Q ⊢ ~ t ≐ 0 ⇒ ∃' (↑ₜt ≐ S #0) := zero_or_succ _
 
@@ -202,15 +208,25 @@ variable {a b m : ℕ}
 
 theorem add_ofNat :
   ↑ᵀ^[n] Q ⊢ a + b ≐ (a + b : ℕ) := by
-  induction b with simp [ofNat]
+  induction b with simp
   | zero => apply add_zero
   | succ b ih => prw [add_succ, ih]; prefl
 
 theorem mul_ofNat :
   ↑ᵀ^[n] Q ⊢ a * b ≐ (a * b : ℕ) := by
-  induction b with simp [ofNat]
+  induction b with simp
   | zero => apply mul_zero
   | succ b ih => prw [mul_succ, ih, add_ofNat]; prefl
+
+theorem ne_ofNat : a ≠ b → ↑ᵀ^[n] Q ⊢ ~ a ≐ b := by
+  intro h
+  induction b generalizing a with
+  | zero =>
+    cases a <;> simp at h; pexact succ_ne_zero
+  | succ b ih =>
+    cases a with simp
+    | zero => prw [Proof.ne_comm]; pexact succ_ne_zero
+    | succ a => simp at h; prw [succ_inj_iff]; exact ih h
 
 theorem le_ofNat : a ≤ b → ↑ᵀ^[n] Q ⊢ a ⪯ b := by
   intro h
@@ -222,7 +238,7 @@ theorem le_ofNat : a ≤ b → ↑ᵀ^[n] Q ⊢ a ⪯ b := by
 
 theorem lt_ofNat : a < b → ↑ᵀ^[n] Q ⊢ a ≺ b := by
   intro h
-  simp [lt_def, succ_ofNat]
+  simp [lt_def]
   exact le_ofNat h
 
 theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ m ⇔ ⋁ (i : Fin m), t ≐ ofNat i := by
@@ -252,8 +268,7 @@ theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ m ⇔ ⋁ (i : Fin m), t ≐ ofNat
           pintro
           simp [Formula.shift, Formula.subst_orN]
           papply orN_intro i.succ
-          simp [←succ_ofNat]; rw [←Term.shift]
-          prw [1, 0]
+          rw [←Term.shift]; prw [1, 0]
           prefl
   · papply orN_elim'
     intro ⟨i, h⟩
@@ -269,41 +284,48 @@ theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ m ⇒ p) ⇔ ⋀ (i : Fi
     papply forall_elim (ofNat i) at 0; simp
     papplya 0
     pexact lt_ofNat h
-  · induction m generalizing n with
-    | zero => pintros; papply false_elim; papply not_lt_zero; passumption
-    | succ m ih =>
-      pintros; simp [Formula.shift, Formula.subst_andN]
-      papply or_elim
-      · pexact zero_or_succ #0
-      · pintro
-        papply andN_elim 0 at 2
-        simp [←Formula.subst_comp, Subst.single_comp]
-        conv => arg 2; rw [←Formula.subst_id p]
-        papply eq_subst
-        · passumption
-        · intro i
-          cases i using Fin.cases with simp
-          | zero => prw [0]; prefl
-          | succ => prefl
-      · papply exists_elim'
-        pintros; simp [Formula.shift, Formula.subst_andN]
-        phave ∀' (#0 ≺ m ⇒ p[S #0 ∷ᵥ λ i => #(i.addNat 3)]ₚ)
-        · papply ih
-          papply andN_intro
-          intro i
-          papply andN_elim i.succ at 2
-          simp [Formula.shift, ←Formula.subst_comp, Subst.comp_def]; simp_vec
-          passumption
-        · papply forall_elim #0 at 0
-          simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
-          papply eq_subst
-          · papplya 0
-            prw [←succ_lt_succ_iff, ←1]
-            passumption
-          · intro i
-            cases i using Fin.cases with simp
-            | zero => prw [1]; prefl
-            | succ => prefl
+  · pintros; simp [Formula.shift, Formula.subst_andN]
+    prw [lt_ofNat_iff] at 0
+    papply orN_elim
+    · passumption
+    · intro i
+      pintro
+      papply andN_elim i at 2
+      simp [←Formula.subst_comp]
+      nth_rw 2 [←Formula.subst_id p]
+      papply eq_subst
+      · passumption
+      · intro i
+        cases i using Fin.cases with simp
+        | zero => prw [0]; prefl
+        | succ => prefl
+
+theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ m ⩑ p) ⇔ ⋁ (i : Fin m), p[↦ₛ ofNat i]ₚ := by
+  papply iff_intro
+  · papply exists_elim'
+    pintro; simp [Formula.shift, Formula.subst_orN, ←Formula.subst_comp]
+    prw [and_imp_iff]
+    pintros
+    prw [lt_ofNat_iff] at 1
+    papply orN_elim
+    · passumption
+    · intro i
+      pintro
+      papply orN_intro i
+      nth_rw 1 [←Formula.subst_id p]
+      papply eq_subst
+      · passumption
+      · intro i
+        cases i using Fin.cases with simp
+        | zero => passumption
+        | succ => prefl
+  · papply orN_elim'
+    intro ⟨i, h⟩
+    pintro
+    papply exists_intro (ofNat i); simp
+    papply and_intro
+    · pexact lt_ofNat h
+    · passumption
 
 end Q
 
@@ -578,15 +600,7 @@ theorem add_le_add : ↑ᵀ^[n] PA ⊢ t₁ ⪯ t₂ ⇒ t₃ ⪯ t₄ ⇒ t₁ 
   prw [add_assoc, ←add_assoc #0, 1, add_right_comm, 0]
   pexact add_comm
 
-theorem ne_ofNat {a b : ℕ} : a ≠ b → ↑ᵀ^[n] PA ⊢ ~ a ≐ b := by
-  intro h
-  rcases Nat.lt_or_gt_of_ne h with h | h
-  · papply PO.ne_of_lt
-    pexact lt_ofNat h
-  · papply ne_symm
-    papply PO.ne_of_lt
-    pexact lt_ofNat h
-
+/-- Strong induction principle formalized within PA. -/
 theorem strong_ind : 
   ↑ᵀ^[n] PA ⊢ ∀' (∀' (#0 ≺ #1 ⇒ p[#0 ∷ᵥ λ i => #(i.addNat 2)]ₚ) ⇒ p) ⇒ ∀' p := by
   pintro
@@ -595,7 +609,7 @@ theorem strong_ind :
     papply forall_elim (S #0) at 0
     papply forall_elim #0 at 0
     simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
-    conv => arg 2; rw [←Formula.subst_id p, Vec.eq_cons Subst.id]
+    nth_rw 4 [←Formula.subst_id p]; rw [Vec.eq_cons Subst.id]
     papplya 0
     pexact lt_succ_self
   · papply ind <;> simp [←Formula.subst_comp, Subst.comp_def] <;> simp_vec
@@ -617,5 +631,21 @@ theorem strong_ind :
       · passumption 0
       · prw [lt_succ_iff] at 1
         passumption 1
+
+/-- Least number principle formalized in PA. -/
+theorem exists_min :
+  ↑ᵀ^[n] PA ⊢ ∃' p ⇒ ∃' (p ⩑ ∀' (#0 ≺ #1 ⇒ ~ p[#0 ∷ᵥ λ i => #(i.addNat 2)]ₚ)) := by
+  papply imp_contra
+  prw [neg_exists_iff]
+  pintro
+  papply strong_ind
+  pintros
+  papply forall_elim #0 at 2
+  simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
+  papplya 2
+  papply and_intro
+  · nth_rw 4 [←Formula.subst_id p]; rw [Vec.eq_cons Subst.id]
+    passumption
+  · passumption
 
 end FirstOrder.Language.Theory.PA
