@@ -40,17 +40,15 @@ instance : Order order where
 
 namespace Proof
 
-@[prw] theorem RwFormula.le :
-  RwTerm Γ t₁ t₁' → RwTerm Γ t₂ t₂' → RwFormula Γ (t₁ ⪯ t₂) (t₁' ⪯ t₂') := by
-  intros
-  apply Proof.eq_subst_iff
-  intro i; cases i using Fin.cases2 <;> assumption
+@[prw] theorem iff_congr_le : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ⪯ t₂ ⇔ t₁' ⪯ t₂') := by
+  pintros 2
+  papply iff_congr_subst
+  intro i; cases i using Fin.cases2 <;> passumption
 
-@[prw] theorem RwFormula.lt :
-  RwTerm Γ t₁ t₁' → RwTerm Γ t₂ t₂' → RwFormula Γ (t₁ ≺ t₂) (t₁' ≺ t₂') := by
-  intros
-  apply Proof.eq_subst_iff
-  intro i; cases i using Fin.cases2 <;> assumption
+@[prw] theorem iff_congr_lt : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ≺ t₂ ⇔ t₁' ≺ t₂') := by
+  pintros 2
+  papply iff_congr_subst
+  intro i; cases i using Fin.cases2 <;> passumption
 
 end Proof
 

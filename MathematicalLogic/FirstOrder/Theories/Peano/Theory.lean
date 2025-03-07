@@ -93,16 +93,27 @@ open peano
 
 namespace Proof
 
-@[prw] theorem RwTerm.zero : RwTerm Γ 0 (0 : peano.Term n) := .refl
+@[prw] theorem eq_congr_succ : Γ ⊢ t₁ ≐ t₂ ⇒ S t₁ ≐ S t₂ := by
+  pintro
+  papply eq_congr_func
+  papply andN_intro
+  intro i
+  cases i using Fin.cases1
+  passumption
 
-@[prw] theorem RwTerm.succ (h : RwTerm Γ t₁ t₂) : RwTerm Γ (S t₁) (S t₂) :=
-  .func (.cons h .refl)
+@[prw] theorem eq_congr_add : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ + t₂ ≐ t₁' + t₂' := by
+  pintros
+  papply eq_congr_func
+  papply andN_intro
+  intro i
+  cases i using Fin.cases2 <;> passumption
 
-@[prw] theorem RwTerm.add (h₁ : RwTerm Γ t₁ t₁') (h₂ : RwTerm Γ t₂ t₂') : RwTerm Γ (t₁ + t₂) (t₁' + t₂') :=
-  .func (.cons h₁ (.cons h₂ .refl))
-
-@[prw] theorem RwTerm.mul (h₁ : RwTerm Γ t₁ t₁') (h₂ : RwTerm Γ t₂ t₂') : RwTerm Γ (t₁ * t₂) (t₁' * t₂') :=
-  .func (.cons h₁ (.cons h₂ .refl))
+@[prw] theorem eq_congr_mul : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ * t₂ ≐ t₁' * t₂' := by
+  pintros
+  papply eq_congr_func
+  papply andN_intro
+  intro i
+  cases i using Fin.cases2 <;> passumption
 
 end Proof
 
