@@ -204,7 +204,7 @@ theorem not_lt_zero (t) : ↑ᵀ^[n] Q ⊢ ~ t ≺ 0 := by
   · passumption 0
   · pintro; simp; prw [add_succ]; pexact succ_ne_zero
 
-variable {a b m : ℕ}
+variable {a b : ℕ}
 
 theorem add_ofNat :
   ↑ᵀ^[n] Q ⊢ a + b ≐ (a + b : ℕ) := by
@@ -241,9 +241,9 @@ theorem lt_ofNat : a < b → ↑ᵀ^[n] Q ⊢ a ≺ b := by
   simp [lt_def]
   exact le_ofNat h
 
-theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ m ⇔ ⋁ (i : Fin m), t ≐ ofNat i := by
+theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ a ⇔ ⋁ (i : Fin a), t ≐ ofNat i := by
   papply iff_intro
-  · induction m generalizing n with
+  · induction a generalizing n with
     | zero =>
       pintro
       papply false_elim
@@ -276,7 +276,7 @@ theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ m ⇔ ⋁ (i : Fin m), t ≐ ofNat
     prw [0]
     pexact lt_ofNat h
 
-theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ m ⇒ p) ⇔ ⋀ (i : Fin m), p[↦ₛ ofNat i]ₚ := by
+theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fin a), p[↦ₛ ofNat i]ₚ := by
   papply iff_intro
   · pintro
     apply andN_intro
@@ -300,7 +300,7 @@ theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ m ⇒ p) ⇔ ⋀ (i : Fi
         | zero => prw [0]; prefl
         | succ => prefl
 
-theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ m ⩑ p) ⇔ ⋁ (i : Fin m), p[↦ₛ ofNat i]ₚ := by
+theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ a ⩑ p) ⇔ ⋁ (i : Fin a), p[↦ₛ ofNat i]ₚ := by
   papply iff_intro
   · papply exists_elim'
     pintro; simp [Formula.shift, Formula.subst_orN, ←Formula.subst_comp]

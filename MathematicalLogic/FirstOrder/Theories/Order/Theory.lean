@@ -14,13 +14,13 @@ namespace Order
 def le (t₁ t₂ : L.Term n) := leDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ⪯ " => le
 @[simp] theorem subst_le : (t₁ ⪯ t₂)[σ]ₚ = t₁[σ]ₜ ⪯ t₂[σ]ₜ := by
-  simp [le, ←Formula.subst_comp, Subst.cons_comp, Vec.eq_nil]
+  simp [le, ←Formula.subst_comp, Subst.cons_comp]
 @[simp] theorem shift_le : ↑ₚ(t₁ ⪯ t₂) = ↑ₜt₁ ⪯ ↑ₜt₂ := subst_le
 
 def lt (t₁ t₂ : L.Term n) := ltDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ≺ " => lt
 @[simp] theorem subst_lt : (t₁ ≺ t₂)[σ]ₚ = t₁[σ]ₜ ≺ t₂[σ]ₜ := by
-  simp [lt, ←Formula.subst_comp, Subst.cons_comp, Vec.eq_nil]
+  simp [lt, ←Formula.subst_comp, Subst.cons_comp]
 @[simp] theorem shift_lt : ↑ₚ(t₁ ≺ t₂) = ↑ₜt₁ ≺ ↑ₜt₂ := subst_lt
 
 end Order
