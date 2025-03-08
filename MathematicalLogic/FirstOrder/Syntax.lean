@@ -73,6 +73,7 @@ macro:max t:term noWs "[" σ:term "]ₜ" : term => `(Term.subst $t $σ)
 theorem Term.subst_const {c : L.Const} : (c : L.Term n)[σ]ₜ = c := by simp; apply Vec.eq_nil
 
 def Subst.id : L.Subst n n := λ x => #x
+theorem Subst.id_def : (id : L.Subst n n) = λ x => #x := rfl
 @[simp] theorem Subst.id_app : (id x : L.Term n) = #x := rfl
 @[simp] theorem Term.subst_id (t : L.Term n) : t[Subst.id]ₜ = t := by
   induction t with simp
@@ -94,6 +95,7 @@ prefix:lead "↦ₛ " => Subst.single
 @[simp] theorem Subst.single_app_one {t : L.Term (n + 1)} : (↦ₛ t) 1 = #0 := rfl
 
 def Subst.shift : L.Subst n (n + 1) := λ x => #x.succ
+theorem Subst.shift_def : (Subst.shift : L.Subst n (n + 1)) = λ x => #x.succ := rfl
 @[simp] theorem Subst.shift_app : (shift x : L.Term (n + 1)) = #x.succ := rfl
 
 /-- `↑ₜt` shifts each variable `i` forward to `i + 1`. -/
@@ -417,7 +419,7 @@ theorem Sentence.subst_nil {p : L.Sentence} {σ : L.Subst 0 0} : p[σ]ₚ = p :=
 def Formula.alls : {n : ℕ} → L.Formula n → L.Sentence
 | 0, p => p
 | _ + 1, p => alls (∀' p)
-prefix:max "∀* " => Formula.alls
+prefix:110 "∀* " => Formula.alls
 
 /-- An abbreviation of `Set (L.Formula n)`. -/
 abbrev FormulaSet (L : Language) (n : ℕ) := Set (L.Formula n)

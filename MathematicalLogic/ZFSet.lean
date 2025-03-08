@@ -260,24 +260,4 @@ theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible
     rw [mk_out x] at this
     exact this
 
-theorem card_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
-  card (V κ.ord) = κ := by
-  apply le_antisymm
-  · simp [V_limit (isLimit_ord (le_of_lt hκ.1))]
-    apply card_sUnion_range_le.trans
-    apply (sum_le_iSup _).trans
-    simp
-    conv => rhs; rw [←mul_eq_self (le_of_lt hκ.1)]
-    apply mul_le_mul
-    · simp
-    · have : Nonempty κ.ord.toType := by
-        simp; apply ne_zero_of_lt hκ.1
-      apply ciSup_le; intro
-      apply le_of_lt
-      apply card_V_lt_of_inaccessible hκ
-      apply Ordinal.typein_lt_self
-    · simp
-    · simp
-  · sorry
-
 end ZFSet

@@ -42,12 +42,12 @@ namespace Proof
 
 @[prw] theorem iff_congr_le : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ⪯ t₂ ⇔ t₁' ⪯ t₂') := by
   pintros 2
-  papply iff_congr_subst
+  papply eq_subst_iff
   intro i; cases i using Fin.cases2 <;> passumption
 
 @[prw] theorem iff_congr_lt : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ≺ t₂ ⇔ t₁' ≺ t₂') := by
   pintros 2
-  papply iff_congr_subst
+  papply eq_subst_iff
   intro i; cases i using Fin.cases2 <;> passumption
 
 end Proof

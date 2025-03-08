@@ -30,7 +30,11 @@ variable {Γ : L.FormulaSet n}
       (by intros v₁ v₂ h; simp; apply Quotient.sound; papply Proof.eq_congr_func; exact Proof.andN_intro h)
   interpRel r v :=
     Quotient.liftOnVec v (Γ ⊢ r ⬝ʳ ·)
-      (by intros v₁ v₂ h; simp; apply Proof.iff_iff; papply Proof.eq_congr_rel_iff; exact Proof.andN_intro h)
+      (by
+        intros v₁ v₂ h; simp
+        constructor <;> apply Proof.mp <;> papply Proof.eq_congr_rel <;> papply Proof.andN_intro <;> intro i
+        · exact h i
+        · psymm; exact h i)
 
 namespace TermModel
 

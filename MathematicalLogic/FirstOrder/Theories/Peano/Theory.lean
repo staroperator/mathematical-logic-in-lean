@@ -55,6 +55,10 @@ scoped notation "⌜" a "⌝" => ofEncode a
 @[simp] theorem shift_ofNat : ↑ₜ(ofNat n : peano.Term m) = ofNat n := subst_ofNat
 @[simp] theorem shift_ofEncode [Encodable α] {a : α} : ↑ₜ(⌜a⌝ : peano.Term n) = ⌜a⌝ := shift_ofNat
 
+@[simp] theorem shiftN_ofNat : ↑ₜ^[k] (ofNat n : peano.Term m) = ofNat n := by
+  induction k with simp [Term.shiftN]
+  | succ k ih => simp [ih]
+
 instance : Order peano where
   leDef := ∃' (#0 + #1 ≐ #2)
   ltDef := ∃' (#0 + S #1 ≐ #2)
@@ -182,10 +186,22 @@ lemma add_eq_zero_left : ↑ᵀ^[n] Q ⊢ t₁ + t₂ ≐ 0 ⇒ t₁ ≐ 0 := by
     prw [←add_succ, ←0]
     passumption
 
+theorem le_of_add_eq : ↑ᵀ^[n] Q ⊢ t₁ + t₂ ≐ t₃ ⇒ t₂ ⪯ t₃ := by
+  pintro
+  papply exists_intro t₁
+  simp
+  passumption
+
 theorem zero_le : ↑ᵀ^[n] Q ⊢ 0 ⪯ t := by
   papply exists_intro t; simp
   prw [add_zero]
   prefl
+
+theorem succ_not_le_zero : ↑ᵀ^[n] Q ⊢ ~ S t ⪯ 0 := by
+  pintro
+  papply exists_elim
+  · passumption 0
+  · pintro; simp; prw [add_succ]; pexact succ_ne_zero
 
 theorem succ_le_succ_iff : ↑ᵀ^[n] Q ⊢ S t₁ ⪯ S t₂ ⇔ t₁ ⪯ t₂ := by
   papply iff_intro
@@ -201,6 +217,10 @@ theorem succ_le_succ_iff : ↑ᵀ^[n] Q ⊢ S t₁ ⪯ S t₂ ⇔ t₁ ⪯ t₂ 
     prw [←0, add_succ]
     prefl
 
+theorem not_lt_zero : ↑ᵀ^[n] Q ⊢ ~ t ≺ 0 := by
+  simp [lt_def]
+  pexact succ_not_le_zero
+
 theorem lt_succ_iff : ↑ᵀ^[n] Q ⊢ t₁ ≺ S t₂ ⇔ t₁ ⪯ t₂ := by
   simp [lt_def]
   pexact succ_le_succ_iff
@@ -208,12 +228,6 @@ theorem lt_succ_iff : ↑ᵀ^[n] Q ⊢ t₁ ≺ S t₂ ⇔ t₁ ⪯ t₂ := by
 theorem succ_lt_succ_iff : ↑ᵀ^[n] Q ⊢ S t₁ ≺ S t₂ ⇔ t₁ ≺ t₂ := by
   simp [lt_def]
   pexact succ_le_succ_iff
-
-theorem not_lt_zero (t) : ↑ᵀ^[n] Q ⊢ ~ t ≺ 0 := by
-  pintro
-  papply exists_elim
-  · passumption 0
-  · pintro; simp; prw [add_succ]; pexact succ_ne_zero
 
 variable {a b : ℕ}
 
@@ -229,8 +243,7 @@ theorem mul_ofNat :
   | zero => apply mul_zero
   | succ b ih => prw [mul_succ, ih, add_ofNat]; prefl
 
-theorem ne_ofNat : a ≠ b → ↑ᵀ^[n] Q ⊢ ~ a ≐ b := by
-  intro h
+theorem ne_ofNat (h : a ≠ b) : ↑ᵀ^[n] Q ⊢ ~ a ≐ b := by
   induction b generalizing a with
   | zero =>
     cases a <;> simp at h; pexact succ_ne_zero
@@ -239,26 +252,83 @@ theorem ne_ofNat : a ≠ b → ↑ᵀ^[n] Q ⊢ ~ a ≐ b := by
     | zero => prw [Proof.ne_comm]; pexact succ_ne_zero
     | succ a => simp at h; prw [succ_inj_iff]; exact ih h
 
-theorem le_ofNat : a ≤ b → ↑ᵀ^[n] Q ⊢ a ⪯ b := by
-  intro h
-  papply exists_intro (ofNat (b - a))
+theorem le_ofNat (h : a ≤ b) : ↑ᵀ^[n] Q ⊢ a ⪯ b := by
+  papply exists_intro (b - a)
   simp
   prw [add_ofNat]
   rw [Nat.sub_add_cancel h]
   prefl
 
-theorem lt_ofNat : a < b → ↑ᵀ^[n] Q ⊢ a ≺ b := by
-  intro h
+theorem lt_ofNat (h : a < b) :↑ᵀ^[n] Q ⊢ a ≺ b := by
   simp [lt_def]
   exact le_ofNat h
 
-theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ a ⇔ ⋁ (i : Fin a), t ≐ ofNat i := by
+theorem not_le_ofNat (h : b < a) : ↑ᵀ^[n] Q ⊢ ~ a ⪯ b := by
+  induction b generalizing a with simp
+  | zero =>
+    cases a <;> simp at h
+    simp; pexact succ_not_le_zero
+  | succ b ih =>
+    cases a <;> simp at h
+    simp; prw [succ_le_succ_iff]
+    exact ih h
+
+theorem not_lt_ofNat (h : b ≤ a) : ↑ᵀ^[n] Q ⊢ ~ a ≺ b := by
+  simp [lt_def]
+  exact not_le_ofNat (Nat.lt_succ_of_le h)
+
+theorem eq_or_ge_ofNat (t) (a : ℕ) : ↑ᵀ^[n] Q ⊢ (⋁ (i : Fin a), t ≐ i) ⩒ a ⪯ t := by
+  induction a generalizing n t with simp
+  | zero => papply or_inr; pexact zero_le
+  | succ a ih =>
+    papply or_elim
+    · pexact zero_or_succ t
+    · pintro
+      papply or_inl
+      papply orN_intro 0
+      passumption
+    · papply exists_elim'
+      pintros 2
+      papply or_elim
+      · pexact ih (t := #0)
+      · papply orN_elim'
+        intro i
+        pintro
+        papply or_inl; simp [Formula.subst_orN]
+        papply orN_intro i.succ; rw [←Term.shift]; simp
+        prw [1, succ_inj_iff]
+        passumption
+      · pintro
+        papply or_inr; simp; rw [←Term.shift]
+        prw [1, succ_le_succ_iff]
+        passumption
+
+theorem lt_or_ge_ofNat (t) (a : ℕ) : ↑ᵀ^[n] Q ⊢ t ≺ a ⩒ a ⪯ t := by
+  papply or_elim
+  · exact eq_or_ge_ofNat t a
+  · papply orN_elim'
+    intro ⟨i, h⟩
+    pintro
+    papply or_inl
+    prw [0]
+    pexact lt_ofNat h
+  · pexact or_inr
+
+theorem eq_or_gt_ofNat (t) (a : ℕ) : ↑ᵀ^[n] Q ⊢ (⋁ (i : Fin (a + 1)), t ≐ i) ⩒ a ≺ t := by
+  simp [lt_def]; rw [←ofNat_succ]
+  exact eq_or_ge_ofNat t (a + 1)
+
+theorem le_or_gt_ofNat (t) (a : ℕ) : ↑ᵀ^[n] Q ⊢ t ⪯ a ⩒ a ≺ t := by
+  prw [←lt_succ_iff]; rw [←ofNat_succ]; nth_rw 2 [lt_def]
+  exact lt_or_ge_ofNat t (a + 1)
+
+theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ a ⇔ ⋁ (i : Fin a), t ≐ i := by
   papply iff_intro
   · induction a generalizing n with
     | zero =>
       pintro
+      papply not_lt_zero at 0
       papply false_elim
-      papply not_lt_zero t
       passumption
     | succ m ih =>
       pintro
@@ -269,7 +339,7 @@ theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ a ⇔ ⋁ (i : Fin a), t ≐ ofNat
         passumption
       · papply exists_elim'
         pintros 2; simp
-        phave #0 ≺ ofNat m
+        phave #0 ≺ m
         · prw [←succ_lt_succ_iff, ←0]
           passumption
         · papply ih at 0
@@ -287,12 +357,37 @@ theorem lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ≺ a ⇔ ⋁ (i : Fin a), t ≐ ofNat
     prw [0]
     pexact lt_ofNat h
 
-theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fin a), p[↦ₛ ofNat i]ₚ := by
+theorem le_ofNat_iff : ↑ᵀ^[n] Q ⊢ t ⪯ a ⇔ ⋁ (i : Fin (a + 1)), t ≐ i := by
+  prw [←lt_succ_iff]
+  rw [←ofNat_succ]
+  prw [lt_ofNat_iff]
+  prefl
+
+theorem not_lt_ofNat_iff : ↑ᵀ^[n] Q ⊢ ~ t ≺ a ⇔ a ⪯ t := by
+  papply iff_intro
+  · pexact lt_or_ge_ofNat t a
+  · pintro
+    prw [lt_ofNat_iff, neg_orN_iff]
+    papply andN_intro
+    intro ⟨i, h⟩
+    pintro
+    prw [0] at 1
+    papply not_le_ofNat h at 1
+    passumption
+
+theorem not_le_ofNat_iff : ↑ᵀ^[n] Q ⊢ ~ t ⪯ a ⇔ a ≺ t := by
+  simp [lt_def]
+  prw [←lt_succ_iff]
+  rw [←ofNat_succ]
+  prw [not_lt_ofNat_iff, lt_succ_iff]
+  prefl
+
+theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fin a), p[↦ₛ i]ₚ := by
   papply iff_intro
   · pintro
     apply andN_intro
     intro ⟨i, h⟩
-    papply forall_elim (ofNat i) at 0; simp
+    papply forall_elim i at 0; simp
     papplya 0
     pexact lt_ofNat h
   · pintros; simp [Formula.shift, Formula.subst_andN]
@@ -311,7 +406,7 @@ theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fi
         | zero => prw [0]; prefl
         | succ => prefl
 
-theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ a ⩑ p) ⇔ ⋁ (i : Fin a), p[↦ₛ ofNat i]ₚ := by
+theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ a ⩑ p) ⇔ ⋁ (i : Fin a), p[↦ₛ i]ₚ := by
   papply iff_intro
   · papply exists_elim'
     pintro; simp [Formula.shift, Formula.subst_orN, ←Formula.subst_comp]
@@ -333,7 +428,7 @@ theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ a ⩑ p) ⇔ ⋁ (i : Fin
   · papply orN_elim'
     intro ⟨i, h⟩
     pintro
-    papply exists_intro (ofNat i); simp
+    papply exists_intro i; simp
     papply and_intro
     · pexact lt_ofNat h
     · passumption

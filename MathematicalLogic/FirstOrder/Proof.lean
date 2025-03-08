@@ -324,6 +324,7 @@ private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × 
   for mvar in fmvars do
     if !(← mvar.mvarId!.isAssigned) then
       newMVarIds := newMVarIds ++ [mvar.mvarId!]
+  Term.synthesizeSyntheticMVarsNoPostponing
   return (proofTerm, newMVarIds)
 
 def runPapplyAtMainGoal (f : TSyntax `term) (depth : Option ℕ) : TacticM Unit := withMainContext do
@@ -333,6 +334,8 @@ def runPapplyAtMainGoal (f : TSyntax `term) (depth : Option ℕ) : TacticM Unit 
   replaceMainGoal newGoals
 
 def runPapplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : Option ℕ) : TacticM Unit := withMainContext do
+  if depth == some 0 then throwError "depth can't be 0"
+  let depth := depth.map λ d => d - 1
   let some ldecl := (← getLCtx).findFromUserName? target.getId | throwError m!"{target} not found"
   let some (L, n, Γ, p) := ldecl.type.app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
   let q ← mkFreshExprMVar (some (mkApp2 (.const ``Formula []) L n))
@@ -345,6 +348,8 @@ def runPapplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : O
   replaceMainGoal (mainGoal :: newGoals)
 
 def runPapplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ) : TacticM Unit := withMainContext do
+  if depth == some 0 then throwError "depth can't be 0"
+  let depth := depth.map λ d => d - 1
   let [goal, newMainGoal] ← evalTacticAt
     (← `(tactic| (
       eapply cut_append
@@ -375,7 +380,7 @@ syntax location := "at" (ident <|> num)
     goals for other `Δ ⊢ pᵢ`.
   
   `papply ⋯ with d` controls the number of `Proof.mp` (equal to `n`) to be `d`. If `with` is not
-  presented, `papply` will try from `n = 0` until it succeeds or exhausts all `Proof.mp`.
+  presented, `papply` will try from `n = 0` until it succeeds or exhausts all `⇒`.
   -/
 syntax "papply" ppSpace colGt term (location)? ("with" num)? : tactic
 
@@ -526,7 +531,6 @@ theorem orN_elim {v : Vec (L.Formula n) m} :
 theorem iff_intro : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ p) ⇒ (p ⇔ q) := and_intro
 theorem iff_mp : Γ ⊢ (p ⇔ q) ⇒ (p ⇒ q) := and_left
 theorem iff_mpr : Γ ⊢ (p ⇔ q) ⇒ (q ⇒ p) := and_right
-theorem iff_iff : Γ ⊢ p ⇔ q → (Γ ⊢ p ↔ Γ ⊢ q) := λ h => ⟨iff_mp.mp₂ h, iff_mpr.mp₂ h⟩
 
 @[prw] theorem iff_refl : Γ ⊢ p ⇔ p := mp₂ iff_intro identity identity
 
@@ -605,28 +609,45 @@ theorem neg_or_iff : Γ ⊢ ~ (p ⩒ q) ⇔ ~ p ⩑ ~ q := by
     · papply and_left; passumption
     · papply and_right; passumption
 
-theorem neg_or_iff_imp : Γ ⊢ ~ p ⩒ q ⇔ (p ⇒ q) := by
+theorem imp_iff : Γ ⊢ (p ⇒ q) ⇔ ~ p ⩒ q := by
   papply iff_intro
+  · pintros
+    papplya 1
+    papply double_neg_imp
+    passumption
   · papply or_elim'
     · pintros; papply false_elim; papplya 1; passumption
     · pintros; passumption
-  · pintros
-    papplya 1
-    papply double_neg_imp
-    passumption
 
 theorem neg_imp_iff : Γ ⊢ ~ (p ⇒ q) ⇔ p ⩑ ~ q := by
-  papply iff_intro
-  · pintros
-    papplya 1
-    pintro
-    papply double_neg_imp
-    papplya 1
-    passumption
-  · pintros
-    phave ~ q
-    · papply and_right; passumption
-    · papplya 0; papplya 1; papply and_left; passumption
+  papply iff_trans
+  · papply iff_congr_neg
+    pexact imp_iff
+  · papply iff_trans
+    · pexact neg_or_iff
+    · papply iff_congr_and
+      · pexact double_neg_iff
+      · pexact iff_refl
+
+theorem neg_andN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋀ i, v i) ⇔ ⋁ i, ~ v i := by
+  induction m with simp [Formula.orN, Formula.andN]
+  | zero => exact double_neg_iff
+  | succ m ih =>
+    papply iff_trans
+    · pexact neg_and_iff
+    · papply iff_congr_or
+      · exact iff_refl
+      · exact ih
+
+theorem neg_orN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋁ i, v i) ⇔ ⋀ i, ~ v i := by
+  induction m with simp [Formula.orN, Formula.andN]
+  | zero => exact iff_refl
+  | succ m ih =>
+    papply iff_trans
+    · pexact neg_or_iff
+    · papply iff_congr_and
+      · exact iff_refl
+      · exact ih
 
 theorem and_imp_iff : Γ ⊢ (p ⩑ q ⇒ r) ⇔ (p ⇒ q ⇒ r) := by
   papply iff_intro
@@ -809,14 +830,14 @@ end Tactic
 
 theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
 
-theorem eq_congr_subst (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
+theorem eq_subst_eq (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
   induction t with simp
   | var => apply h
   | func f v ih => papply eq_congr_func; apply andN_intro; exact ih
 
-theorem eq_congr_subst_single : Γ ⊢ t₁ ≐ t₂ ⇒ t[↦ₛ t₁]ₜ ≐ t[↦ₛ t₂]ₜ := by
+theorem eq_subst_single_eq : Γ ⊢ t₁ ≐ t₂ ⇒ t[↦ₛ t₁]ₜ ≐ t[↦ₛ t₂]ₜ := by
   pintro
-  apply eq_congr_subst
+  apply eq_subst_eq
   intro i
   cases i using Fin.cases with simp
   | zero => passumption
@@ -828,7 +849,7 @@ theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂
   · psymm; passumption
   · ptrans <;> passumption
 
-@[prw] theorem iff_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇔ t₁' ≐ t₂' := by
+@[prw] theorem eq_congr_eq_iff : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇔ t₁' ≐ t₂' := by
   pintros 2
   papply iff_intro
   · papply eq_congr_eq <;> passumption
@@ -836,7 +857,7 @@ theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂
 
 theorem eq_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂ := ax .eq_congr_rel
 
-theorem iff_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
+theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
   pintro
   papply iff_intro <;> papply eq_congr_rel
   · passumption
@@ -846,12 +867,12 @@ theorem iff_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r
     papply andN_elim (v := λ i => v₁ i ≐ v₂ i)
     passumption
 
-theorem iff_congr_subst {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
+theorem eq_subst_iff {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
   induction p generalizing n with simp
   | rel r v =>
-    papply iff_congr_rel; apply andN_intro; intro; apply eq_congr_subst; exact h
+    papply eq_congr_rel_iff; apply andN_intro; intro; apply eq_subst_eq; exact h
   | eq t₁ t₂ =>
-    papply iff_congr_eq <;> apply eq_congr_subst <;> exact h
+    papply eq_congr_eq_iff <;> apply eq_subst_eq <;> exact h
   | false =>
     exact iff_refl
   | imp p q ih₁ ih₂ =>
@@ -862,17 +883,9 @@ theorem iff_congr_subst {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ�
     | zero => prefl
     | succ i => apply shift (p := σ₁ i ≐ σ₂ i); apply h
 
-theorem iff_congr_subst_single : Γ ⊢ t₁ ≐ t₂ ⇒ p[↦ₛ t₁]ₚ ⇔ p[↦ₛ t₂]ₚ := by
-  pintro
-  apply iff_congr_subst
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ i => prefl
-
 theorem eq_subst (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
   papply iff_mp
-  exact iff_congr_subst h
+  exact eq_subst_iff h
 
 namespace Tactic
 
@@ -917,16 +930,16 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : Tactic
 
 def runPrwAtMainGoal (rules : TSyntaxArray ``prwRule) (debug? : Bool) : TacticM Unit := do
   for rule in rules do
-    let rwGoal :: mainGoals ← evalTacticAt (← `(tactic| papply iff_mpr with 2)) (← getMainGoal) | throwError "prw failed"
+    let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| papply iff_mpr with 2)) (← getMainGoal) | throwError "prw failed"
     let newGoals ← prwSolve rule rwGoal debug?
-    replaceMainGoal (mainGoals ++ newGoals)
+    replaceMainGoal (mainGoal :: newGoals)
     if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
 def runPrwAtLocalHyp (rules : TSyntaxArray ``prwRule) (target : TSyntax `ident) (debug? : Bool) : TacticM Unit := do
   for rule in rules do
-    let rwGoal :: mainGoals ← evalTacticAt (← `(tactic| papply iff_mp at $target with 2)) (← getMainGoal) | throwError "prw failed"
+    let [mainGoal, rwGoal] ← evalTacticAt (← `(tactic| papply iff_mp at $target with 2)) (← getMainGoal) | throwError "prw failed"
     let newGoals ← prwSolve rule rwGoal debug?
-    replaceMainGoal (mainGoals ++ newGoals)
+    replaceMainGoal (mainGoal :: newGoals)
     if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
 def runPrwAtAssumption (rules : TSyntaxArray ``prwRule) (target : ℕ) (debug? : Bool) : TacticM Unit := do
