@@ -36,25 +36,25 @@ theorem soundness : Γ ⊢ p → Γ ⊨ p := by
   | ax h => exact Entails.ax h
   | mp _ _ ih₁ ih₂ => exact Entails.mp ih₁ ih₂
 
-/-- Satisfiability implies consistency. -/
 theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
   intro ⟨M, ρ, h₁⟩ h₂
   apply soundness at h₂
   apply h₂
   exact h₁
 
-/-- Empty set is consistent. -/
 theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) :=
   of_satisfiable.{0} .empty
 
 variable {M : Type u} [L.IsStructure M]
 
-/-- The theory of a structure is always complete. -/
 theorem theory.complete : Complete (L.theory M) := by
   intro p
   by_cases h : M ⊨ₛ p
   · exact Or.inl (.hyp h)
   · exact Or.inr (.hyp h)
+
+theorem theory.consistent : Consistent (L.theory M) :=
+  .of_satisfiable satisfiable
 
 variable {T : L.Theory} [T.IsModel M]
 

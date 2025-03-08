@@ -150,7 +150,6 @@ theorem Satisfiable.weaken :
   apply h₁
   exact h₃
 
-/-- Empty set is satisfiable. -/
 theorem Satisfiable.empty : Satisfiable (∅ : L.FormulaSet n) := by
   exists ⟨PUnit, λ _ v => .unit, λ _ _ => True⟩, λ _ => .unit
   simp
@@ -198,7 +197,6 @@ def theory (L : Language) (M : Type u) [L.IsStructure M] : L.Theory := { p | M �
 instance : (L.theory M).IsModel M where
   satisfy_theory _ h := h
 
-/-- The theory of a structure is always satisfied by the structure itself. -/
 theorem theory.satisfiable : Satisfiable.{u} (L.theory M) := .of_model M
 
 namespace Structure

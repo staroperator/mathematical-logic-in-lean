@@ -29,7 +29,6 @@ theorem Satisfiable.of_consistent : Consistent Γ → Satisfiable Γ := by
     · apply Proof.forall_intro; pintro; exact Proof.true_intro
     · exact h
 
-/-- Consistency is equivalent to satisfiability. -/
 theorem consistent_iff_satisfiable : Consistent Γ ↔ Satisfiable Γ := ⟨Satisfiable.of_consistent, Consistent.of_satisfiable⟩
 
 /-- Completeness theorem. -/
