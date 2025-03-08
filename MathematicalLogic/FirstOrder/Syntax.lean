@@ -156,6 +156,8 @@ prefix:lead "↦ₛ " => Subst.single
 
 def Subst.shift : L.Subst n (n + 1) := λ x => #x.succ
 theorem Subst.shift_def : (Subst.shift : L.Subst n (n + 1)) = λ x => #x.succ := rfl
+theorem Subst.zero_cons_shift : #0 ∷ᵥ shift = (id : L.Subst (n + 1) (n + 1)) := by
+  simp [id_def, shift_def]; simp_vec
 @[simp] theorem Subst.shift_app : (shift x : L.Term (n + 1)) = #x.succ := rfl
 
 /-- `↑ₜt` shifts each variable `i` forward to `i + 1`. -/
@@ -168,8 +170,6 @@ def Subst.assign (t : L.Term (n + 1)) : L.Subst (n + 1) (n + 1) := t ∷ᵥ shif
 prefix:lead "≔ₛ " => Subst.assign
 @[simp] theorem Subst.assign_app_zero : (≔ₛ t) 0 = t := rfl
 @[simp] theorem Subst.assign_app_succ {x : Fin n} : (≔ₛ t) x.succ = #x.succ := rfl
-theorem Subst.assign_zero : ≔ₛ #0 = @id L (n + 1) := by
-  ext x; cases x using Fin.cases <;> simp
 
 theorem Term.shift_subst_cons : (↑ₜt₁)[t₂ ∷ᵥ σ]ₜ = t₁[σ]ₜ := by
   rw [shift, ←subst_comp]; rfl
@@ -200,12 +200,13 @@ theorem Subst.lift_comp_single : ⇑ₛσ ∘ₛ ↦ₛ t = t ∷ᵥ σ := by
   ext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]
 @[simp] theorem Subst.nil_comp : []ᵥ ∘ₛ σ = []ᵥ := by
   simp [Vec.eq_nil]
-theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
+@[simp] theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
   ext x; cases x using Fin.cases <;> simp
-theorem Subst.single_comp : ↦ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ σ := cons_comp
+@[simp] theorem Subst.single_comp : ↦ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ σ := cons_comp
+@[simp] theorem Subst.assign_comp : ≔ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ shift ∘ₛ σ := cons_comp
 
 theorem Term.subst_swap_single : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ t'[σ]ₜ]ₜ := by
-  simp [←subst_comp, Subst.lift_comp_single, Subst.single_comp]
+  simp [←subst_comp, Subst.lift_comp_single]
 
 def Term.shiftN : (m : ℕ) → L.Term n → L.Term (n + m)
 | 0, t => t
@@ -479,7 +480,7 @@ theorem Sentence.subst_nil {p : L.Sentence} {σ : L.Subst 0 0} : p[σ]ₚ = p :=
 def Formula.alls : {n : ℕ} → L.Formula n → L.Sentence
 | 0, p => p
 | _ + 1, p => alls (∀' p)
-prefix:110 "∀* " => Formula.alls
+prefix:100 "∀* " => Formula.alls
 
 /-- An abbreviation of `Set (L.Formula n)`. -/
 abbrev FormulaSet (L : Language) (n : ℕ) := Set (L.Formula n)

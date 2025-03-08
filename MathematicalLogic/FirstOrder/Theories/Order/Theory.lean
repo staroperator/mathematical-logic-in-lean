@@ -14,14 +14,26 @@ namespace Order
 def le (t₁ t₂ : L.Term n) := leDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ⪯ " => le
 @[simp] theorem subst_le : (t₁ ⪯ t₂)[σ]ₚ = t₁[σ]ₜ ⪯ t₂[σ]ₜ := by
-  simp [le, ←Formula.subst_comp, Subst.cons_comp]
+  simp [le, ←Formula.subst_comp]
 @[simp] theorem shift_le : ↑ₚ(t₁ ⪯ t₂) = ↑ₜt₁ ⪯ ↑ₜt₂ := subst_le
 
 def lt (t₁ t₂ : L.Term n) := ltDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ≺ " => lt
 @[simp] theorem subst_lt : (t₁ ≺ t₂)[σ]ₚ = t₁[σ]ₜ ≺ t₂[σ]ₜ := by
-  simp [lt, ←Formula.subst_comp, Subst.cons_comp]
+  simp [lt, ←Formula.subst_comp]
 @[simp] theorem shift_lt : ↑ₚ(t₁ ≺ t₂) = ↑ₜt₁ ≺ ↑ₜt₂ := subst_lt
+
+/-- Bounded forall. -/
+def bdall (t : L.Term n) (p : L.Formula (n + 1)) := ∀' (#0 ≺ ↑ₜt ⇒ p)
+notation:100 "∀[" "≺ " t "] " p:100 => bdall t p
+@[simp] theorem subst_bdall : (∀[≺ t] p)[σ]ₚ = ∀[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
+  simp [bdall, Term.shift_subst_lift]
+
+/-- Bounded exists. -/
+def bdex (t : L.Term n) (p : L.Formula (n + 1)) := ∃' (#0 ≺ ↑ₜt ⩑ p)
+notation "∃[" "≺ " t "] " p:100 => bdex t p
+@[simp] theorem subst_bdex : (∃[≺ t] p)[σ]ₚ = ∃[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
+  simp [bdex, Term.shift_subst_lift]
 
 end Order
 
@@ -49,6 +61,20 @@ namespace Proof
   pintros 2
   papply eq_subst_iff
   intro i; cases i using Fin.cases2 <;> passumption
+
+@[prw] theorem iff_congr_bdall : Γ ⊢ t₁ ≐ t₂ ⇒ (∀[≺ t₁] p ⇔ ∀[≺ t₂] p) := by
+  pintro
+  papply iff_congr_forall
+  pintro; simp
+  prw [0]
+  prefl
+
+@[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
+  pintro
+  papply iff_congr_exists
+  pintro; simp
+  prw [0]
+  prefl
 
 end Proof
 

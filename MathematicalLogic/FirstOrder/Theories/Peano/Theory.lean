@@ -382,7 +382,27 @@ theorem not_le_ofNat_iff : ↑ᵀ^[n] Q ⊢ ~ t ⪯ a ⇔ a ≺ t := by
   prw [not_lt_ofNat_iff, lt_succ_iff]
   prefl
 
-theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fin a), p[↦ₛ i]ₚ := by
+theorem ne_ofNat_iff : ↑ᵀ^[n] Q ⊢ ~ t ≐ a ⇔ t ≺ a ⩒ a ≺ t := by
+  papply iff_intro
+  · pintro
+    papply or_elim
+    · pexact le_or_gt_ofNat t a
+    · prw [le_ofNat_iff]
+      papply orN_elim'
+      intro ⟨i, h⟩
+      pintro
+      simp [Nat.lt_succ_iff_lt_or_eq] at h; rcases h with h | h
+      · papply or_inl
+        prw [0]
+        pexact lt_ofNat h
+      · simp [h]
+        papplya 1 at 0
+        papply false_elim
+        passumption
+    · pexact or_inr
+  · papply or_elim' <;> pintros <;> prw [0] at 1 <;> papply not_lt_ofNat (le_refl a) at 1 <;> passumption
+
+theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀[≺ a] p ⇔ ⋀ (i : Fin a), p[↦ₛ i]ₚ := by
   papply iff_intro
   · pintro
     apply andN_intro
@@ -406,7 +426,7 @@ theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀' (#0 ≺ a ⇒ p) ⇔ ⋀ (i : Fi
         | zero => prw [0]; prefl
         | succ => prefl
 
-theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃' (#0 ≺ a ⩑ p) ⇔ ⋁ (i : Fin a), p[↦ₛ i]ₚ := by
+theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃[≺ a] p ⇔ ⋁ (i : Fin a), p[↦ₛ i]ₚ := by
   papply iff_intro
   · papply exists_elim'
     pintro; simp [Formula.shift, Formula.subst_orN, ←Formula.subst_comp]

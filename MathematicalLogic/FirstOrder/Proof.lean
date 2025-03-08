@@ -192,7 +192,7 @@ theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
     apply shift at h
     simp [Formula.shift] at h
     apply (forall_elim #0).mp at h
-    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id] at h
+    rw [←Formula.subst_comp, Subst.lift_comp_single, Subst.zero_cons_shift, Formula.subst_id] at h
     exact h
 
 theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
@@ -741,6 +741,15 @@ theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   · exact iff_mp
   · exact iff_mpr
 
+theorem iff_congr_exists : Γ ⊢ ∀' (p ⇔ q) ⇒ ∃' p ⇔ ∃' q := by
+  pintro
+  papply iff_congr_neg
+  papply iff_congr_forall
+  prevert
+  papply forall_imp
+  pintro
+  pexact iff_congr_neg
+
 theorem neg_forall_iff : Γ ⊢ ~ ∀' p ⇔ ∃' (~ p) :=
   iff_congr_neg.mp (iff_congr_forall.mp (forall_intro (iff_symm.mp double_neg_iff)))
 
@@ -787,7 +796,7 @@ theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
   · apply forall_intro
     pintros 2
     papply exists_intro #0
-    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Subst.assign, Subst.assign_zero, Formula.subst_id]
+    rw [←Formula.subst_comp, Subst.lift_comp_single, Subst.zero_cons_shift, Formula.subst_id]
     papplya 1
     passumption 0
   · passumption
@@ -952,6 +961,60 @@ theorem eq_subst_iff {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ 
 theorem eq_subst (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
   papply iff_mp
   exact eq_subst_iff h
+
+@[prw] theorem eq_subst_iff_1 :
+  Γ ⊢ t₁ ≐ t₁' ⇒ p[t₁ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ σ]ₚ := by
+  pintro
+  papply eq_subst_iff
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ => prefl
+
+@[prw] theorem eq_subst_iff_2 :
+  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ σ]ₚ := by
+  pintros 2
+  papply eq_subst_iff
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ i =>
+    cases i using Fin.cases with simp
+    | zero => passumption
+    | succ => prefl
+
+@[prw] theorem eq_subst_iff_3 :
+  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₃ ≐ t₃' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ t₃ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ t₃' ∷ᵥ σ]ₚ := by
+  pintros 3
+  papply eq_subst_iff
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ i =>
+    cases i using Fin.cases with simp
+    | zero => passumption
+    | succ i =>
+      cases i using Fin.cases with simp
+      | zero => passumption
+      | succ => prefl
+
+@[prw] theorem eq_subst_iff_4 :
+  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₃ ≐ t₃' ⇒ t₄ ≐ t₄' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ t₃ ∷ᵥ t₄ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ t₃' ∷ᵥ t₄' ∷ᵥ σ]ₚ := by
+  pintros 4
+  papply eq_subst_iff
+  intro i
+  cases i using Fin.cases with simp
+  | zero => passumption
+  | succ i =>
+    cases i using Fin.cases with simp
+    | zero => passumption
+    | succ i =>
+      cases i using Fin.cases with simp
+      | zero => passumption
+      | succ i =>
+        cases i using Fin.cases with simp
+        | zero => passumption
+        | succ => prefl
 
 namespace Tactic
 
