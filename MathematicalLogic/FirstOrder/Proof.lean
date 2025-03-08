@@ -2,6 +2,69 @@ import Mathlib.Data.Set.Finite.Basic
 import MathematicalLogic.FirstOrder.Syntax
 import MathematicalLogic.FirstOrder.Proof.Init
 
+/-!
+
+# Proof system of first-order logic
+
+This file formalizes a Hilbert-style proof system of first-order logic.
+
+1. `Axiom` and `Proof` defines the first-order axioms and Hilbert-style proofs as inductive families.
+  `Proof Γ p` (or `Γ ⊢ p`) where `Γ` is a set of formulas, says that `p` (proof goal) is provable
+  from first-order axioms and propositions in `Γ` (hypotheses).
+2. A few tactics are provided to facilitate proof writing -- e.g. `pintro` to introduce local
+  hypothesis as a formula added to `Γ`, `papply` to apply a theorem onto the proof goal, and `prw`
+  to rewrite the equalities or iffs in the proof goal.
+3. A lot of theorems (e.g. principle of explosion `Proof.false_elim`) and metatheorems (e.g.
+  deduction theorem `Proof.deduction`) are proved.
+
+## Design note
+
+There are different ways to design a proof system for first-order logic.
+
+1. Hilbert-style systems, which promote minimality in its design, typically have a minimal set of
+  axioms and minimal inference rules.
+2. Natural deduction, which has introduction and elimination rules for each logical connectives.
+  Some metatheorems in Hilbert-style systems, like the deduction theorem, becomes inference rules in
+  natural deduction.
+3. Sequent calculus, which is similar to natural deduction but has a bottom-up style, in a sense
+  that cut-free sequent calculus has subformula property. This also makes proof search easier in
+  sequent calculus.
+
+We are using Hilbert-style system because it's elegant, it can be easily applied to first-order
+theories (just let `Γ` be the theory) and it's easier to do encoding for proofs (since `Γ` does not
+change in the proof tree). Moreover, with the help of proof tactics, we are able to write proofs in
+the style of natural deduction (just as in Lean).
+
+There are formalizations of other systems in Lean, e.g.
+[FFL(lean4-logic)](https://github.com/FormalizedFormalLogic/Foundation) formalizes Tait calculus (a
+variant of sequent calculus) for first-order logic, and
+[flypitch](https://github.com/flypitch/flypitch) formalizes natural deduction.
+
+Even within Hilbert-style systems, there are different choices on selecting the axioms and inference
+rules. The axiom and rules we selected have the following property:
+
+1. The only inference rule is Modus Ponens (`Proof.mp`). Some systems (e.g. in Mendelson's book)
+  include a GEN rule to introduce universal quantifiers, but in our system it's a metatheorem
+  (`Proof.generalization`).
+2. The deduction theorem (`Proof.deduction`) is unrestricted (while in Mendelson's system, the
+  deduction theorem for `Γ ⊢ p ⇒ q` requires no free variable in `p` used for GEN in `Γ, p ⊢ q`).
+3. The logical axioms do not refer to propositional logic. Some systems (e.g. in Enderton's book)
+  include all propositional tautologies as logical axioms.
+4. Equality axioms is formalized as logical axioms, not as a theory. Also, in semantics equalities
+  are always interpreted as "true equalities".
+5. Empty structures are admitted in our system (i.e. `∅ ⊬ ∃ x. ⊤` in general). This is because to
+  prove `∃ x. ⊤` as a `Sentence`, a closed term `t : L.Term 0` is needed for `Proof.exists_intro`;
+  but in a language with no constants, no closed term exists.
+
+## References
+
+* FFL (lean4-logic). <https://github.com/FormalizedFormalLogic/Foundation>
+* flypitch. <https://github.com/flypitch/flypitch>
+* Introduction to Mathematical Logic (fourth edition), Elliott Mendelson.
+* A Mathematical Introduction to Logic (second edition), Herbert B. Enderton.
+
+-/
+
 namespace FirstOrder.Language
 
 /--
@@ -265,6 +328,7 @@ partial def isSubtheoryOf (L n Γ Δ : Expr) : MetaM (Option Expr) := do
   let mut weakenTerm := mkApp3 (.const ``Subtheory.refl []) L n Γ
   if Γ.isMVar then
     -- if Γ is a mvar, we try to unify `Γ` as large as possible
+    -- TODO: fix
     let (l₂', l₂'') := l₂.splitAt (l₂.length - l₁.length)
     for q in l₂' do
       Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ q

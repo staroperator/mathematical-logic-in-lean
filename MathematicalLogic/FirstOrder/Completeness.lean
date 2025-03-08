@@ -3,6 +3,33 @@ import MathematicalLogic.FirstOrder.Completeness.Henkin
 import MathematicalLogic.FirstOrder.Completeness.Lindenbaum
 import MathematicalLogic.FirstOrder.Completeness.TermModel
 
+/-!
+
+# Completeness of first-order logic
+
+This file formalizes the completeness theorem (also referred as Godel's completeness theorem) of
+first-order logic.
+
+The proof mainly follows [flypitch](https://github.com/flypitch/flypitch):
+
+1. We first prove that any theory can be extended with Henkin constants and Henkin axioms while
+  keeping its consistency (`FormulaSet.henkinStep`).
+2. We then prove that starting from a consistent theory, extends it with Henkin constants ω times
+  creates a consistent theory that satisfies Henkin property (`FormulaSet.henkinize`).
+3. We show the Lindenbaum's theorem: any consistent theory can be extended to a consistent, complete
+  theory (`FormulaSet.lindenbaum`).
+4. Finally we show that a consistent, complete theory satisfying Henkin property is satisfiable by
+  its syntactic terms (`FormulaSet.TermModel`).
+
+This file collects the main results only; the details are decomposed into files under `Completeness`
+folder (`Language.lean`, `Henkin.lean`, `Lindenbaum.lean` and `TermModel.lean`).
+
+## References
+
+* flypitch. <https://github.com/flypitch/flypitch>
+
+-/
+
 namespace FirstOrder.Language
 
 variable {L : Language} {Γ : L.FormulaSet n}

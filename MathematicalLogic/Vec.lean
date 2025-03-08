@@ -2,6 +2,20 @@ import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Nat.Pairing
 import Mathlib.Logic.Encodable.Basic
 
+/-!
+
+# Vector
+
+This files defines `Vec` as an abbreviation of `Fin n → α`. (This is different with `Vector`.)
+A lot of definitions in this file are just encapsulations of those under `Fin` namespace; the reason
+to create a new namespace is to allow dot notation and to avoid potential naming collision.
+
+`Vec` type is heavily used in this library, mainly because `(Fin n → α) → α` can be used in inductive
+definitions very naturally (while other solutions, including `List α → α` and mutual inductive,
+generate very complicated recursors).
+
+-/
+
 namespace Nat
 
 lemma pair_le_pair_left (h : a₁ ≤ a₂) : pair a₁ b ≤ pair a₂ b := by

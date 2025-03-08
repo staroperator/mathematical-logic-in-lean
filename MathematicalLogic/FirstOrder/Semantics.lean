@@ -1,5 +1,13 @@
 import MathematicalLogic.FirstOrder.Syntax
 
+/-!
+
+# Semantics of first-order logic
+
+This file defines the semantics of first-order logic (structures, models, satisfiability, etc.).
+
+-/
+
 namespace FirstOrder.Language
 
 /--

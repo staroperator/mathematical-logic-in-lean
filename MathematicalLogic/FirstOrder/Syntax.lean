@@ -1,6 +1,66 @@
 import MathematicalLogic.Vec
 import MathematicalLogic.Notation
 
+/-!
+
+# Syntax of first-order logic
+
+This file defines the syntax of first-order logic.
+
+1. `Language`, `Term`, `Formula` defines first-order languages, terms and formulas. Terms and
+  formulas are inductive families indexed by a `n : ℕ`, saying that there are `n` free variables.
+  Variables are de Bruijn indexes (as elements in `Fin n`); e.g. `∀ x. ∃ y. x = y` is
+  `∀' ∃' (#1 ≐ #0)`.
+2. A few operations, including substitutions (`Term.subst` and `Formula.subst`) are defined for
+  manipulating the de Bruijn indexes. Some of them are the same as in
+  [Autosubst paper](https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf),
+  e.g. `Subst.shift` and `Subst.lift` (called "up" in the paper); some are useful in logic, e.g.
+  `Subst.single` and `Subst.assign`. A lot of equalities about substitutions are proved for
+  simplification.
+3. The only logical connectives defined for formulas are: false `⊥`, implication `⇒` and universal
+  quantifier (forall) `∀'`. Other connectives are derived, e.g. negation `~ p = p ⇒ ⊥`, disjunction
+  `p ⩒ q = ~ p ⇒ q` and existential quantifier `∃' p = ~ ∀' ~ p`.
+
+## Design note
+
+Nameless representation makes formalization much easier compared with named representation. For
+example, all substitutions are well-formed, which is not in traditional named representation (e.g.
+`(∃ y. p(x, y))[x ↦ y]` should not be `∃ y. p(y, y)`). It's also easier to define simultaneous
+substitution. However, the cost is that formulas and proofs become hard to read, and some
+substitutions are not intuitive (e.g. to eliminate the quantifier in `∀' p` you must first
+substitute the `0` var to a term `t`, and then shift all remained variables `i + 1` to `i` -- that
+is `Subst.single`). Still, nameless representation is almost the best choice for us.
+
+The `Term` and `Formula` are defined as inductive families, indexed by the number of free variables.
+Such a dependent type design has several advantages:
+
+1. All terms and formulas are carried with a "proof" that the variables are bounded by `n`.
+  Therefore, to substitute a `L.Formula 2` it's enough to supply a vector of two `L.Term n`.
+  `L.Subst n m` is defined as `Vec (L.Term m) n`, so any `Vec` operations can be directly applied on
+  `Subst`.
+2. In computability results, it's easy to encode a substitution as a `Vec` of `Term`, but such an
+  encoding is not possible in an unbounded version (since `ℕ → ℕ` is not encodable).
+3. The proof system of bounded terms and formulas admits empty structure. This is because, in
+  unbounded version, free variables always exist, which assert that the domain is nonempty. However
+  in bounded version, a closed term `L.Term 0` does not contain any variable -- if the language has
+  no constants, the set of closed terms is also empty.
+
+However, the dependent type design does make it more complicated when manipulating the index -- for
+example, we have two different operations to "shift" a set of formulas: `↑ᴳ^[m] Γ` is
+`FormulaSet (n + m)` for `Γ : FormulaSet n`, while `↑ᵀ^[n] T` is `FormulaSet n` for `T : Theory`
+(the same as `FormulaSet 0`), just because `0 + n` and `n` are not definitionally equal.
+
+We include the equality `≐` as a part of `Formula`, instead of defining it as a binary relation,
+because this allows us to force the interpretation of equality as "true equality" in first-order
+structures. Also, the concept of equality is so ubiquitous, so we think it's nicer to formalize it
+as a part of first-order logic.
+
+## References
+
+* Autosubst: Reasoning with de Bruijn Terms and Parallel Substitution. Steven Schäfer, Tobias Tebbi, Gert Smolka. <https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf>
+
+-/
+
 namespace FirstOrder
 
 /--

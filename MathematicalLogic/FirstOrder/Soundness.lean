@@ -1,6 +1,14 @@
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Proof
 
+/-!
+
+# Soundness of first-order logic
+
+This file formalizes the soundness theorem of first-order logic.
+
+-/
+
 namespace FirstOrder.Language
 
 variable {L : Language}
