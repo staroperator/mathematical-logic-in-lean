@@ -207,6 +207,8 @@ instance refl : Γ ⊆ᵀ Γ where
 theorem trans (h₁ : Γ₁ ⊆ᵀ Γ₂) (h₂ : Γ₂ ⊆ᵀ Γ₃) : Γ₁ ⊆ᵀ Γ₃ where
   subtheory _ h := .cut h₂ (h₁.subtheory _ h)
 
+theorem trans' (h₁ : Γ₂ ⊆ᵀ Γ₃) (h₂ : Γ₁ ⊆ᵀ Γ₂) : Γ₁ ⊆ᵀ Γ₃ := h₂.trans h₁
+
 theorem append (h : Γ ⊆ᵀ Δ) : Γ ⊆ᵀ Δ,' p := h.trans (of_subset FormulaSet.subset_append)
 
 theorem append_append (h : Γ ⊆ᵀ Δ) : Γ,' p ⊆ᵀ Δ,' p where
@@ -308,10 +310,10 @@ elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
 macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
 
-def isTheory? (n : Expr) (Γ : Expr) : Option Expr :=
-  if n.isConstOf `Nat.zero then Γ
-  else if let some (_, _, T) := Γ.app3? ``Theory.shiftT then T
-  else none
+def isTheory? (n : Expr) (Γ : Expr) : MetaM (Option Expr) := do
+  if let some (_, _, T) := Γ.app3? ``Theory.shiftT then return T
+  else if (← getNatValue? n) == some 0 then return Γ
+  else return none
 
 partial def formulaList (Γ : Expr) : Expr × List Expr :=
   if let some (_, _, Γ', p) := Γ.app4? ``FormulaSet.append then
@@ -320,29 +322,30 @@ partial def formulaList (Γ : Expr) : Expr × List Expr :=
   else
     (Γ, [])
 
-/-- Unify `Γ` as a subtheory of `Δ`; if succeed, return a term of type `Γ ⊆ᵀ Δ`. -/
+/-- Unify `Γ` as a subtheory of `Δ` and return a term of type `Γ ⊆ᵀ Δ`. -/
 partial def isSubtheoryOf (L n Γ Δ : Expr) : MetaM (Option Expr) := do
   let mut (Γ, l₁) := formulaList Γ
   let mut (Δ, l₂) := formulaList Δ
-  if l₁.length > l₂.length then failure
+  if l₁.length > l₂.length then return none
   let mut weakenTerm := mkApp3 (.const ``Subtheory.refl []) L n Γ
   if Γ.isMVar then
     -- if Γ is a mvar, we try to unify `Γ` as large as possible
-    -- TODO: fix
+    -- TODO: try different sizes for `Γ`
     let (l₂', l₂'') := l₂.splitAt (l₂.length - l₁.length)
     for q in l₂' do
       Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ q
     Γ.mvarId!.assign Δ
     l₂ := l₂''
-  else if let (some T₁, some T₂) := (isTheory? n Γ, isTheory? n Δ) then
-    weakenTerm := mkApp5 (.const ``Subtheory.shiftT []) L n T₁ T₂
-      (← synthInstance (mkApp4 (.const ``Subtheory []) L (.const `Nat.zero []) T₁ T₂))
+  else if let (some T₁, some T₂) := (← isTheory? n Γ, ← isTheory? n Δ) then
+    let some inst := ← synthInstance? (mkApp4 (.const ``Subtheory []) L (.const `Nat.zero []) T₁ T₂)
+      | return none
+    weakenTerm := mkApp5 (.const ``Subtheory.shiftT []) L n T₁ T₂ inst
   else
-    let true := ← isDefEq Γ Δ | failure
+    let true := ← isDefEq Γ Δ | return none
   for (p, q) in l₁.zipRight l₂ do
     match p with
     | some p =>
-      let .true := ← isDefEq p q | failure
+      let .true := ← isDefEq p q | return none
       weakenTerm := mkApp6 (.const ``Subtheory.append_append []) L n Γ Δ p weakenTerm
       Γ := mkApp4 (.const ``FormulaSet.append []) L n Γ p
       Δ := mkApp4 (.const ``FormulaSet.append []) L n Δ p
@@ -401,7 +404,7 @@ def runPapplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : O
   if depth == some 0 then throwError "depth can't be 0"
   let depth := depth.map λ d => d - 1
   let some ldecl := (← getLCtx).findFromUserName? target.getId | throwError m!"{target} not found"
-  let some (L, n, Γ, p) := ldecl.type.app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
+  let some (L, n, Γ, p) := (← instantiateMVars ldecl.type).app4? ``Proof | throwError m!"{ldecl.type} is not a proof"
   let q ← mkFreshExprMVar (some (mkApp2 (.const ``Formula []) L n))
   let goal := mkApp4 (.const ``Proof []) L n Γ (mkApp4 (.const ``Formula.imp []) L n p q)
   let (goalTerm, newGoals) ← papply (← elabTerm f none true) goal depth
@@ -432,19 +435,18 @@ def runPapplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ
 syntax location := "at" (ident <|> num)
 
 /--
-  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ ⇒ q`, `papply t` apply it on another goal using a chain
-  of `Proof.mp`.
-  - `papply t` will apply `t` on the current goal `Δ ⊢ q` (where `Γ` is a subset of `Δ`) and create
-    goals for `Δ ⊢ pᵢ`.
+  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₘ ⇒ q`, `papply t` apply it on another goal `Δ ⊢ ⋯`
+  (`Γ` should be a subset/subtheory of `Δ`) with a chain `Proof.mp`.
+  - `papply t` will apply `t` on the current goal `Δ ⊢ q` and create goals for each `Δ ⊢ pᵢ`.
   - `papply t at h` (where `h` is an identifier) will apply `t` on the local hypothesis `h` with
-    type `Δ ⊢ pₙ` (where `Γ`
-    is a subset of `Δ`), replace it with `Δ ⊢ q` and create goals for other `Δ ⊢ pᵢ`.
-  - `papply t at k` (where `k` is an number literal) will apply `t` on the `k`-th assumption `pₙ` in
-    current goal (on the LHS of `⊢`, counting from right to left), replace it with `q` and create
+    type `Δ ⊢ pₘ`, replace it with `Δ ⊢ q` and create goals for other `Δ ⊢ pᵢ`.
+  - `papply t at n` (where `n` is an number literal) will apply `t` on the `n`-th assumption `pₘ` in
+    current goal `Δ ⊢ ⋯` (in `Δ`, counting from right to left), replace it with `q` and create
     goals for other `Δ ⊢ pᵢ`.
   
-  `papply ⋯ with d` controls the number of `Proof.mp` (equal to `n`) to be `d`. If `with` is not
-  presented, `papply` will try from `n = 0` until it succeeds or exhausts all `⇒`.
+  `papply ⋯ with d` controls the number of `Proof.mp` (equal to `m`) to be `d`. If `with` is not
+  presented, `papply` will try from `n = 0` (`n = 1` for `at h` and `at n`) until it succeeds or
+  exhausts all `⇒`.
   -/
 syntax "papply" ppSpace colGt term (location)? ("with" num)? : tactic
 

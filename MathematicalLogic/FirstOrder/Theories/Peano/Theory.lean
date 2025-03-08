@@ -470,6 +470,8 @@ instance : Q ⊆ᵀ PA where
     | ax_zero_or_succ => pintro; pexact zero_or_succ #0
     | _ => apply hyp; constructor
 
+instance [h : PA ⊆ᵀ T] : Q ⊆ᵀ T := h.trans' inferInstance
+
 lemma zero_add (t) : ↑ᵀ^[n] PA ⊢ 0 + t ≐ t := by
   psuffices ∀' (0 + #0 ≐ #0)
   · papply forall_elim t at 0

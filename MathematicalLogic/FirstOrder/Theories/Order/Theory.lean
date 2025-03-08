@@ -182,7 +182,7 @@ namespace LO
 instance : PO ⊆ᵀ (LO : L.Theory) where
   subtheory _ h := hyp (po h)
 
-instance {T : L.Theory} [h : LO ⊆ᵀ T] : PO ⊆ᵀ T := Subtheory.trans inferInstance h
+instance {T : L.Theory} [h : LO ⊆ᵀ T] : PO ⊆ᵀ T := h.trans' inferInstance
 
 theorem le_total (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t₂ ⪯ t₁ := by
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_le_total)
