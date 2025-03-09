@@ -67,29 +67,14 @@ theorem le_def : t₁ ⪯ t₂ = ∃' (#0 + ↑ₜt₁ ≐ ↑ₜt₂) := by sim
 
 theorem lt_def : t₁ ≺ t₂ = S t₁ ⪯ t₂ := by simp [Order.lt, Order.ltDef, le_def]
 
-open Lean.Parser Std in
-def reprTerm : peano.Term n → ℕ → Format
-| #x, _ => "#" ++ repr x
-| .zero ⬝ᶠ _, _ => "0"
-| .succ ⬝ᶠ v, p => Repr.addAppParen ("S " ++ reprTerm (v 0) argPrec) p
-| .add ⬝ᶠ v, p => (if p ≥ 65 then Format.paren else id) (reprTerm (v 0) 65 ++ " + " ++ reprTerm (v 1) 65)
-| .mul ⬝ᶠ v, p => (if p ≥ 70 then Format.paren else id) (reprTerm (v 0) 70 ++ " * " ++ reprTerm (v 1) 70)
-
-instance : Repr (peano.Term n) := ⟨reprTerm⟩
-
-open Lean.Parser Std in
-def reprFormula {n} : peano.Formula n → ℕ → Format
-| t₁ ≐ t₂, prec => (if prec ≥ 25 then Format.paren else id) (reprTerm t₁ 25 ++ " = " ++ reprTerm t₂ 25)
-| (∀' (p ⇒ ⊥)) ⇒ ⊥, prec => Repr.addAppParen ("∃ " ++ reprFormula p argPrec) prec
-| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ∧ " ++ reprFormula q 57)
-| (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ∨ " ++ reprFormula q 56)
-| ⊥ ⇒ ⊥, _ => "⊤"
-| p ⇒ ⊥, prec => (if prec ≥ 58 then Format.paren else id) ("~ " ++ reprFormula p 58)
-| ⊥, _ => "⊥"
-| p ⇒ q, prec => (if prec ≥ 55 then Format.paren else id) (reprFormula p 55 ++ " ⇒ " ++ reprFormula q 55)
-| ∀' p, prec => Repr.addAppParen ("∀ " ++ reprFormula p argPrec) prec
-
-instance : Repr (peano.Formula n) := ⟨reprFormula⟩
+open Std Lean.Parser in
+instance : Repr peano where
+  reprFunc
+  | .zero, _, _ => "0"
+  | .succ, prec, v => Repr.addAppParen ("S " ++ v 0 argPrec) prec
+  | .add, prec, v => (if prec ≥ 65 then Format.paren else id) (v 0 65 ++ " + " ++ v 1 65)
+  | .mul, prec, v => (if prec ≥ 70 then Format.paren else id) (v 0 70 ++ " * " ++ v 1 70)
+  reprRel r := nomatch r
 
 end peano
 
@@ -418,13 +403,9 @@ theorem bdall_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∀[≺ a] p ⇔ ⋀ (i : Fin a), p[�
       pintro
       papply andN_elim i at 2
       simp [←Formula.subst_comp]
-      nth_rw 2 [←Formula.subst_id p]
-      papply eq_subst
-      · passumption
-      · intro i
-        cases i using Fin.cases with simp
-        | zero => prw [0]; prefl
-        | succ => prefl
+      prw [←0] at 2
+      rw [Subst.zero_cons_shift, Formula.subst_id]
+      passumption
 
 theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃[≺ a] p ⇔ ⋁ (i : Fin a), p[↦ₛ i]ₚ := by
   papply iff_intro
@@ -438,13 +419,9 @@ theorem bdex_ofNat_iff : ↑ᵀ^[n] Q ⊢ ∃[≺ a] p ⇔ ⋁ (i : Fin a), p[�
     · intro i
       pintro
       papply orN_intro i
-      nth_rw 1 [←Formula.subst_id p]
-      papply eq_subst
-      · passumption
-      · intro i
-        cases i using Fin.cases with simp
-        | zero => passumption
-        | succ => prefl
+      prw [←0]
+      rw [Subst.zero_cons_shift, Formula.subst_id]
+      passumption
   · papply orN_elim'
     intro ⟨i, h⟩
     pintro

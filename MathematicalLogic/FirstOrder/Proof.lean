@@ -903,20 +903,21 @@ macro "ptrans" t:(ppSpace colGt term)? : tactic =>
 
 end Tactic
 
-theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
+@[prw] theorem eq_andN_refl {v : Vec (L.Term n) m} : Γ ⊢ ⋀ i, v i ≐ v i := by
+  papply andN_intro
+  intro
+  prefl
 
-theorem eq_subst_eq (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
-  induction t with simp
-  | var => apply h
-  | func f v ih => papply eq_congr_func; apply andN_intro; exact ih
+@[prw] theorem eq_andN_cons :
+  Γ ⊢ t₁ ≐ t₂ ⇒ (⋀ i, v₁ i ≐ v₂ i) ⇒ ⋀ i,  (t₁ ∷ᵥ v₁) i ≐ (t₂ ∷ᵥ v₂) i := and_intro
 
-theorem eq_subst_single_eq : Γ ⊢ t₁ ≐ t₂ ⇒ t[↦ₛ t₁]ₜ ≐ t[↦ₛ t₂]ₜ := by
+@[prw] theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
+
+@[prw] theorem eq_subst_eq : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
   pintro
-  apply eq_subst_eq
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ i => prefl
+  induction t with simp
+  | var x => papply andN_elim x at 0; passumption
+  | func f v ih => papply eq_congr_func; apply andN_intro; exact ih
 
 theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇒ t₁' ≐ t₂' := by
   pintros
@@ -932,7 +933,7 @@ theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂
 
 theorem eq_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂ := ax .eq_congr_rel
 
-theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
+@[prw] theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
   pintro
   papply iff_intro <;> papply eq_congr_rel
   · passumption
@@ -942,79 +943,31 @@ theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ �
     papply andN_elim (v := λ i => v₁ i ≐ v₂ i)
     passumption
 
-theorem eq_subst_iff {Γ : L.FormulaSet n} (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
-  induction p generalizing n with simp
+@[prw] theorem eq_subst_iff {Γ : L.FormulaSet n} : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
+  induction p generalizing n with (pintro; simp)
   | rel r v =>
-    papply eq_congr_rel_iff; apply andN_intro; intro; apply eq_subst_eq; exact h
+    papply eq_congr_rel_iff
+    apply andN_intro
+    intro i
+    papply eq_subst_eq
+    passumption
   | eq t₁ t₂ =>
-    papply eq_congr_eq_iff <;> apply eq_subst_eq <;> exact h
+    papply eq_congr_eq_iff <;> papply eq_subst_eq <;> passumption
   | false =>
-    exact iff_refl
+    prefl
   | imp p q ih₁ ih₂ =>
-    papply iff_congr_imp <;> apply_assumption <;> exact h
+    papply iff_congr_imp
+    · papply ih₁; passumption
+    · papply ih₂; passumption
   | all p ih =>
-    papply iff_congr_forall; apply forall_intro; apply ih; intro i
-    cases i using Fin.cases with simp
+    papply iff_congr_forall
+    pintro
+    papply ih
+    papply andN_intro
+    intro i
+    cases i using Fin.cases with simp [Formula.shift, Formula.subst_andN]
     | zero => prefl
-    | succ i => apply shift (p := σ₁ i ≐ σ₂ i); apply h
-
-theorem eq_subst (h : ∀ i, Γ ⊢ σ₁ i ≐ σ₂ i) : Γ ⊢ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
-  papply iff_mp
-  exact eq_subst_iff h
-
-@[prw] theorem eq_subst_iff_1 :
-  Γ ⊢ t₁ ≐ t₁' ⇒ p[t₁ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ σ]ₚ := by
-  pintro
-  papply eq_subst_iff
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ => prefl
-
-@[prw] theorem eq_subst_iff_2 :
-  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ σ]ₚ := by
-  pintros 2
-  papply eq_subst_iff
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ i =>
-    cases i using Fin.cases with simp
-    | zero => passumption
-    | succ => prefl
-
-@[prw] theorem eq_subst_iff_3 :
-  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₃ ≐ t₃' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ t₃ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ t₃' ∷ᵥ σ]ₚ := by
-  pintros 3
-  papply eq_subst_iff
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ i =>
-    cases i using Fin.cases with simp
-    | zero => passumption
-    | succ i =>
-      cases i using Fin.cases with simp
-      | zero => passumption
-      | succ => prefl
-
-@[prw] theorem eq_subst_iff_4 :
-  Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₃ ≐ t₃' ⇒ t₄ ≐ t₄' ⇒ p[t₁ ∷ᵥ t₂ ∷ᵥ t₃ ∷ᵥ t₄ ∷ᵥ σ]ₚ ⇔ p[t₁' ∷ᵥ t₂' ∷ᵥ t₃' ∷ᵥ t₄' ∷ᵥ σ]ₚ := by
-  pintros 4
-  papply eq_subst_iff
-  intro i
-  cases i using Fin.cases with simp
-  | zero => passumption
-  | succ i =>
-    cases i using Fin.cases with simp
-    | zero => passumption
-    | succ i =>
-      cases i using Fin.cases with simp
-      | zero => passumption
-      | succ i =>
-        cases i using Fin.cases with simp
-        | zero => passumption
-        | succ => prefl
+    | succ i => papply andN_elim i at 0; passumption
 
 namespace Tactic
 
@@ -1039,7 +992,7 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : Tactic
   let mut success := false
   repeat
     let goal :: currentGoals' := currentGoals | break
-    if debug? then logInfo m!"prw: try to solve {(← goal.getType)}"
+    if debug? then logInfo m!"prw: try to solve {(← goal.withContext (instantiateMVars (← goal.getType)))}"
     currentGoals := currentGoals'
     try
       let newGoals' ← withReducibleAndInstances (evalTacticAt tac goal)

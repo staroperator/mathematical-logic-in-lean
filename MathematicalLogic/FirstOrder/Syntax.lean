@@ -532,4 +532,32 @@ notation "↑ᵀ^[" n "]" => Theory.shiftT n
   induction m with simp [FormulaSet.shiftN]
   | succ m ih => simp [ih]; rfl
 
+open Std Lean.Parser
+
+class Repr (L : Language) where
+  reprFunc : L.Func n → ℕ → (Fin n → ℕ → Format) → Format
+  reprRel : L.Rel n → ℕ → (Fin n → ℕ → Format) → Format
+
+variable [Repr L]
+
+private def reprTerm : L.Term n → ℕ → Format
+| #x, _ => "#" ++ repr x
+| f ⬝ᶠ v, prec => Repr.reprFunc f prec λ i => reprTerm (v i)
+
+instance : _root_.Repr (L.Term n) := ⟨reprTerm⟩
+
+private def reprFormula : L.Formula n → ℕ → Format
+| r ⬝ʳ v, prec => Repr.reprRel r prec λ i => reprTerm (v i)
+| t₁ ≐ t₂, prec => (if prec ≥ 25 then Format.paren else id) (reprTerm t₁ 25 ++ " = " ++ reprTerm t₂ 25)
+| (∀' (p ⇒ ⊥)) ⇒ ⊥, prec => (if prec ≥ 100 then Format.paren else id) ("∃ " ++ reprFormula p 100)
+| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ∧ " ++ reprFormula q 57)
+| (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ∨ " ++ reprFormula q 56)
+| ⊥ ⇒ ⊥, _ => "⊤"
+| p ⇒ ⊥, prec => (if prec ≥ 58 then Format.paren else id) ("~ " ++ reprFormula p 58)
+| ⊥, _ => "⊥"
+| p ⇒ q, prec => (if prec ≥ 55 then Format.paren else id) (reprFormula p 55 ++ " ⇒ " ++ reprFormula q 55)
+| ∀' p, prec => (if prec ≥ 100 then Format.paren else id) ("∀ " ++ reprFormula p 100)
+
+instance : _root_.Repr (L.Formula n) := ⟨reprFormula⟩
+
 end FirstOrder.Language
