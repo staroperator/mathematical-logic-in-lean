@@ -20,13 +20,13 @@ namespace peano
 def succ (t : peano.Term n) : peano.Term n := .succ ⬝ᶠ [t]ᵥ
 scoped notation "S" => succ
 
+instance : Zero (peano.Term n) := ⟨(.zero ⬝ᶠ []ᵥ)⟩
 instance : Add (peano.Term n) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
 instance : Mul (peano.Term n) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 
 def ofNat : ℕ → peano.Term n
-| 0 => .zero ⬝ᶠ []ᵥ
+| 0 => 0
 | n + 1 => S (ofNat n)
-instance : OfNat (peano.Term m) n := ⟨ofNat n⟩
 instance : Coe ℕ (peano.Term m) := ⟨ofNat⟩
 
 def ofEncode [Encodable α] (a : α) : peano.Term n := ofNat (Encodable.encode a)
@@ -67,6 +67,17 @@ theorem le_def : t₁ ⪯ t₂ = ∃' (#0 + ↑ₜt₁ ≐ ↑ₜt₂) := by sim
 
 theorem lt_def : t₁ ≺ t₂ = S t₁ ⪯ t₂ := by simp [Order.lt, Order.ltDef, le_def]
 
+open Proof
+
+@[prw] theorem eq_congr_succ : Γ ⊢ t₁ ≐ t₂ ⇒ S t₁ ≐ S t₂ := by
+  pintro; papply eq_congr_func; papply andN_intro; intro i; cases i using Fin.cases1; passumption
+
+@[prw] theorem eq_congr_add : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ + t₂ ≐ t₁' + t₂' := by
+  pintros; papply eq_congr_func; papply andN_intro; intro i; cases i using Fin.cases2 <;> passumption
+
+@[prw] theorem eq_congr_mul : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ * t₂ ≐ t₁' * t₂' := by
+  pintros; papply eq_congr_func; papply andN_intro; intro i; cases i using Fin.cases2 <;> passumption
+
 open Std Lean.Parser in
 instance : Repr peano where
   reprFunc
@@ -78,37 +89,9 @@ instance : Repr peano where
 
 end peano
 
-open peano
-
-namespace Proof
-
-@[prw] theorem eq_congr_succ : Γ ⊢ t₁ ≐ t₂ ⇒ S t₁ ≐ S t₂ := by
-  pintro
-  papply eq_congr_func
-  papply andN_intro
-  intro i
-  cases i using Fin.cases1
-  passumption
-
-@[prw] theorem eq_congr_add : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ + t₂ ≐ t₁' + t₂' := by
-  pintros
-  papply eq_congr_func
-  papply andN_intro
-  intro i
-  cases i using Fin.cases2 <;> passumption
-
-@[prw] theorem eq_congr_mul : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ * t₂ ≐ t₁' * t₂' := by
-  pintros
-  papply eq_congr_func
-  papply andN_intro
-  intro i
-  cases i using Fin.cases2 <;> passumption
-
-end Proof
-
-open Proof
-
 namespace Theory
+
+open peano Proof
 
 attribute [local simp] Term.shift_subst_single Term.shift_subst_assign Term.shift_subst_lift Formula.shift_subst_single
 

@@ -87,7 +87,7 @@ theorem cov_eval {f : Partrec (n + 2)} (hf : ∀ a b, (f (a ∷ᵥ b ∷ᵥ v)).
     congr! with i
     cases i using Fin.lastCases <;> simp [ih]
 
-/-- Course-of-values recursion. For simplicity we assume the totality of `f` on the first two argumemts. -/
+/-- Course-of-values recursion. For simplicity we assume the totality of `f` on the first two arguments. -/
 def covrec (f : Partrec (n + 2)) : Partrec (n + 1) :=
   (ofPrim .vget).comp₂ (f.cov.comp (succ.comp₁ (proj 0) ∷ᵥ (proj ·.succ))) (proj 0)
 theorem covrec_dom {f : Partrec (n + 2)} (hf : ∀ a b, (f (a ∷ᵥ b ∷ᵥ v)).Dom) :

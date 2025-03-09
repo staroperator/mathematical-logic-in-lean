@@ -35,13 +35,27 @@ notation "∃[" "≺ " t "] " p:100 => bdex t p
 @[simp] theorem subst_bdex : (∃[≺ t] p)[σ]ₚ = ∃[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
   simp [bdex, Term.shift_subst_lift]
 
+open Proof
+
+@[prw] theorem iff_congr_le : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ⪯ t₂ ⇔ t₁' ⪯ t₂') := by
+  pintros 2; simp [Order.le]; prw [0, 1]; prefl
+
+@[prw] theorem iff_congr_lt : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ≺ t₂ ⇔ t₁' ≺ t₂') := by
+  pintros 2; simp [Order.lt]; prw [0, 1]; prefl
+
+@[prw] theorem iff_congr_bdall : Γ ⊢ t₁ ≐ t₂ ⇒ (∀[≺ t₁] p ⇔ ∀[≺ t₂] p) := by
+  pintro; papply iff_congr_forall; pintro; simp; prw [0]; prefl
+
+@[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
+  pintro; papply iff_congr_exists; pintro; simp; prw [0]; prefl
+
 end Order
 
 private inductive order.Rel : ℕ → Type where
 | le : Rel 2
 | lt : Rel 2
 
-/-- The language with only two binary predicates, `⪯` and `≺`. -/
+/-- The language of order, with only two binary predicates, `⪯` and `≺`. -/
 def order : Language where
   Func _ := Empty
   Rel := order.Rel
@@ -49,36 +63,6 @@ def order : Language where
 instance : Order order where
   leDef := .le ⬝ʳ [#0, #1]ᵥ
   ltDef := .lt ⬝ʳ [#0, #1]ᵥ
-
-namespace Proof
-
-@[prw] theorem iff_congr_le : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ⪯ t₂ ⇔ t₁' ⪯ t₂') := by
-  pintros 2
-  simp [Order.le]
-  prw [0, 1]
-  prefl
-
-@[prw] theorem iff_congr_lt : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ≺ t₂ ⇔ t₁' ≺ t₂') := by
-  pintros 2
-  simp [Order.lt]
-  prw [0, 1]
-  prefl
-
-@[prw] theorem iff_congr_bdall : Γ ⊢ t₁ ≐ t₂ ⇒ (∀[≺ t₁] p ⇔ ∀[≺ t₂] p) := by
-  pintro
-  papply iff_congr_forall
-  pintro; simp
-  prw [0]
-  prefl
-
-@[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
-  pintro
-  papply iff_congr_exists
-  pintro; simp
-  prw [0]
-  prefl
-
-end Proof
 
 namespace Theory
 

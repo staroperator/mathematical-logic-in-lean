@@ -11,7 +11,7 @@ A lot of definitions in this file are just encapsulations of those under `Fin` n
 to create a new namespace is to allow dot notation and to avoid potential naming collision.
 
 `Vec` type is heavily used in this library, mainly because `(Fin n → α) → α` can be used in inductive
-definitions very naturally (while other solutions, including `List α → α` and mutual inductive,
+definitions very naturally (while other solutions, including `List α → α` and `mutual inductive`,
 generate very complicated recursors).
 
 -/
@@ -37,6 +37,8 @@ end Nat
 
 namespace Fin
 
+@[simp] theorem succ_two_eq_three : Fin.succ (2 : Fin (n + 3)) = 3 := rfl
+
 @[elab_as_elim] def cases1 {motive : Fin 1 → Sort _}
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
 @[elab_as_elim] def cases2 {motive : Fin 2 → Sort _}
@@ -59,7 +61,9 @@ theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (O
   simp [natCast_def]
   rw [Nat.mod_eq_of_lt (by simp [Nat.lt_succ]), Nat.mod_eq_of_lt (by simp [Nat.lt_succ])]
 
-/-- `castAdd' x m` embeds `x : Fin m` in `Fin (m + n)`. -/
+/--
+  `castAdd' x m` embeds `x : Fin n` in `Fin (m + n)`. This is contrary to `castAdd m i` which embeds
+  into `Fin (n + m)`. -/
 def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
 @[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
 @[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl

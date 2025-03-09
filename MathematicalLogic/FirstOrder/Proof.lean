@@ -21,19 +21,20 @@ This file formalizes a Hilbert-style proof system of first-order logic.
 
 There are different ways to design a proof system for first-order logic.
 
-1. Hilbert-style systems, which promote minimality in its design, typically have a minimal set of
+1. Hilbert-style systems, which promote minimality in their design, typically have a minimal set of
   axioms and minimal inference rules.
-2. Natural deduction, which has introduction and elimination rules for each logical connectives.
-  Some metatheorems in Hilbert-style systems, like the deduction theorem, becomes inference rules in
-  natural deduction.
+2. Natural deduction usually has a weak sense on axioms, and is defined through a large set of
+  inference rules, including introduction and elimination rules for each logical connectives.
+  Some metatheorems in Hilbert-style systems, like the deduction theorem, becomes rules in natural
+  deduction.
 3. Sequent calculus, which is similar to natural deduction but has a bottom-up style, in a sense
   that cut-free sequent calculus has subformula property. This also makes proof search easier in
   sequent calculus.
 
 We are using Hilbert-style system because it's elegant, it can be easily applied to first-order
-theories (just let `Γ` be the theory) and it's easier to do encoding for proofs (since `Γ` does not
-change in the proof tree). Moreover, with the help of proof tactics, we are able to write proofs in
-the style of natural deduction (just as in Lean).
+theories with infinite axioms (since `Γ` can be any set) and it's easier to do encoding for proofs
+(since `Γ` does not change in the proof tree). Moreover, with the help of proof tactics, we are able
+to write proofs in the style of natural deduction (just as in Lean).
 
 There are formalizations of other systems in Lean, e.g.
 [FFL(lean4-logic)](https://github.com/FormalizedFormalLogic/Foundation) formalizes Tait calculus (a
@@ -41,18 +42,18 @@ variant of sequent calculus) for first-order logic, and
 [flypitch](https://github.com/flypitch/flypitch) formalizes natural deduction.
 
 Even within Hilbert-style systems, there are different choices on selecting the axioms and inference
-rules. The axiom and rules we selected have the following property:
+rules. The axioms and rules we selected have the following property:
 
 1. The only inference rule is Modus Ponens (`Proof.mp`). Some systems (e.g. in Mendelson's book)
   include a GEN rule to introduce universal quantifiers, but in our system it's a metatheorem
-  (`Proof.generalization`).
-2. The deduction theorem (`Proof.deduction`) is unrestricted (while in Mendelson's system, the
-  deduction theorem for `Γ ⊢ p ⇒ q` requires no free variable in `p` used for GEN in `Γ, p ⊢ q`).
-3. The logical axioms do not refer to propositional logic. Some systems (e.g. in Enderton's book)
+  (`Proof.generalization`). In such systems, the deduction theorem is restricted (e.g. in
+  Mendelson's system, the deduction theorem for `Γ ⊢ p ⇒ q` requires no free variable in `p` used
+  by GEN rule in `Γ, p ⊢ q`), while ours (`Proof.deduction`) is not.
+2. The logical axioms do not refer to propositional logic. Some systems (e.g. in Enderton's book)
   include all propositional tautologies as logical axioms.
-4. Equality axioms is formalized as logical axioms, not as a theory. Also, in semantics equalities
+3. Equality axioms is formalized as logical axioms, not as a theory. Also, in semantics equalities
   are always interpreted as "true equalities".
-5. Empty structures are admitted in our system (i.e. `∅ ⊬ ∃ x. ⊤` in general). This is because to
+4. Empty structures are admitted in our system (i.e. `∅ ⊬ ∃ x. ⊤` in general). This is because to
   prove `∃ x. ⊤` as a `Sentence`, a closed term `t : L.Term 0` is needed for `Proof.exists_intro`;
   but in a language with no constants, no closed term exists.
 
@@ -110,8 +111,8 @@ infix:50 " ⊢ " => Proof
   Theory `T₁` is a subtheory of `T₂` (`T₁ ⊆ᵀ T₂`) if `T₂` can proves all formulas in `T₁`. When that
   is true, all theorems of `T₁` are also theorems of `T₂` (see `Proof.cut`).
   
-  This is designed as a typeclass so that, if there is an instance of `T₁ ⊆ᵀ T₂`, all theorems proved
-  for `T₁` can be applied to `T₂` automatically when using `papply` tactic.
+  This is designed as a typeclass so that, if there is an instance of `T₁ ⊆ᵀ T₂`, all theorems
+  proved for `T₁` can be applied to `T₂` automatically when using `papply` tactic.
   
   Note: we define `Subtheory` for `FormulaSet n` in general, but the instances should always be for
   `Theory`.
@@ -435,18 +436,17 @@ def runPapplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ
 syntax location := "at" (ident <|> num)
 
 /--
-  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₘ ⇒ q`, `papply t` apply it on another goal `Δ ⊢ ⋯`
+  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ ⇒ q`, `papply t` apply it on another goal `Δ ⊢ ⋯`
   (`Γ` should be a subset/subtheory of `Δ`) with a chain `Proof.mp`.
   - `papply t` will apply `t` on the current goal `Δ ⊢ q` and create goals for each `Δ ⊢ pᵢ`.
   - `papply t at h` (where `h` is an identifier) will apply `t` on the local hypothesis `h` with
-    type `Δ ⊢ pₘ`, replace it with `Δ ⊢ q` and create goals for other `Δ ⊢ pᵢ`.
-  - `papply t at n` (where `n` is an number literal) will apply `t` on the `n`-th assumption `pₘ` in
-    current goal `Δ ⊢ ⋯` (in `Δ`, counting from right to left), replace it with `q` and create
-    goals for other `Δ ⊢ pᵢ`.
+    type `Δ ⊢ pₙ`, replace it with `Δ ⊢ q` and create goals for other `Δ ⊢ pᵢ`.
+  - `papply t at k` (where `k` is an number) will apply `t` on the `k`-th assumption `pₙ` in `Δ`
+    (counting from right to left), replace it with `q` and create goals for other `Δ ⊢ pᵢ`.
   
-  `papply ⋯ with d` controls the number of `Proof.mp` (equal to `m`) to be `d`. If `with` is not
-  presented, `papply` will try from `n = 0` (`n = 1` for `at h` and `at n`) until it succeeds or
-  exhausts all `⇒`.
+  `papply t with d` controls the number of `Proof.mp` (equal to `n`) to be `d`. If `with` is not
+  presented, `papply` will try from `n = 0` until it succeeds or exhausts all `⇒`. For `papply at h`
+  or `papply at k`, `d` should be greater than or equal to `1`.
   -/
 syntax "papply" ppSpace colGt term (location)? ("with" num)? : tactic
 
@@ -969,6 +969,12 @@ theorem eq_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r 
     | zero => prefl
     | succ i => papply andN_elim i at 0; passumption
 
+theorem eq_subst : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
+  pintro
+  papply iff_mp
+  papply eq_subst_iff
+  passumption
+
 namespace Tactic
 
 open Lean Parser Syntax Meta Elab Tactic
@@ -1036,13 +1042,13 @@ def runPrwAtAssumption (rules : TSyntaxArray ``prwRule) (target : ℕ) (debug? :
     if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
 /--
-  `prw [e₁, ⋯, eₙ]` rewrites a proof goal `Γ ⊢ p` using given rules. A rule `e` can be either proof term or a
-  number (the number of assumption), having type `Δ ⊢ t₁ ≐ t₂` or `Δ ⊢ q ⇔ r` (and `Δ` should be a subset of
-  `Γ`). Also, `←e` reverse the direction of rewrite.
+  `prw [e₁, ⋯, eₙ]` rewrites a proof goal `Γ ⊢ p` using given rules. A rule `e` can be either proof
+  term or a number (refer to an assumption in `Γ`), having type `Δ ⊢ t₁ ≐ t₂` or `Δ ⊢ q ⇔ r` (and
+  `Δ` should be a subset/subtheory of `Γ`). `←e` reverse the direction of rewrite.
   
   - `prw [e₁, ⋯, eₙ]` will rewrite on the current goal.
-  - `prw [e₁, ⋯, eₙ] at h` (where `h` is an identifier) will rewrite at local hypothesis `h`.
-  - `prw [e₁, ⋯, eₙ] at n` (where `n` is a number) will rewrite on `n`-th assumption.
+  - `prw [e₁, ⋯, eₙ] at h` (where `h` is an identifier) will rewrite at the local hypothesis `h`.
+  - `prw [e₁, ⋯, eₙ] at k` (where `k` is a number) will rewrite on the `k`-th assumption in `Γ`.
   
   `prw_debug` runs `prw` tactic while printing debug information.
   -/
@@ -1137,7 +1143,7 @@ abbrev Decidable (T : L.Theory) := DecidablePred T.theorems
 
 end Theory
 
-notation Γ:50 "⊬" p:50 => ¬ Γ ⊢ p
+notation:50 Γ "⊬" p:50 => ¬ Γ ⊢ p
 
 /-- A theory (formula set in general) is consistent if it does not prove `⊥`. -/
 def Consistent (Γ : L.FormulaSet n) := Γ ⊬ ⊥
