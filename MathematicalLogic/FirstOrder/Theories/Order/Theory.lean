@@ -1,5 +1,20 @@
 import MathematicalLogic.FirstOrder.Proof
 
+/-!
+
+# Theory of orders
+
+This file formalizes the basic theories of orders -- the theory of paritial order `PO` and the
+theory of linear (total) order `LO`.
+
+## Design note
+
+We always use less-equal `⪯` and less-than `≺` for orders, and do not define greater-equal `⪰` or
+greater-than `≻`. When naming the theorems, we may use `ge` or `gt` when it is actually `le` or
+`lt`, e.g. `LO.lt_or_ge` is the `lt_or_le` in Mathlib -- we are more comfortable to such names.
+
+-/
+
 namespace FirstOrder.Language
 
 /-- Language with two formulas that represent less-equal `⪯` and less-than `≺`. -/
@@ -49,13 +64,31 @@ open Proof
 @[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
   pintro; papply iff_congr_exists; pintro; simp; prw [0]; prefl
 
+theorem neg_bdall_iff : ↑ᵀ^[n] LO ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) := by
+  simp [Order.bdall, Order.bdex]
+  prw [neg_forall_iff]
+  papply iff_congr_exists
+  pintro
+  prw [neg_imp_iff]
+  prefl
+
+theorem neg_bdex_iff : ↑ᵀ^[n] LO ⊢ ~ ∃[≺ t] p ⇔ ∀[≺ t] (~ p) := by
+  simp [Order.bdall, Order.bdex]
+  prw [neg_exists_iff]
+  papply iff_congr_forall
+  pintro
+  prw [neg_and_iff, imp_iff]
+  prefl
+
 end Order
 
 private inductive order.Rel : ℕ → Type where
 | le : Rel 2
 | lt : Rel 2
 
-/-- The language of order, with only two binary predicates, `⪯` and `≺`. -/
+/--
+  The language of order, with only two binary predicates, `⪯` and `≺`. This is the minimal language
+  (or the free language) satisfying `Order`. -/
 def order : Language where
   Func _ := Empty
   Rel := order.Rel
@@ -73,7 +106,7 @@ inductive PO : L.Theory where
 | ax_le_refl : PO (∀' (#0 ⪯ #0))
 | ax_le_antisymm : PO (∀' ∀' (#1 ⪯ #0 ⇒ #0 ⪯ #1 ⇒ #1 ≐ #0))
 | ax_le_trans : PO (∀' ∀' ∀' (#2 ⪯ #1 ⇒ #1 ⪯ #0 ⇒ #2 ⪯ #0))
-| ax_lt_iff_le_not_le : PO (∀' ∀' (#1 ≺ #0 ⇔ #1 ⪯ #0 ⩑ ~ #0 ⪯ #1))
+| ax_lt_iff_le_not_ge : PO (∀' ∀' (#1 ≺ #0 ⇔ #1 ⪯ #0 ⩑ ~ #0 ⪯ #1))
 
 namespace PO
 
@@ -89,27 +122,27 @@ theorem le_trans : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₃ ⇒ t₁ �
   have := foralls_elim [t₃, t₂, t₁]ᵥ (hyp ax_le_trans)
   simp at this; exact this
 
-theorem lt_iff_le_not_le : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₂ ⪯ t₁ := by
-  have := foralls_elim [t₂, t₁]ᵥ (hyp ax_lt_iff_le_not_le)
+theorem lt_iff_le_not_ge : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₂ ⪯ t₁ := by
+  have := foralls_elim [t₂, t₁]ᵥ (hyp ax_lt_iff_le_not_ge)
   simp at this; exact this
 
 theorem le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ t₁ ⪯ t₂ := by
   pintro
-  prw [lt_iff_le_not_le] at 0
+  prw [lt_iff_le_not_ge] at 0
   papply and_left at 0
   passumption
 
-theorem not_le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ ~ t₂ ⪯ t₁ := by
-  prw [lt_iff_le_not_le, and_imp_iff]
+theorem not_ge_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ ~ t₂ ⪯ t₁ := by
+  prw [lt_iff_le_not_ge, and_imp_iff]
   pintros 2
   passumption
 
-theorem not_lt_of_le : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ ~ t₂ ≺ t₁ := by
+theorem not_gt_of_le : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ ~ t₂ ≺ t₁ := by
   pintros
-  papply not_le_of_lt <;> passumption
+  papply not_ge_of_lt <;> passumption
 
 theorem lt_iff_le_and_ne : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₁ ≐ t₂ := by
-  prw [lt_iff_le_not_le]
+  prw [lt_iff_le_not_ge]
   papply iff_intro <;> prw [and_imp_iff] <;> pintros 2 <;> papply and_intro
   · passumption
   · pintro
@@ -154,7 +187,7 @@ theorem lt_of_lt_of_le : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ t₂ ⪯ t₃ ⇒ t
     · passumption
   · pintro
     prw [0] at 2
-    papply not_le_of_lt <;> passumption
+    papply not_ge_of_lt <;> passumption
 
 theorem lt_of_le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ≺ t₃ ⇒ t₁ ≺ t₃ := by
   pintros
@@ -166,12 +199,12 @@ theorem lt_of_le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ≺ t₃ ⇒ t
       passumption
   · pintro
     prw [←0] at 1
-    papply not_le_of_lt <;> passumption
+    papply not_ge_of_lt <;> passumption
 
 theorem lt_asymm : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ ~ t₂ ≺ t₁ := by
   pintros
   papply le_of_lt at 1
-  papply not_le_of_lt <;> passumption
+  papply not_ge_of_lt <;> passumption
 
 theorem lt_trans : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ t₂ ≺ t₃ ⇒ t₁ ≺ t₃ := by
   pintros
@@ -186,13 +219,12 @@ open PO
 
 /-- Theory of linear order. -/
 inductive LO : L.Theory where
-| po : p ∈ PO → LO p
+| ax_po : p ∈ PO → LO p
 | ax_le_total : LO (∀' ∀' (#1 ⪯ #0 ⩒ #0 ⪯ #1))
 
 namespace LO
 
-instance : PO ⊆ᵀ (LO : L.Theory) where
-  subtheory _ h := hyp (po h)
+instance : PO ⊆ᵀ (LO : L.Theory) := .of_subset (λ _ => ax_po)
 
 instance {T : L.Theory} [h : LO ⊆ᵀ T] : PO ⊆ᵀ T := h.trans' inferInstance
 
@@ -211,7 +243,7 @@ theorem not_le_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ⪯ t₂ ⇔ t₂ ≺ t₁ := by
       papplya 1
       prw [0]
       pexact PO.le_refl
-  · pexact PO.not_le_of_lt
+  · pexact PO.not_ge_of_lt
 
 theorem not_lt_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ≺ t₂ ⇔ t₂ ⪯ t₁ := by
   papply iff_intro
@@ -220,9 +252,9 @@ theorem not_lt_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ≺ t₂ ⇔ t₂ ⪯ t₁ := by
     prw [not_le_iff] at 0
     papplya 1
     passumption
-  · pexact PO.not_lt_of_le
+  · pexact PO.not_gt_of_le
 
-theorem le_or_lt (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t₂ ≺ t₁ := by
+theorem le_or_gt (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t₂ ≺ t₁ := by
   papply or_elim
   · pexact le_total t₁ t₂
   · pexact or_inl
@@ -237,9 +269,15 @@ theorem le_or_lt (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t�
       prw [0]
       prefl
 
+theorem lt_or_ge (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ≺ t₂ ⩒ t₂ ⪯ t₁ := by
+  papply or_elim
+  · pexact le_or_gt t₂ t₁
+  · pexact or_inr
+  · pexact or_inl
+
 theorem lt_trichotomy (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ≺ t₂ ⩒ t₁ ≐ t₂ ⩒ t₂ ≺ t₁ := by
   papply or_elim
-  · pexact le_or_lt t₁ t₂
+  · pexact le_or_gt t₁ t₂
   · prw [PO.le_iff_lt_or_eq]
     papply or_elim'
     · pintro

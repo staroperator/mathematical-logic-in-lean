@@ -911,7 +911,7 @@ end Tactic
 @[prw] theorem eq_andN_cons :
   Γ ⊢ t₁ ≐ t₂ ⇒ (⋀ i, v₁ i ≐ v₂ i) ⇒ ⋀ i,  (t₁ ∷ᵥ v₁) i ≐ (t₂ ∷ᵥ v₂) i := and_intro
 
-@[prw] theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
+theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ f ⬝ᶠ v₂ := ax .eq_congr_func
 
 @[prw] theorem eq_subst_eq : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
   pintro
@@ -933,7 +933,7 @@ theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂
 
 theorem eq_congr_rel : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇒ r ⬝ʳ v₂ := ax .eq_congr_rel
 
-@[prw] theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
+theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ ⇔ r ⬝ʳ v₂ := by
   pintro
   papply iff_intro <;> papply eq_congr_rel
   · passumption

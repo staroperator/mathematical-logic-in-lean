@@ -200,7 +200,7 @@ theorem Subst.lift_comp_single : ⇑ₛσ ∘ₛ ↦ₛ t = t ∷ᵥ σ := by
   ext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]
 @[simp] theorem Subst.nil_comp : []ᵥ ∘ₛ σ = []ᵥ := by
   simp [Vec.eq_nil]
-@[simp] theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
+@[simp high] theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
   ext x; cases x using Fin.cases <;> simp
 @[simp] theorem Subst.single_comp : ↦ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ σ := cons_comp
 @[simp] theorem Subst.assign_comp : ≔ₛ t ∘ₛ σ = t[σ]ₜ ∷ᵥ shift ∘ₛ σ := cons_comp
