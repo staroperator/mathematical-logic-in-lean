@@ -124,6 +124,16 @@ theorem dom_of_pos (h : 0 < x) : x.Dom := by
 
 end
 
+section
+
+variable {a : Part ℕ}
+
+theorem zero_or_pos_of_dom (h : a.Dom) : 0 < a ∨ 0 ∈ a := by
+  rw [←some_get h]; simp [-some_get]
+  rcases Nat.eq_zero_or_pos (a.get h) with h' | h' <;> simp [h']
+
+end
+
 def find_aux (f : ℕ →. ℕ)
   (h : ∃ n, 0 < f n ∧ ∀ k < n, (f k).Dom)
   (n : ℕ) (ih : ∀ k < n, 0 ∈ f k) : {n : ℕ // 0 < f n ∧ ∀ k < n, 0 ∈ f k} :=

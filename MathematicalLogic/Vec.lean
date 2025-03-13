@@ -38,6 +38,12 @@ end Nat
 namespace Fin
 
 @[simp] theorem succ_two_eq_three : Fin.succ (2 : Fin (n + 3)) = 3 := rfl
+@[simp] theorem succ_three_eq_four : Fin.succ (3 : Fin (n + 4)) = 4 := rfl
+@[simp] theorem succ_four_eq_five : Fin.succ (4 : Fin (n + 5)) = 5 := rfl
+@[simp] theorem succ_five_eq_six : Fin.succ (5 : Fin (n + 6)) = 6 := rfl
+@[simp] theorem succ_six_eq_seven : Fin.succ (6 : Fin (n + 7)) = 7 := rfl
+@[simp] theorem succ_seven_eq_eight : Fin.succ (7 : Fin (n + 8)) = 8 := rfl
+@[simp] theorem succ_eight_eq_nine : Fin.succ (8 : Fin (n + 9)) = 9 := rfl
 
 @[elab_as_elim] def cases1 {motive : Fin 1 → Sort _}
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
@@ -55,6 +61,7 @@ namespace Fin
 
 attribute [simp] forall_fin_one forall_fin_two
 @[simp] theorem forall_fin_three {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 := by simp [forall_fin_succ]
+@[simp] theorem forall_fin_four {p : Fin 4 → Prop} : (∀ (i : Fin 4), p i) ↔ p 0 ∧ p 1 ∧ p 2 ∧ p 3 := by simp [forall_fin_succ]
 
 theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (OfNat.ofNat n : Fin (m + n + 1)) := by
   simp [OfNat.ofNat, Nat.cast]
@@ -96,13 +103,18 @@ macro_rules
 | `([]ᵥ) => `(nil)
 
 @[simp] theorem cons_succ : (a ∷ᵥ v) i.succ = v i := rfl
-@[simp] theorem cons_0 : (a ∷ᵥ v) 0 = a := rfl
-@[simp] theorem cons_1 {v : Vec α (n + 1)} : (a ∷ᵥ v) 1 = v 0 := rfl
-@[simp] theorem cons_2 {v : Vec α (n + 2)} : (a ∷ᵥ v) 2 = v 1 := rfl
-@[simp] theorem cons_3 {v : Vec α (n + 3)} : (a ∷ᵥ v) 3 = v 2 := rfl
-@[simp] theorem cons_4 {v : Vec α (n + 4)} : (a ∷ᵥ v) 4 = v 3 := rfl
-@[simp] theorem cons_5 {v : Vec α (n + 5)} : (a ∷ᵥ v) 5 = v 4 := rfl
-@[simp] theorem cons_6 {v : Vec α (n + 6)} : (a ∷ᵥ v) 6 = v 5 := rfl
+@[simp] theorem cons_zero : (a ∷ᵥ v) 0 = a := rfl
+@[simp] theorem cons_one {v : Vec α (n + 1)} : (a ∷ᵥ v) 1 = v 0 := rfl
+@[simp] theorem cons_two {v : Vec α (n + 2)} : (a ∷ᵥ v) 2 = v 1 := rfl
+@[simp] theorem cons_three {v : Vec α (n + 3)} : (a ∷ᵥ v) 3 = v 2 := rfl
+@[simp] theorem cons_four {v : Vec α (n + 4)} : (a ∷ᵥ v) 4 = v 3 := rfl
+@[simp] theorem cons_five {v : Vec α (n + 5)} : (a ∷ᵥ v) 5 = v 4 := rfl
+@[simp] theorem cons_six {v : Vec α (n + 6)} : (a ∷ᵥ v) 6 = v 5 := rfl
+@[simp] theorem cons_seven {v : Vec α (n + 7)} : (a ∷ᵥ v) 7 = v 6 := rfl
+@[simp] theorem cons_eight {v : Vec α (n + 8)} : (a ∷ᵥ v) 8 = v 7 := rfl
+@[simp] theorem cons_nine {v : Vec α (n + 9)} : (a ∷ᵥ v) 9 = v 8 := rfl
+@[simp] theorem cons_ten {v : Vec α (n + 10)} : (a ∷ᵥ v) 10 = v 9 := rfl
+@[simp] theorem cons_eleven {v : Vec α (n + 11)} : (a ∷ᵥ v) 11 = v 10 := rfl
 
 @[app_unexpander nil] def unexpandNil : Lean.PrettyPrinter.Unexpander
 | `($(_)) => `([]ᵥ)

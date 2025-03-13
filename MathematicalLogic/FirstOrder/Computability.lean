@@ -101,6 +101,30 @@ def Formula.impPR : Primrec 2 :=
 @[simp] theorem Formula.impPR_eval {p q : L.Formula n} :
   impPR [Encodable.encode p, Encodable.encode q]ᵥ = Encodable.encode (p ⇒ q) := by
   simp [impPR, Formula.encode_imp]
+theorem Formula.eq_impPR_eval {p : L.Formula n} :
+  Encodable.encode p = impPR [a, b]ᵥ → ∃ q r, p = q ⇒ r ∧ a = Encodable.encode q ∧ b = Encodable.encode r := by
+  intro h
+  cases p with simp [Encodable.encode, Formula.encode, impPR] at h
+  | imp q r => exists q, r, rfl; simp [Encodable.encode, h]
+  | _ => apply congr_arg (· % 4) at h; simp at h
+
+def Formula.isImpPR : Primrec 1 :=
+  Primrec.eq (mod.comp₂ (proj 0) (const 4)) (const 3)
+theorem Formula.isImpPR_eval_pos_iff {p : L.Formula n} :
+  0 < isImpPR [Encodable.encode p]ᵥ ↔ ∃ q r, p = q ⇒ r := by
+  cases p <;> simp [isImpPR, Formula.encode_rel, Formula.encode_eq, Formula.encode_false, Formula.encode_imp, Formula.encode_all]
+
+def Formula.impLeftPR : Primrec 1 :=
+  fst.comp₁ (div.comp₂ (proj 0) (const 4))
+@[simp] theorem Formula.impLeftPR_eval {p q : L.Formula n} :
+  impLeftPR [Encodable.encode (p ⇒ q)]ᵥ = Encodable.encode p := by
+  simp [impLeftPR, Formula.encode_imp, Nat.mul_add_div]
+
+def Formula.impRightPR : Primrec 1 :=
+  snd.comp₁ (div.comp₂ (proj 0) (const 4))
+@[simp] theorem Formula.impRightPR_eval {p q : L.Formula n} :
+  impRightPR [Encodable.encode (p ⇒ q)]ᵥ = Encodable.encode q := by
+  simp [impRightPR, Formula.encode_imp, Nat.mul_add_div]
 
 def Formula.negPR : Primrec 1 :=
   impPR.comp₂ (proj 0) zero
@@ -648,7 +672,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       rcases h with ⟨_, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, h⟩
       simp at h; subst h
       exact .imp_imp_self
-    · simp [Fin.ofNat_succ 6, Fin.forall_fin_succ, isFormulaPR_eval_pos_iff] at h
+    · simp [Fin.forall_fin_succ, isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, ⟨r, rfl⟩, h⟩
       simp at h; subst h
       exact .imp_distrib
@@ -676,11 +700,11 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       rcases h with ⟨_, _, _, _, ⟨t₁, rfl⟩, ⟨t₂, rfl⟩, h⟩
       simp at h; subst h
       exact .eq_symm
-    · simp [Fin.ofNat_succ 6, Fin.forall_fin_succ, isTermPR_eval_pos_iff] at h
+    · simp [Fin.forall_fin_succ, isTermPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, _, _, ⟨t₁, rfl⟩, ⟨t₂, rfl⟩, ⟨t₃, rfl⟩, h⟩
       simp at h; subst h
       exact .eq_trans
-    · simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.forall_fin_succ, isFuncPR_eval_pos_iff, isvec_eval_pos_iff] at h
+    · simp [Fin.forall_fin_succ, isFuncPR_eval_pos_iff, isvec_eval_pos_iff] at h
       rcases h with ⟨m, _, _, _, _, _, _, _, ⟨f, rfl⟩, ⟨_, rfl⟩, h', ⟨_, rfl⟩, h'', h⟩
       simp [vmap_eval, vand_eval_pos_iff, isTermPR_eval_pos_iff] at h' h''
       choose v₁ h' using h'
@@ -688,7 +712,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       simp [funext h', funext h'', vmk_eval, vget_eval] at h
       simp [←Vec.encode_eq] at h; subst h
       exact .eq_congr_func
-    · simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.ofNat_succ 8, Fin.forall_fin_succ, isRelPR_eval_pos_iff, isvec_eval_pos_iff] at h
+    · simp [Fin.forall_fin_succ, isRelPR_eval_pos_iff, isvec_eval_pos_iff] at h
       rcases h with ⟨m, _, _, _, _, _, _, _, ⟨r, rfl⟩, ⟨_, rfl⟩, h', ⟨_, rfl⟩, h'', h⟩
       simp [vmap_eval, vand_eval_pos_iff, isTermPR_eval_pos_iff] at h' h''
       choose v₁ h' using h'
@@ -696,7 +720,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       simp [funext h', funext h'', vmk_eval, vget_eval] at h
       simp [←Vec.encode_eq] at h; subst h
       exact .eq_congr_rel
-    · simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.ofNat_succ 8, Fin.ofNat_succ 9, isFormulaPR_eval_pos_iff] at h
+    · simp [isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, ⟨p, rfl⟩, h, h'⟩
       simp at h'; subst h'
       cases' d with d <;> simp [Formula.depth] at h₂
@@ -767,7 +791,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       · exact Formula.encode_lt_eq_left
       · simp [isTermPR_eval_pos_iff]
     | @eq_symm _ t₁ t₂ =>
-      exists 7; simp [Fin.ofNat_succ 6]
+      exists 7; simp
       refine ⟨Encodable.encode t₁, ?_, Encodable.encode t₂, ?_, ?_⟩
       · apply Formula.encode_lt_imp_left.trans'
         exact Formula.encode_lt_eq_left
@@ -775,7 +799,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         exact Formula.encode_lt_eq_right
       · simp [isTermPR_eval_pos_iff]
     | @eq_trans _ t₁ t₂ t₃ =>
-      exists 8; simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7]
+      exists 8; simp
       refine ⟨Encodable.encode t₁, ?_, Encodable.encode t₂, ?_, Encodable.encode t₃, ?_, ?_⟩
       · apply Formula.encode_lt_imp_left.trans'
         exact Formula.encode_lt_eq_left
@@ -786,7 +810,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         exact Formula.encode_lt_eq_right
       · simp [Fin.forall_fin_succ, isTermPR_eval_pos_iff]
     | @eq_congr_func m _ v₁ v₂ f =>
-      exists 9; simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.ofNat_succ 8]
+      exists 9; simp
       refine ⟨m, ?_, Encodable.encode f, ?_, Encodable.encode v₁, ?_, Encodable.encode v₂, ?_, ?_⟩
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_eq_left.trans'
@@ -805,7 +829,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         simp [Vec.encode_eq, vget_eval]
         simp [←Vec.encode_eq]
     | @eq_congr_rel m _ v₁ v₂ r =>
-      exists 10; simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.ofNat_succ 8, Fin.ofNat_succ 9]
+      exists 10; simp
       refine ⟨m, ?_, Encodable.encode r, ?_, Encodable.encode v₁, ?_, Encodable.encode v₂, ?_, ?_⟩
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_left.trans'
@@ -824,7 +848,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         simp [Vec.encode_eq, vget_eval]
         simp [←Vec.encode_eq]
     | @all _ p _ ih =>
-      exists 11; simp [Fin.ofNat_succ 6, Fin.ofNat_succ 7, Fin.ofNat_succ 8, Fin.ofNat_succ 9, Fin.ofNat_succ 10]
+      exists 11; simp
       refine ⟨Encodable.encode p, ?_, ?_⟩
       · exact Formula.encode_lt_all
       · simp [isFormulaPR_eval_pos_iff]
@@ -835,6 +859,182 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
         · apply Nat.pair_lt_pair_left'
           · exact Formula.encode_lt_all
           · simp
+
+end
+
+
+
+section
+
+variable {L : Language} [∀ n, Encodable (L.Func n)] [∀ n, Encodable (L.Rel n)] [L.PrimCodable] {T : L.Theory} [Recursive T]
+
+/--
+  `isProofOf(n)` returns `m + 1` if `n` encodes a proof of the formula encoded by `m`; returns `0`
+  if `n` does not encode any proof. -/
+def isProofOfPR (T : L.Theory) [Recursive T] : Partrec 1 :=
+  Partrec.covrec inner
+  where inner :=
+    (Partrec.site
+      (.ofPrim (odd.comp₁ (proj 0)))
+      (.ofPrim (ite
+        (andv [
+          vget.comp₂ (proj 1) (fst.comp₁ (div2.comp₁ (proj 0))),
+          vget.comp₂ (proj 1) (snd.comp₁ (div2.comp₁ (proj 0))),
+          Formula.isImpPR.comp₁ (pred.comp₁ (vget.comp₂ (proj 1) (fst.comp₁ (div2.comp₁ (proj 0))))),
+          eq
+            (Formula.impLeftPR.comp₁ (pred.comp₁ (vget.comp₂ (proj 1) (fst.comp₁ (div2.comp₁ (proj 0))))))
+            (pred.comp₁ (vget.comp₂ (proj 1) (snd.comp₁ (div2.comp₁ (proj 0)))))
+        ]ᵥ)
+        (succ.comp₁ (Formula.impRightPR.comp₁ (pred.comp₁ (vget.comp₂ (proj 1) (fst.comp₁ (div2.comp₁ (proj 0)))))))
+        zero))
+      (Partrec.site
+        (Partrec.sand
+          (.ofPrim (L.isSentencePR.comp₁ (div2.comp₁ (proj 0))))
+          (add.toPart.comp₂
+            (.ofPrim (L.isAxiomPR.comp₂ zero (div2.comp₁ (proj 0))))
+            ((Recursive.char T).comp₁ (.ofPrim (div2.comp₁ (proj 0))))))
+        (.ofPrim (succ.comp₁ (div2.comp₁ (proj 0))))
+        (.const 0)))
+
+lemma isProofOfPR.inner_dom (n ih) : (inner T [n, ih]ᵥ).Dom := by
+  simp [inner, Partrec.site_dom, Partrec.sand_dom]
+  by_cases h₁ : n.bodd <;> simp [h₁]
+  apply Part.zero_or_pos_of_dom
+  simp [Partrec.sand_dom]
+  by_cases h₂ : 0 < L.isSentencePR.eval [n.div2]ᵥ
+  · simp [h₂, (ne_zero_of_lt h₂).symm]
+    simp [isSentencePR_eval_pos_iff] at h₂
+    rcases h₂ with ⟨_, h₂⟩
+    simp [h₂]
+    apply Recursive.char_dom
+  · simp at h₂; simp [h₂]
+
+theorem isProofOfPR_dom : (isProofOfPR T [n]ᵥ).Dom := by
+  apply Partrec.covrec_dom
+  intro n ih
+  apply isProofOfPR.inner_dom
+
+theorem isProofOfPR_eval_pos_of_proof [L.HasConstEncodeZero] :
+  T ⊢ p → ∃ n, Encodable.encode p + 1 ∈ isProofOfPR T [n]ᵥ := by
+  intro h
+  induction h with
+  | @ax p h | @hyp p h =>
+    exists 2 * Encodable.encode p
+    rw [isProofOfPR, Partrec.covrec_eval isProofOfPR.inner_dom]
+    nth_rw 1 [isProofOfPR.inner]
+    simp [Partrec.mem_site_eval_iff, Partrec.sand_eval_pos_iff, isSentencePR_eval_pos_iff]
+    refine ⟨_, _, ⟨Part.get_mem (Recursive.char_dom _), rfl⟩, ?_⟩
+    simp [isAxiomPR_eval_pos_iff, ←Part.pos_iff_get, ←Recursive.mem_iff, h]
+  | mp _ _ ih₁ ih₂ =>
+    rcases ih₁ with ⟨n, ih₁⟩
+    rcases ih₂ with ⟨m, ih₂⟩
+    exists 2 * n.pair m + 1
+    rw [←Part.eq_get_iff_mem isProofOfPR_dom] at ih₁ ih₂
+    simp [isProofOfPR] at ih₁ ih₂ ⊢
+    rw [Partrec.covrec_eval isProofOfPR.inner_dom]
+    nth_rw 1 [isProofOfPR.inner]
+    simp [Partrec.mem_site_eval_iff]
+    have h₁ : n < 2 * n.pair m + 1 := by
+      apply Nat.lt_succ_of_le
+      apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+      apply Nat.left_le_pair
+    have h₂ : m < 2 * n.pair m + 1 := by
+      apply Nat.lt_succ_of_le
+      apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
+      apply Nat.right_le_pair
+    rw [vget_eval' h₁, vget_eval' h₂, ←ih₁, ←ih₂]
+    simp [Formula.isImpPR_eval_pos_iff]
+
+theorem proof_of_isProofOfPR_eval_pos [L.HasConstEncodeZero] :
+  m + 1 ∈ isProofOfPR T [n]ᵥ → ∃ p, m = Encodable.encode p ∧ T ⊢ p := by
+  intro h
+  induction' n using Nat.strong_induction_on with n ih generalizing m
+  simp [isProofOfPR] at ih h
+  rw [Partrec.covrec_eval isProofOfPR.inner_dom] at h
+  nth_rw 1 [isProofOfPR.inner] at h
+  simp [Partrec.mem_site_eval_iff] at h
+  cases h' : n.bodd <;> simp [h'] at h
+  · simp [Partrec.sand_eval_pos_iff, isSentencePR_eval_pos_iff] at h
+    rcases h with ⟨⟨⟨p, h₁⟩, ⟨_, _, ⟨h₂, rfl⟩, h₃ | h₃⟩⟩, rfl⟩ <;> exists p, h₁
+    · simp [h₁, isAxiomPR_eval_pos_iff] at h₃
+      exact Proof.ax h₃
+    · simp [h₁] at h₂
+      apply Proof.hyp
+      rw [Recursive.mem_iff, Part.pos_iff]
+      exact ⟨_, h₂, h₃⟩
+  · split_ifs at h with h₁
+    rcases h₁ with ⟨h₁, h₂, h₃, h₄⟩
+    have h₁' : n.div2.unpair.1 < n := by
+      apply (Nat.unpair_left_le _).trans_lt
+      simp [Nat.div2_val]
+      apply Nat.div_lt_self
+      · rw [←n.bodd_add_div2]; simp [h']
+      · simp
+    have h₂' : n.div2.unpair.2 < n := by
+      apply (Nat.unpair_right_le _).trans_lt
+      simp [Nat.div2_val]
+      apply Nat.div_lt_self
+      · rw [←n.bodd_add_div2]; simp [h']
+      · simp
+    rw [vget_eval' h₁'] at h₁ h₃ h₄ h
+    rw [vget_eval' h₂'] at h₂ h₄
+    apply Nat.sub_add_cancel at h₁
+    apply Nat.sub_add_cancel at h₂
+    rw [Part.eq_get_iff_mem] at h₁ h₂
+    apply ih _ h₁' at h₁; rcases h₁ with ⟨_, h₁, h₁'⟩
+    apply ih _ h₂' at h₂; rcases h₂ with ⟨_, h₂, h₂'⟩
+    rw [h₁, Formula.isImpPR_eval_pos_iff] at h₃; rcases h₃ with ⟨p, q, rfl⟩
+    rw [h₁, h₂] at h₄; simp at h₄; subst h₄
+    rw [h₁] at h; simp at h; subst h
+    exists q, rfl
+    exact Proof.mp h₁' h₂'
+
+theorem provable_iff_isProofOfPR_eval [L.HasConstEncodeZero] :
+  T ⊢ p ↔ ∃ n, Encodable.encode p + 1 ∈ isProofOfPR T [n]ᵥ := by
+  by_cases h : T ⊢ p <;> simp [h]
+  · exact isProofOfPR_eval_pos_of_proof h
+  · by_contra! h'
+    rcases h' with ⟨n, h'⟩
+    apply proof_of_isProofOfPR_eval_pos at h'
+    rcases h' with ⟨q, h', h''⟩
+    simp at h'; subst h'
+    contradiction
+
+def isProofPR (T : L.Theory) [Recursive T] : Partrec 2 :=
+  (eq (proj 0) (proj 1)).toPart.comp₂
+    ((isProofOfPR T).comp₁ (.proj 0))
+    (.ofPrim (succ.comp₁ (proj 1)))
+
+theorem isProofPR_dom {p : L.Sentence} : (isProofPR T [n, Encodable.encode p]ᵥ).Dom := by
+  simp [isProofPR]; exact isProofOfPR_dom
+
+theorem provable_iff_isProofPR_eval_pos [L.HasConstEncodeZero] :
+  T ⊢ p ↔ ∃ n, 0 < isProofPR T [n, Encodable.encode p]ᵥ := by
+  simp [isProofPR, provable_iff_isProofOfPR_eval]
+
+/-- Theorems of a recursive theory is RE. -/
+theorem Theory.theorems_enumerable_of_recursive [L.HasConstEncodeZero] : IsEnumerable T.theorems := by
+  refine ⟨⟨isProofPR T, ?_, ?_⟩⟩
+  · intros; apply isProofPR_dom
+  · simp [provable_iff_isProofPR_eval_pos]
+
+/-- Theorems of a complete recursive theory is also recursive. -/
+theorem Complete.theorems_recursive_of_recursive [L.HasConstEncodeZero] (h : Complete T) : IsRecursive T.theorems := by
+  rw [IsRecursive.iff_re_compl_re]
+  exists Theory.theorems_enumerable_of_recursive
+  by_cases h' : Consistent T
+  · rw [IsEnumerable.def]
+    exists (isProofPR T).comp₂ (.proj 0) (.ofPrim (Formula.negPR.comp₁ (proj 1)))
+    constructor
+    · intro n p; simp; exact isProofPR_dom
+    · intro p; simp [h.unprovable_iff h', ←provable_iff_isProofPR_eval_pos]
+  · simp [Consistent] at h'
+    rw [IsEnumerable.iff_semi_decidable]
+    exists Partrec.loop
+    intro p
+    simp
+    papply Proof.false_elim
+    exact h'
 
 end
 
