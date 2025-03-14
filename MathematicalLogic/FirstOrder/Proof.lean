@@ -22,14 +22,14 @@ This file formalizes a Hilbert-style proof system of first-order logic.
 There are different ways to design a proof system for first-order logic.
 
 1. Hilbert-style systems, which promote minimality in their design, typically have a minimal set of
-  axioms and minimal inference rules.
-2. Natural deduction usually has a weak sense on axioms, and is defined through a large set of
-  inference rules, including introduction and elimination rules for each logical connectives.
-  Some metatheorems in Hilbert-style systems, like the deduction theorem, becomes rules in natural
-  deduction.
-3. Sequent calculus, which is similar to natural deduction but has a bottom-up style, in a sense
-  that cut-free sequent calculus has subformula property. This also makes proof search easier in
-  sequent calculus.
+  axioms and minimal inference rules (typically, only Modus Ponens).
+2. Natural deduction usually has a weak notion of axioms and focuses more on inference rules. Those
+  rules include introduction and elimination rules for each logical connectives. Some metatheorems
+  in Hilbert-style systems, like the deduction theorem, become rules in natural deduction.
+3. Sequent calculus is similar to natural deduction, but has a more "bottom-up" style. In cut-free
+  sequent calculus, a nice property, subformula property, holds, which makes it easy to do automated
+  proof search. Gentzen's cut elimination, a standard result, ensures that any proof using cut can
+  be transformed into a cut-free proof.
 
 We are using Hilbert-style system because it's elegant, it can be easily applied to first-order
 theories with infinite axioms (since `Γ` can be any set) and it's easier to do encoding for proofs
@@ -46,16 +46,17 @@ rules. The axioms and rules we selected have the following property:
 
 1. The only inference rule is Modus Ponens (`Proof.mp`). Some systems (e.g. in Mendelson's book)
   include a GEN rule to introduce universal quantifiers, but in our system it's a metatheorem
-  (`Proof.generalization`). In such systems, the deduction theorem is restricted (e.g. in
+  (`Proof.generalization`). Also in such systems, the deduction theorem is restricted (e.g. in
   Mendelson's system, the deduction theorem for `Γ ⊢ p ⇒ q` requires no free variable in `p` used
   by GEN rule in `Γ, p ⊢ q`), while ours (`Proof.deduction`) is not.
 2. The logical axioms do not refer to propositional logic. Some systems (e.g. in Enderton's book)
   include all propositional tautologies as logical axioms.
-3. Equality axioms is formalized as logical axioms, not as a theory. Also, in semantics equalities
-  are always interpreted as "true equalities".
-4. Empty structures are admitted in our system (i.e. `∅ ⊬ ∃ x. ⊤` in general). This is because to
-  prove `∃ x. ⊤` as a `Sentence`, a closed term `t : L.Term 0` is needed for `Proof.exists_intro`;
-  but in a language with no constants, no closed term exists.
+3. Equality axioms are formalized as logical axioms, not as a theory, because we want equality to be
+  a part of first-order logic itself. This also makes `prw` tactic usable for all first-order
+  theories.
+4. Empty structures are admitted (i.e. `∅ ⊬ ∃ x. ⊤` in general). This thanks to the "dependent type
+  design" of `Term` and `Formula`: to prove `∃ x. ⊤` as a `Sentence`, a closed term `t : L.Term 0`
+  is needed for `Proof.exists_intro`; but in a language with no constants, no closed term exists.
 
 ## References
 
@@ -119,7 +120,7 @@ infix:50 " ⊢ " => Proof
   -/
 class Subtheory (Γ Δ : L.FormulaSet n) : Prop where
   subtheory : ∀ p ∈ Γ, Δ ⊢ p
-infix:50 " ⊆ᵀ " => Subtheory
+@[inherit_doc Subtheory] infix:50 " ⊆ᵀ " => Subtheory
 
 theorem Subtheory.of_subset : Γ ⊆ Δ → Γ ⊆ᵀ Δ :=
   λ h => ⟨λ _ h' => .hyp (h h')⟩
@@ -247,10 +248,10 @@ macro "pintro" : tactic => `(tactic|
      try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append,
        Theory.shift_eq, Theory.shift_shiftN, Theory.shiftN_eq, Theory.shiftN_shiftN]))
 
-/-- Revert a hypothesis through deduction theorem. -/
-macro "prevert" : tactic => `(tactic| eapply deduction.mp)
-
-/-- Repeatedly introduce new hypotheses and variables. Use `pintros n` to control the number of hypothesis introduced. -/
+/--
+  Repeatedly introduce new hypotheses and variables. `pintros n` introduces exactly `n` hypotheses
+  and variables, while `pintros` introduces as many as possible.
+  -/
 macro "pintros" n:(ppSpace colGt num)? : tactic =>
   match n with
   | some n => `(tactic| iterate $n pintro)
@@ -263,9 +264,8 @@ def hypTerm (n : ℕ) : MacroM (TSyntax `term) := do
   return t
 
 /--
-  Close the proof goal using assumption.
-  If a number `n` is given, the `n`-th assumption (from right to left) will be used.
-  Otherwise, this tactic will try to search for such an assumption.
+  Close the proof goal using assumption. `passumption n` will use the `n`-th assumption (from right
+  to left, counting from `0`), while `passumption` tries to search for such an assumption.
   -/
 macro "passumption" n:(ppSpace colGt num)? : tactic => do
   match n with
@@ -288,7 +288,7 @@ elab "pclear" n:(ppSpace colGt num) : tactic => do
   let mainGoal :: _ ← evalTacticAt (← `(tactic| eapply weaken $weakenTerm)) (← getMainGoal) | throwError "pclear failed"
   replaceMainGoal [mainGoal]
 
-/-- Remove all assumptions except the `FormulaSet`. -/
+/-- Remove all assumptions except the theory (or formula set) itself. -/
 macro "pclears" : tactic => `(tactic| repeat pclear 0)
 
 /-- Swap the `n`-th assumption and the `m`-th assumption. -/
@@ -307,9 +307,21 @@ elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
     | throwError "pswap failed"
   replaceMainGoal [mainGoal]
 
-/-- Replaces the `n`-th assumption with a new proposition, and generate a new goal to prove `Γ, ⋯ ⊢ p`. -/
+/-- Replaces the `n`-th assumption with a new proposition `p`, and generate a new goal to prove `p`. -/
 macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
+
+/--
+  Revert a hypothesis through deduction theorem. `prevert n` revert the `n`-th assumption, while
+  `prevert` revert the `0`-th assumption.
+  -/
+macro "prevert" n:(ppSpace colGt num)? : tactic =>
+  match n with
+  | some n =>
+    match n.getNat with
+    | n + 1 => `(tactic| (pswap $(mkNatLit (n + 1)) 0; eapply deduction.mp; pswap $(mkNatLit n) 0))
+    | 0 => `(tactic| eapply deduction.mp)
+  | none => `(tactic| eapply deduction.mp)
 
 def isTheory? (n : Expr) (Γ : Expr) : MetaM (Option Expr) := do
   if let some (_, _, T) := Γ.app3? ``Theory.shiftT then return T
@@ -436,7 +448,7 @@ def runPapplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ
 syntax location := "at" (ident <|> num)
 
 /--
-  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ ⇒ q`, `papply t` apply it on another goal `Δ ⊢ ⋯`
+  Given a proof term `t` of `Γ ⊢ p₁ ⇒ ⋯ ⇒ pₙ ⇒ q`, `papply t` apply it on a proof goal of `Δ ⊢ ⋯`
   (`Γ` should be a subset/subtheory of `Δ`) with a chain `Proof.mp`.
   - `papply t` will apply `t` on the current goal `Δ ⊢ q` and create goals for each `Δ ⊢ pᵢ`.
   - `papply t at h` (where `h` is an identifier) will apply `t` on the local hypothesis `h` with
@@ -459,11 +471,13 @@ elab_rules : tactic
 | `(tactic| papply $t at $n:num with $d) => runPapplyAtAssumption t n.getNat (some d.getNat)
 
 /-- Apply the `n`-th assumption using `Proof.mp`. -/
-syntax "papplya" (ppSpace colGt num) (location)? : tactic
+syntax "papplya" (ppSpace colGt num) (location)? ("with" num)? : tactic
 
 macro_rules
 | `(tactic| papplya $n) => do `(tactic| papply $(← hypTerm n.getNat))
+| `(tactic| papplya $n with $d) => do `(tactic| papply $(← hypTerm n.getNat) with $d)
 | `(tactic| papplya $n at $l) => do `(tactic| papply $(← hypTerm n.getNat) at $l)
+| `(tactic| papplya $n at $l with $d) => do `(tactic| papply $(← hypTerm n.getNat) at $l with $d)
 
 /-- Close the goal with given proof term. -/
 macro "pexact" t:(ppSpace colGt term) : tactic => `(tactic| papply $t with 0)
@@ -543,7 +557,7 @@ theorem or_elim : Γ ⊢ p ⩒ q ⇒ (p ⇒ r) ⇒ (q ⇒ r) ⇒ r := by
 theorem or_elim' : Γ ⊢ (p ⇒ r) ⇒ (q ⇒ r) ⇒ p ⩒ q ⇒ r := by
   pintros; papply or_elim <;> passumption
 
-theorem excluded_middle : Γ ⊢ ~ p ⩒ p := double_neg_imp
+theorem excluded_middle (p) : Γ ⊢ ~ p ⩒ p := double_neg_imp
 
 theorem andN_intro {v : Vec (L.Formula n) m} :
   (∀ i, Γ ⊢ v i) → Γ ⊢ ⋀ i, v i := by
@@ -891,8 +905,8 @@ macro "prefl" : tactic => `(tactic| first | pexact eq_refl | pexact iff_refl)
 macro "psymm" : tactic => `(tactic| first | papply eq_symm | papply iff_symm)
 
 /--
-  If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals,
-  `t₁ ≐ t` and `t ≐ t₂` (or `p ⇔ r` and `r ⇔ q`) using transitivity.
+  If the proof goal is `t₁ ≐ t₂` (or `p ⇔ q`), replace it with two goals, `t₁ ≐ t` and `t ≐ t₂` (or
+  `p ⇔ r` and `r ⇔ q`) using transitivity.
   
   A meta variable is generated for `t` or `r` if it is not given.
   -/
@@ -974,6 +988,9 @@ theorem eq_subst : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇒ p[σ�
   papply iff_mp
   papply eq_subst_iff
   passumption
+
+theorem eq_subst' : Γ ⊢ p[σ₁]ₚ ⇒ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₂]ₚ := by
+  pintros; papply eq_subst <;> passumption
 
 namespace Tactic
 
@@ -1175,13 +1192,13 @@ theorem Consistent.append_neg : Consistent (Γ,' ~ p) ↔ Γ ⊬ p := by
     pcontra
     exact h₂
 
-theorem Consistent.undisprovable : Consistent Γ → Γ ⊢ p → Γ ⊬ ~ p := by
+theorem Consistent.undisprovable_of_provable : Consistent Γ → Γ ⊢ p → Γ ⊬ ~ p := by
   intro h h₁ h₂
   apply h
   papply h₂
   exact h₁
 
-theorem Consistent.unprovable : Consistent Γ → Γ ⊢ ~ p → Γ ⊬ p := by
+theorem Consistent.unprovable_of_disprovable : Consistent Γ → Γ ⊢ ~ p → Γ ⊬ p := by
   intro h h₁ h₂
   apply h
   papply h₁
@@ -1196,7 +1213,7 @@ def Complete (Γ : L.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
 theorem Complete.disprovable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
   rcases h p with h₁ | h₁ <;> simp [h₁]
 
-theorem Complete.unprovable_iff (h₁ : Complete Γ) (h₂ : Consistent Γ) : Γ ⊬ p ↔ Γ ⊢ ~ p := by
+theorem Complete.unprovable_iff_disprovable (h₁ : Complete Γ) (h₂ : Consistent Γ) : Γ ⊬ p ↔ Γ ⊢ ~ p := by
   rcases h₁ p with h | h <;> simp [h] <;> intro h'
   · exact h₂ (h'.mp h)
   · exact h₂ (h.mp h')

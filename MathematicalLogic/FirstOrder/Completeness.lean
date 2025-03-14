@@ -7,7 +7,7 @@ import MathematicalLogic.FirstOrder.Completeness.TermModel
 
 # Completeness of first-order logic
 
-This file formalizes the completeness theorem (also referred as Godel's completeness theorem) of
+This file formalizes the completeness theorem (also referred as Gödel's completeness theorem) of
 first-order logic.
 
 The proof mainly follows [flypitch](https://github.com/flypitch/flypitch):

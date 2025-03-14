@@ -1027,7 +1027,7 @@ theorem Complete.theorems_recursive_of_recursive [L.HasConstEncodeZero] (h : Com
     exists (isProofPR T).comp₂ (.proj 0) (.ofPrim (Formula.negPR.comp₁ (proj 1)))
     constructor
     · intro n p; simp; exact isProofPR_dom
-    · intro p; simp [h.unprovable_iff h', ←provable_iff_isProofPR_eval_pos]
+    · intro p; simp [h.unprovable_iff_disprovable h', ←provable_iff_isProofPR_eval_pos]
   · simp [Consistent] at h'
     rw [IsEnumerable.iff_semi_decidable]
     exists Partrec.loop

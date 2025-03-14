@@ -163,6 +163,7 @@ theorem Subst.zero_cons_shift : #0 ∷ᵥ shift = (id : L.Subst (n + 1) (n + 1))
 /-- `↑ₜt` shifts each variable `i` forward to `i + 1`. -/
 def Term.shift (t : L.Term n) := t[Subst.shift]ₜ
 prefix:max "↑ₜ" => Term.shift
+theorem Term.shift_def : ↑ₜt = t[Subst.shift]ₜ := rfl
 @[simp] theorem Term.shift_var : ↑ₜ(#x : L.Term n) = #x.succ := rfl
 
 /-- `≔ₛ t` is similar to `↦ₛ t`, but only substitutes variable `0` and does not shift others. -/

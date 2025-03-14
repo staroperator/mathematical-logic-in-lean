@@ -53,7 +53,7 @@ theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
 theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) :=
   of_satisfiable.{0} .empty
 
-variable {M : Type u} [L.IsStructure M]
+variable {T : L.Theory} {M : Type u} [L.IsStructure M] [T.IsModel M]
 
 theorem theory.complete : Complete (L.theory M) := by
   intro p
@@ -64,12 +64,20 @@ theorem theory.complete : Complete (L.theory M) := by
 theorem theory.consistent : Consistent (L.theory M) :=
   .of_satisfiable satisfiable
 
-variable {T : L.Theory} [T.IsModel M]
+namespace Theory
 
-theorem Theory.soundness : T ⊢ p → M ⊨ₛ p := by
+theorem soundness : T ⊢ p → M ⊨ₛ p := by
   intro h
   apply Language.soundness h (M := .of M)
   exact IsModel.satisfy_theory
+
+theorem IsModel.of_subtheory (T₂ : L.Theory) [T₁ ⊆ᵀ T₂] [IsModel T₂ M] : IsModel T₁ M where
+  satisfy_theory _ h := T₂.soundness (Subtheory.subtheory _ h)
+
+instance subtheory_theory : T ⊆ᵀ L.theory M :=
+  .of_subset (λ _ h => soundness (.hyp h))
+
+end Theory
 
 theorem Complete.provable_iff_satisfied (h : Complete T) : T ⊢ p ↔ M ⊨ₛ p := by
   by_cases h' : T ⊢ p <;> simp [h']

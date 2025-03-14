@@ -64,7 +64,7 @@ open Proof
 @[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
   pintro; papply iff_congr_exists; pintro; simp; prw [0]; prefl
 
-theorem neg_bdall_iff : ↑ᵀ^[n] LO ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) := by
+theorem neg_bdall_iff : Γ ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) := by
   simp [Order.bdall, Order.bdex]
   prw [neg_forall_iff]
   papply iff_congr_exists
@@ -72,7 +72,7 @@ theorem neg_bdall_iff : ↑ᵀ^[n] LO ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) :=
   prw [neg_imp_iff]
   prefl
 
-theorem neg_bdex_iff : ↑ᵀ^[n] LO ⊢ ~ ∃[≺ t] p ⇔ ∀[≺ t] (~ p) := by
+theorem neg_bdex_iff : Γ ⊢ ~ ∃[≺ t] p ⇔ ∀[≺ t] (~ p) := by
   simp [Order.bdall, Order.bdex]
   prw [neg_exists_iff]
   papply iff_congr_forall
@@ -125,6 +125,9 @@ theorem le_trans : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₃ ⇒ t₁ �
 theorem lt_iff_le_not_ge : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₂ ⪯ t₁ := by
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_lt_iff_le_not_ge)
   simp at this; exact this
+
+theorem le_trans' : ↑ᵀ^[n] PO ⊢ t₂ ⪯ t₃ ⇒ t₁ ⪯ t₂ ⇒ t₁ ⪯ t₃ := by
+  pintros; papply le_trans <;> passumption
 
 theorem le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ t₁ ⪯ t₂ := by
   pintro
@@ -201,6 +204,12 @@ theorem lt_of_le_of_lt : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ≺ t₃ ⇒ t
     prw [←0] at 1
     papply not_ge_of_lt <;> passumption
 
+theorem lt_of_lt_of_le' : ↑ᵀ^[n] PO ⊢ t₂ ≺ t₃ ⇒ t₁ ⪯ t₂ ⇒ t₁ ≺ t₃ := by
+  pintros; papply lt_of_le_of_lt <;> passumption
+
+theorem lt_of_le_of_lt' : ↑ᵀ^[n] PO ⊢ t₂ ⪯ t₃ ⇒ t₁ ≺ t₂ ⇒ t₁ ≺ t₃ := by
+  pintros; papply lt_of_lt_of_le <;> passumption
+
 theorem lt_asymm : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ ~ t₂ ≺ t₁ := by
   pintros
   papply le_of_lt at 1
@@ -232,7 +241,7 @@ theorem le_total (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t�
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_le_total)
   simp at this; exact this
 
-theorem not_le_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ⪯ t₂ ⇔ t₂ ≺ t₁ := by
+theorem neg_le_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ⪯ t₂ ⇔ t₂ ≺ t₁ := by
   papply iff_intro
   · pintro
     prw [PO.lt_iff_le_and_ne]
@@ -245,11 +254,11 @@ theorem not_le_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ⪯ t₂ ⇔ t₂ ≺ t₁ := by
       pexact PO.le_refl
   · pexact PO.not_ge_of_lt
 
-theorem not_lt_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ≺ t₂ ⇔ t₂ ⪯ t₁ := by
+theorem neg_lt_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ≺ t₂ ⇔ t₂ ⪯ t₁ := by
   papply iff_intro
   · pintro
     pcontra
-    prw [not_le_iff] at 0
+    prw [neg_le_iff] at 0
     papplya 1
     passumption
   · pexact PO.not_gt_of_le
@@ -292,6 +301,22 @@ theorem lt_trichotomy (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ≺ t₂ �
     papply or_inr
     papply or_inr
     passumption
+
+theorem ne_iff_lt_or_gt : ↑ᵀ^[n] LO ⊢ ~ t₁ ≐ t₂ ⇔ t₁ ≺ t₂ ⩒ t₂ ≺ t₁ := by
+  papply iff_intro
+  · pintro
+    papply or_elim
+    · pexact lt_trichotomy t₁ t₂
+    · pexact or_inl
+    · papply or_elim'
+      · pintro
+        papplya 1 at 0
+        papply false_elim
+        passumption
+      · pexact or_inr
+  · papply or_elim'
+    · pexact PO.ne_of_lt
+    · prw [Proof.ne_comm]; pexact PO.ne_of_lt
 
 end LO
 
