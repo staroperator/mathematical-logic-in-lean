@@ -105,7 +105,8 @@ theorem covrec_eval {f : Partrec (n + 2)} (hf : ∀ a b, (f (a ∷ᵥ b ∷ᵥ v
   it returns `0` for `Part.none`, and `x + 1` for `Part.some x`.
   
   `bd` is similar to `Nat.Partrec.Code.evaln` in mathlib, although `bd` itself is not primitive recursive
-  (since `bd f` is equivalent to `f + 1` when `f` is primitive recursive). -/
+  (since `bd f` is equivalent to `f + 1` when `f` is primitive recursive).
+  -/
 def bd : Partrec n → Primrec (n + 1)
 | const n => .const (n + 1)
 | succ => Primrec.succ.comp₁ (Primrec.succ.comp₁ (.proj 1))
@@ -331,7 +332,8 @@ theorem dom_iff_exists_bd_pos : (f v).Dom ↔ ∃ k, 0 < bd f (k ∷ᵥ v) := by
 
 /--
   Short-circuit if-then-else.
-  `site f g h` is equivalent to `g` when `f` is positive, and equivalent to `h` when `f` is zero. -/
+  `site f g h` is equivalent to `g` when `f` is positive, and equivalent to `h` when `f` is zero.
+  -/
 def site (f g h : Partrec n) : Partrec n :=
   let k := mu (Primrec.cond.toPart.comp₃ (f.comp (proj ·.succ)) g.bd.toPart h.bd.toPart)
   Primrec.cond.toPart.comp₃ f

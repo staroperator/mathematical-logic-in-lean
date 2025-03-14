@@ -70,7 +70,8 @@ theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (O
 
 /--
   `castAdd' x m` embeds `x : Fin n` in `Fin (m + n)`. This is contrary to `castAdd m i` which embeds
-  into `Fin (n + m)`. -/
+  into `Fin (n + m)`.
+  -/
 def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
 @[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
 @[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl
@@ -195,7 +196,8 @@ def rcons (v : Vec α n) (x : α) : Vec α (n + 1) := Fin.snoc v x
 
 /--
   `append v₁ v₂` adds elements in `v₁ : Vec α n` before elements in `v₂ : Vec α m`, but gets a vector
-  of length `m + n`. This is contrary to `Fin.append` which returns vector of `n + m`. -/
+  of length `m + n`. This is contrary to `Fin.append` which returns vector of `n + m`.
+  -/
 def append (v₁ : Vec α n) (v₂ : Vec α m) : Vec α (m + n) :=
   match n with
   | 0 => v₂

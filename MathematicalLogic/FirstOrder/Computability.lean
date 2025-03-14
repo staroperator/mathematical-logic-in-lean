@@ -870,7 +870,8 @@ variable {L : Language} [∀ n, Encodable (L.Func n)] [∀ n, Encodable (L.Rel n
 
 /--
   `isProofOf(n)` returns `m + 1` if `n` encodes a proof of the formula encoded by `m`; returns `0`
-  if `n` does not encode any proof. -/
+  if `n` does not encode any proof.
+  -/
 def isProofOfPR (T : L.Theory) [Recursive T] : Partrec 1 :=
   Partrec.covrec inner
   where inner :=

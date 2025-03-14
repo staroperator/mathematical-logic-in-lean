@@ -117,7 +117,8 @@ end Term
 
 /--
   `σ : L.Subst n m` substitutes variable `i : Fin n` into a term `σ i : L.Term m`. This is an alias
-  of `Vec (L.Term m) n`. -/
+  of `Vec (L.Term m) n`.
+  -/
 abbrev Subst (L : Language) (n m : ℕ) := Vec (L.Term m) n
 
 def Term.subst : L.Term n → L.Subst n m → L.Term m
@@ -252,7 +253,8 @@ theorem Term.vars_of_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars := by
 /--
   `L.Formula n` is the type of formulas with `n` free variables (indexed by `Fin n`). The only logical
   connectives defined in the inductive type are `⊥`, `⇒` and `∀'`; others are derived (see `PropNotation`
-  and `Formula.ex`). -/
+  and `Formula.ex`).
+  -/
 inductive Formula (L : Language) : ℕ → Type where
 | rel : L.Rel m → (Fin m → L.Term n) → L.Formula n
 | eq : L.Term n → L.Term n → L.Formula n
@@ -487,8 +489,9 @@ prefix:100 "∀* " => Formula.alls
 abbrev FormulaSet (L : Language) (n : ℕ) := Set (L.Formula n)
 
 /--
-  `append Γ p` is the same as `insert p Γ`, but with a nicer notation `Γ,' p` so that
-  when writing proofs, `Γ,' p₁,' ⋯,' pₙ` looks like a list of local hypotheses. -/
+  `append Γ p` is the same as `insert p Γ`, but with a nicer notation `Γ,' p` so that when writing
+  proofs, `Γ,' p₁,' ⋯,' pₙ` looks like a list of local hypotheses.
+  -/
 def FormulaSet.append (Γ : L.FormulaSet n) (p : L.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 

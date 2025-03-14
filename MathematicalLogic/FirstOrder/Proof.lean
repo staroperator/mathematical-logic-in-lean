@@ -1207,7 +1207,8 @@ theorem Consistent.unprovable_of_disprovable : Consistent Γ → Γ ⊢ ~ p → 
 /--
   A theory (formula set in general) is complete if for each `p` it either proves `p` or proves `~ p`.
   
-  Note: it does not assume the theory to be consistent. -/
+  Note: it does not assume the theory to be consistent.
+  -/
 def Complete (Γ : L.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
 
 theorem Complete.disprovable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by

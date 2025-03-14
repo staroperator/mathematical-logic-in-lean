@@ -88,7 +88,8 @@ private inductive order.Rel : ℕ → Type where
 
 /--
   The language of order, with only two binary predicates, `⪯` and `≺`. This is the minimal language
-  (or the free language) satisfying `Order`. -/
+  (or the free language) satisfying `Order`.
+  -/
 def order : Language where
   Func _ := Empty
   Rel := order.Rel
