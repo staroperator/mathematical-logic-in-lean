@@ -144,7 +144,7 @@ def Formula.andPR : Primrec 2 :=
   negPR.comp₁ (impPR.comp₂ (proj 0) (negPR.comp₁ (proj 1)))
 @[simp] theorem Formula.andPR_eval {p q : L.Formula n} :
   andPR [Encodable.encode p, Encodable.encode q]ᵥ = Encodable.encode (p ⩑ q) := by
-  simp [andPR, PropNotation.and]
+  simp [andPR, ClassicalPropNotation.and_def]
 
 def Formula.andNPR : Primrec 2 :=
   ((Formula.negPR.comp₁ zero).prec (Formula.andPR.comp₂

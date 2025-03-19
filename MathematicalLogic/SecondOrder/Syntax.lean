@@ -48,9 +48,7 @@ namespace Formula
 infix:70 " ⬝ʳ " => rconst
 infix:70 " ⬝ʳᵛ " => rvar
 infix:60 (priority := high) " ≐ " => eq
-instance : PropNotation (L.Formula Γ) where
-  false := false
-  imp := imp
+instance : ClassicalPropNotation (L.Formula Γ) := ⟨false, imp⟩
 
 notation "∀' " => all
 notation "∀ᶠ " => allf

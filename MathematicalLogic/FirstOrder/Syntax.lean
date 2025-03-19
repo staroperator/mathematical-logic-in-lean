@@ -251,9 +251,9 @@ theorem Term.vars_of_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars := by
   | func t v ih => rw [Set.iUnion_comm]; simp_rw [ih]
 
 /--
-  `L.Formula n` is the type of formulas with `n` free variables (indexed by `Fin n`). The only logical
-  connectives defined in the inductive type are `⊥`, `⇒` and `∀'`; others are derived (see `PropNotation`
-  and `Formula.ex`).
+  `L.Formula n` is the type of formulas with `n` free variables (indexed by `Fin n`). The only
+  logical connectives defined as inductive type constructors are `⊥`, `⇒` and `∀'`; others are
+  derived (see `ClassicalPropNotation` and `Formula.ex`).
   -/
 inductive Formula (L : Language) : ℕ → Type where
 | rel : L.Rel m → (Fin m → L.Term n) → L.Formula n
@@ -266,7 +266,7 @@ namespace Formula
 
 infix:70 " ⬝ʳ " => rel
 infix:60 " ≐ " => eq
-instance : PropNotation (L.Formula n) := ⟨false, imp⟩
+instance : ClassicalPropNotation (L.Formula n) := ⟨false, imp⟩
 prefix:100 "∀' " => all
 def ex (p : L.Formula (n + 1)) := ~ ∀' (~ p)
 prefix:100 "∃' " => ex

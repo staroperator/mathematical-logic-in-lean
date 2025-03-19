@@ -90,13 +90,13 @@ open ZFSet in
       intro x h₁ y h₂ h
       ext z
       constructor <;> intro h'
-      · refine (h _ ?_).mp h'; exact V_transitive _ h₁ h'
-      · refine (h _ ?_).mpr h'; exact V_transitive _ h₂ h'
+      · refine (h _ ?_).left h'; exact V_transitive _ h₁ h'
+      · refine (h _ ?_).right h'; exact V_transitive _ h₂ h'
     | ax_insert => aesop
     | ax_union =>
       intro x h₁ y _
       constructor
-      · intro ⟨z, h₂, h₃⟩; exists z, h₂, V_transitive _ h₁ h₂
+      · intro z h₂ h₃; exists z, h₂, V_transitive _ h₁ h₂
       · aesop
     | ax_powerset =>
       intro x _ y h₁
@@ -117,7 +117,7 @@ open ZFSet in
         exists y, h₃, V_transitive _ h₁ h₃
         rw [Vec.eq_one λ _ => _]
         simp [g, V_transitive _ h₁ h₃]
-      · intro ⟨z, h₃, h₄, h₅⟩
+      · intro z h₃ h₄ h₅
         rw [Vec.eq_one λ _ => _] at h₅
         simp [←Subtype.val_inj] at h₅
         simp [mem_image]
@@ -152,7 +152,7 @@ instance : Membership M M := ⟨λ y x => M.interpRel .mem [x, y]ᵥ⟩
 
 @[ext] theorem ext : (∀ z, z ∈ x ↔ z ∈ y) → x = y := by
   have := M.satisfy_theory _ .ax_ext x y
-  simp [Vec.eq_two, SetTheory.mem] at this
+  simp [Vec.eq_two, SetTheory.mem, ←iff_iff_implies_and_implies] at this
   exact this
 
 instance : EmptyCollection M := ⟨M.interpFunc .empty []ᵥ⟩
@@ -172,7 +172,7 @@ theorem nonempty_iff : Nonempty x ↔ x ≠ ∅ := by
 instance : Insert M M := ⟨(M.interpFunc .insert [·, ·]ᵥ)⟩
 @[simp] theorem mem_insert : z ∈ insert x y ↔ z ∈ y ∨ z = x := by
   have := M.satisfy_theory _ .ax_insert x y z
-  simp [Vec.eq_two, SetTheory.mem] at this
+  simp [Vec.eq_two, SetTheory.mem, ←iff_iff_implies_and_implies, ←or_iff_not_imp_left] at this
   exact this
 
 instance : Singleton M M := ⟨(insert · ∅)⟩
@@ -182,7 +182,7 @@ instance : Singleton M M := ⟨(insert · ∅)⟩
 def sUnion (x : M) : M := M.interpFunc .union [x]ᵥ
 @[simp] theorem mem_sUnion : y ∈ sUnion x ↔ ∃ z, z ∈ x ∧ y ∈ z := by
   have := M.satisfy_theory _ .ax_union x y
-  simp [Vec.eq_two, Vec.eq_one, SetTheory.sUnion, SetTheory.mem] at this
+  simp [Vec.eq_two, Vec.eq_one, SetTheory.sUnion, SetTheory.mem, -forall_exists_index, ←iff_iff_implies_and_implies] at this
   exact this
 
 instance : Union M := ⟨(sUnion {·, ·})⟩
@@ -211,13 +211,13 @@ theorem ssubset_trans : x ⊂ y → y ⊂ z → x ⊂ z := by
 def power (x : M) : M := M.interpFunc .powerset [x]ᵥ
 @[simp] theorem mem_power : y ∈ power x ↔ y ⊆ x := by
   have := M.satisfy_theory _ .ax_powerset x y
-  simp [Vec.eq_two, Vec.eq_one, SetTheory.powerset, SetTheory.mem] at this
+  simp [Vec.eq_two, Vec.eq_one, SetTheory.powerset, SetTheory.mem, ←iff_iff_implies_and_implies] at this
   exact this
 
 lemma exists_replace (x : M) (f : M → M) :
   ∃ (y : M), ∀ z, z ∈ y ↔ ∃ z' ∈ x, z = f z' := by
   have := M.satisfy_theory _ .ax_replacement x (f ·.head)
-  simp [Vec.head, Vec.eq_two, SetTheory.mem] at this
+  simp [Vec.head, Vec.eq_two, SetTheory.mem, -forall_exists_index, ←iff_iff_implies_and_implies] at this
   exact this
 
 noncomputable def replace (x : M) (f : ∀ y ∈ x, M) : M :=

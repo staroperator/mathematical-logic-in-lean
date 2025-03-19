@@ -789,7 +789,7 @@ theorem le_mul_of_le_left : ↑ᵀ^[n] PA ⊢ 0 ≺ t ⇒ t₁ ⪯ t₂ ⇒ t₁
   pintros 2
   prw [←one_mul t₁]
   papply mul_le_mul
-  · prw [succ_le_iff]; passumption
+  · prw [one_le_iff_zero_lt]; passumption
   · passumption
 
 theorem le_mul_of_le_right : ↑ᵀ^[n] PA ⊢ 0 ≺ t ⇒ t₁ ⪯ t₂ ⇒ t₁ ⪯ t₂ * t := by
@@ -797,7 +797,7 @@ theorem le_mul_of_le_right : ↑ᵀ^[n] PA ⊢ 0 ≺ t ⇒ t₁ ⪯ t₂ ⇒ t�
   prw [←mul_one t₁]
   papply mul_le_mul
   · passumption
-  · prw [succ_le_iff]; passumption
+  · prw [one_le_iff_zero_lt]; passumption
 
 theorem le_mul_left : ↑ᵀ^[n] PA ⊢ 0 ≺ t₂ ⇒ t₁ ⪯ t₂ * t₁ := by
   pintro

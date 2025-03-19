@@ -79,8 +79,8 @@ noncomputable def 𝓡 : Real.Model where
     | ax_left_distrib => apply left_distrib
     | ax_le_antisymm => apply le_antisymm
     | ax_le_trans => apply le_trans
-    | ax_le_total => apply le_total
-    | ax_mul_le_mul => intro a b c; apply mul_le_mul_of_nonneg_right
+    | ax_le_total => intro _ _; apply le_of_lt
+    | ax_mul_le_mul => intro _ _ _; apply mul_le_mul_of_nonneg_right
     | ax_exists_lub =>
       intro R a h₁ b h₂
       exists sSup (R [·]ᵥ)
@@ -181,7 +181,7 @@ noncomputable instance : LinearOrder M where
     simp [OrderedField.le] at this; exact this
   le_total a b := by
     have := M.satisfy_theory _ .ax_le_total a b
-    simp [OrderedField.le] at this; exact this
+    simp [OrderedField.le, ←or_iff_not_imp_left] at this; exact this
   decidableLE := _
 
 theorem add_le_add_right (a b c : M) : a ≤ b → a + c ≤ b + c := by

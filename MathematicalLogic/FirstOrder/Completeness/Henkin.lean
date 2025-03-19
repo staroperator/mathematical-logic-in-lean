@@ -46,7 +46,7 @@ def Formula.consts : L.Formula n → Set L.Const
 | ∀' p => p.consts
 
 theorem Formula.consts_neg {p : L.Formula n} : (~ p).consts = p.consts := by
-  unfold PropNotation.neg; simp [Formula.consts]
+  simp [ClassicalPropNotation.neg_def, Formula.consts]
 
 theorem Formula.consts_ex : (∃' p).consts = p.consts := by
   simp [Formula.ex, Formula.consts_neg, Formula.consts]
@@ -180,8 +180,8 @@ noncomputable def Formula.invConst (k : ℕ) : L.Formula (n + k) → L.Const →
 
 theorem Formula.invConst_andN {v : Vec (L.Formula (n + k)) m} : invConst k (⋀ i, v i) c = ⋀ i, invConst k (v i) c := by
   induction m with simp [andN]
-  | zero => simp [Top.top]
-  | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
+  | zero => simp [ClassicalPropNotation.true_def]
+  | succ m ih => simp [ClassicalPropNotation.and_def, Vec.head, Vec.tail, Function.comp_def, ih]
 
 theorem Formula.subst_singleAt_invConst {p : L.Formula (n + k + 1)} (h : c ∉ p.consts) :
   (p[k ↦ₛ c]ₚ).invConst k c = p := by
@@ -338,8 +338,8 @@ def invFormula : (k : ℕ) → (L.henkinStep n).Formula (m + k) → L.Formula (m
 theorem invFormula_andN {v : Vec ((L.henkinStep n).Formula (m + k)) l} :
   invFormula k (⋀ i, v i) = ⋀ i, invFormula k (v i) := by
   induction l with simp [Formula.andN]
-  | zero => simp [Top.top]
-  | succ m ih => simp [PropNotation.and, Vec.head, Vec.tail, Function.comp_def, ih]
+  | zero => simp [ClassicalPropNotation.true_def]
+  | succ m ih => simp [ClassicalPropNotation.and_def, Vec.head, Vec.tail, Function.comp_def, ih]
 
 theorem invFormula_homFormula : invFormula k (hom.onFormula p : (L.henkinStep n).Formula _) = p[Subst.shiftAt k]ₚ := by
   cases p with simp [Hom.onFormula, invFormula]

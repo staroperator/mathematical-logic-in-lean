@@ -53,9 +53,9 @@ notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
 @[simp] theorem satisfy_imp : M ⊨[ρ] p ⇒ q ↔ M ⊨[ρ] p → M ⊨[ρ] q := by rfl
 @[simp] theorem satisfy_true : M ⊨[ρ] (⊤ : L.Formula n) := by tauto
 @[simp] theorem satisfy_neg : M ⊨[ρ] ~ p ↔ ¬ M ⊨[ρ] p := by rfl
-@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by simp [PropNotation.and]
-@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by simp [PropNotation.or]; tauto
-@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by simp [PropNotation.iff]; tauto
+@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by simp [ClassicalPropNotation.and_def]
+@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by simp [ClassicalPropNotation.or_def]; tauto
+@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by simp [ClassicalPropNotation.iff_def]; tauto
 @[simp] theorem satisfy_all {p : L.Formula (n + 1)} : M ⊨[ρ] ∀' p ↔ ∀ u, M ⊨[u ∷ᵥ ρ] p := by rfl
 @[simp] theorem satisfy_ex {p : L.Formula (n + 1)} : M ⊨[ρ] ∃' p ↔ ∃ u, M ⊨[u ∷ᵥ ρ] p := by simp [Formula.ex]
 

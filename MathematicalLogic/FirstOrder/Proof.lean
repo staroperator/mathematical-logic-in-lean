@@ -393,7 +393,7 @@ private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × 
       if d == some newMVarIds.length then
         throwError "failed to apply {ftype} at {goal} with depth {newMVarIds.length}"
       MonadBacktrack.restoreState s
-    if let some (_, _, p, q) := (← whnf goalFormula).app4? ``Formula.imp then
+    if let some (_, _, p, q) := (← withAtLeastTransparency .instances (whnf goalFormula)).app4? ``Formula.imp then
       let mvarId ← mkFreshMVarId
       newMVarIds := newMVarIds ++ [mvarId]
       let mvar ← mkFreshExprMVarWithId mvarId (some (mkApp4 (.const ``Proof []) L n Δ p))
@@ -827,10 +827,8 @@ theorem neg_exists_neg_iff : Γ ⊢ ~ ∃' (~ p) ⇔ ∀' p :=
 
 theorem exists_intro (t) : Γ ⊢ p[↦ₛ t]ₚ ⇒ ∃' p := by
   pintros
-  suffices _ ⊢ (~ p)[↦ₛ t]ₚ by
-    papply this
-    passumption
-  papply forall_elim
+  papply forall_elim t at 0
+  papplya 0
   passumption
 
 theorem exists_elim : Γ ⊢ ∃' p ⇒ (∀' (p ⇒ ↑ₚq)) ⇒ q := by
@@ -1069,14 +1067,14 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : Tactic
     if debug? then logInfo m!"prw: try to solve {(← goal.withContext (instantiateMVars (← goal.getType)))}"
     currentGoals := currentGoals'
     try
-      let newGoals' ← withReducibleAndInstances (evalTacticAt tac goal)
+      let newGoals' ← withReducible (evalTacticAt tac goal)
       newGoals := newGoals ++ newGoals'
       success := true
     catch _ =>
       for i in [:prwThms.size] do
         let thm := prwThms[prwThms.size-1-i]!
         try
-          currentGoals := currentGoals ++ (← withReducibleAndInstances (evalTacticAt (←`(tactic| papply $(mkIdent thm))) goal))
+          currentGoals := currentGoals ++ (← withReducible (evalTacticAt (←`(tactic| papply $(mkIdent thm))) goal))
           if debug? then logInfo m!"prw: {thm} succeed"
           break
         catch _ =>
