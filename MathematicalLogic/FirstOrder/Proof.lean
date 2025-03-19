@@ -508,25 +508,25 @@ syntax multilineProof := multilineProofTheory multilineProofHyp* ppDedent(ppLine
 
 @[delab app.FirstOrder.Language.Proof] def delabProofGoal : Delab := do
   let expr ← instantiateMVars <| ← getExpr
-  let mut some (_, _, Γ, p) := expr.app4? ``Proof | failure
-  let defaultDelab ← `($(← delab Γ) ⊢ $(← delab p))
-  let defaultDelabStr := defaultDelab.raw.prettyPrint.pretty
-  -- display as one-line if fitted
-  if defaultDelabStr.length <= 100 then
+  let mut some (_, _, Γ, _) := expr.app4? ``Proof | failure
+  let stxΓ ← withNaryArg 2 delab
+  let stxp ← withNaryArg 3 delab
+  let defaultDelab ← `($stxΓ ⊢ $stxp)
+  -- One line display if fits within 80 characters
+  if defaultDelab.raw.prettyPrint.pretty.length <= 80 then
     return defaultDelab
   let mut hyps : TSyntaxArray ``multilineProofHyp := #[]
   repeat
-    if let some (_, _, Δ, q) := Γ.app4? ``FormulaSet.append then
-      let q' ← delab q
-      let q' ← `(multilineProofHyp| , [$(mkNatLit hyps.size)] $q':term)
-      hyps := hyps.push q'
+    if let some (_, _, Δ, _) := Γ.app4? ``FormulaSet.append then
+      let stxq ← Nat.iterate (withNaryArg 2) (hyps.size + 1) (withNaryArg 3 delab)
+      let stxq ← `(multilineProofHyp| , [$(mkNatLit hyps.size)] $stxq:term)
+      hyps := hyps.push stxq
       Γ := Δ
     else
       break
-  let Γ' ← delab Γ
-  let Γ' ← `(multilineProofTheory| $Γ':term)
-  let p' ← delab p
-  return ⟨← `(multilineProof| $Γ':multilineProofTheory $hyps.reverse* ⊢ $p':term)⟩
+  let stxΓ ← Nat.iterate (withNaryArg 2) (hyps.size + 1) delab
+  let stxΓ ← `(multilineProofTheory| $stxΓ:term)
+  return ⟨← `(multilineProof| $stxΓ:multilineProofTheory $hyps.reverse* ⊢ $stxp:term)⟩
 
 end Tactic
 
@@ -1084,30 +1084,39 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : Tactic
   if !success then throwError m!"prw failed to rewrite {rule} on goal {goal}"
   return newGoals
 
-def runPrwAtMainGoal (rules : TSyntaxArray ``prwRule) (debug? : Bool) : TacticM Unit := do
-  for rule in rules do
-    let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| papply iff_mpr with 2)) (← getMainGoal) | throwError "prw failed"
-    let newGoals ← prwSolve rule rwGoal debug?
-    replaceMainGoal (mainGoal :: newGoals)
-    if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
+def runPrwAtMainGoal (rules : TSepArray ``prwRule ",") (debug? : Bool) : TacticM Unit := do
+  for i in [:rules.getElems.size] do
+    let rule := rules.getElems[i]!
+    let sep := rules.elemsAndSeps.getD (i * 2 + 1) Syntax.missing
+    withTacticInfoContext (mkNullNode #[rule, sep]) do
+      let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| papply iff_mpr with 2)) (← getMainGoal) | throwError "prw failed"
+      let newGoals ← prwSolve rule rwGoal debug?
+      replaceMainGoal (mainGoal :: newGoals)
+      if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
-def runPrwAtLocalHyp (rules : TSyntaxArray ``prwRule) (target : TSyntax `ident) (debug? : Bool) : TacticM Unit := do
-  for rule in rules do
-    let [mainGoal, rwGoal] ← evalTacticAt (← `(tactic| papply iff_mp at $target with 2)) (← getMainGoal) | throwError "prw failed"
-    let newGoals ← prwSolve rule rwGoal debug?
-    replaceMainGoal (mainGoal :: newGoals)
-    if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
+def runPrwAtLocalHyp (rules : TSepArray ``prwRule ",") (target : TSyntax `ident) (debug? : Bool) : TacticM Unit := do
+  for i in [:rules.getElems.size] do
+    let rule := rules.getElems[i]!
+    let sep := rules.elemsAndSeps.getD (i * 2 + 1) Syntax.missing
+    withTacticInfoContext (mkNullNode #[rule, sep]) do
+      let [mainGoal, rwGoal] ← evalTacticAt (← `(tactic| papply iff_mp at $target with 2)) (← getMainGoal) | throwError "prw failed"
+      let newGoals ← prwSolve rule rwGoal debug?
+      replaceMainGoal (mainGoal :: newGoals)
+      if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
-def runPrwAtAssumption (rules : TSyntaxArray ``prwRule) (target : ℕ) (debug? : Bool) : TacticM Unit := do
-  for rule in rules do
-    let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| eapply cut_append)) (← getMainGoal) | throwError "prw failed"
-    let [rwGoal] ← evalTacticAt
-      (← `(tactic| papply iff_mp with 2; (on_goal 2 => passumption $(mkNatLit target)))) rwGoal
-      | throwError "prw failed"
-    let newGoals ← prwSolve rule rwGoal debug?
-    let mainGoal :: _ ← evalTacticAt (← `(tactic| (pswap 0 $(mkNatLit (target+1)); pclear 0))) mainGoal | throwError "prw failed"
-    replaceMainGoal (mainGoal :: newGoals)
-    if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
+def runPrwAtAssumption (rules : TSepArray ``prwRule ",") (target : ℕ) (debug? : Bool) : TacticM Unit := do
+  for i in [:rules.getElems.size] do
+    let rule := rules.getElems[i]!
+    let sep := rules.elemsAndSeps.getD (i * 2 + 1) Syntax.missing
+    withTacticInfoContext (mkNullNode #[rule, sep]) do
+      let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| eapply cut_append)) (← getMainGoal) | throwError "prw failed"
+      let [rwGoal] ← evalTacticAt
+        (← `(tactic| papply iff_mp with 2; (on_goal 2 => passumption $(mkNatLit target)))) rwGoal
+        | throwError "prw failed"
+      let newGoals ← prwSolve rule rwGoal debug?
+      let mainGoal :: _ ← evalTacticAt (← `(tactic| (pswap 0 $(mkNatLit (target+1)); pclear 0))) mainGoal | throwError "prw failed"
+      replaceMainGoal (mainGoal :: newGoals)
+      if debug? then logInfo m!"prw: current status {(← getMainGoal)}"
 
 /--
   `prw [e₁, ⋯, eₙ]` rewrites a proof goal `Γ ⊢ p` using given rules. A rule `e` can be either proof
@@ -1123,12 +1132,12 @@ def runPrwAtAssumption (rules : TSyntaxArray ``prwRule) (target : ℕ) (debug? :
 syntax ("prw" <|> "prw_debug") "[" withoutPosition(prwRule,*,?) "]" (location)? : tactic
 
 elab_rules : tactic
-| `(tactic| prw [$rules,*]) => runPrwAtMainGoal rules.getElems false
-| `(tactic| prw_debug [$rules,*]) => runPrwAtMainGoal rules.getElems true
-| `(tactic| prw [$rules,*] at $h:ident) => runPrwAtLocalHyp rules.getElems h false
-| `(tactic| prw_debug [$rules,*] at $h:ident) => runPrwAtLocalHyp rules.getElems h true
-| `(tactic| prw [$rules,*] at $n:num) => runPrwAtAssumption rules.getElems n.getNat false
-| `(tactic| prw_debug [$rules,*] at $n:num) => runPrwAtAssumption rules.getElems n.getNat true
+| `(tactic| prw [$rules,*]) => runPrwAtMainGoal rules false
+| `(tactic| prw_debug [$rules,*]) => runPrwAtMainGoal rules true
+| `(tactic| prw [$rules,*] at $h:ident) => runPrwAtLocalHyp rules h false
+| `(tactic| prw_debug [$rules,*] at $h:ident) => runPrwAtLocalHyp rules h true
+| `(tactic| prw [$rules,*] at $n:num) => runPrwAtAssumption rules n.getNat false
+| `(tactic| prw_debug [$rules,*] at $n:num) => runPrwAtAssumption rules n.getNat true
 
 end Tactic
 
