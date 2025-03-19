@@ -146,7 +146,7 @@ macro_rules
   `Γ` is satisfiable if there is a structure and an assignment that satisfy all formulas in `Γ`.
   The assignment is not needed for `Theory` (see `Theory.satisfiable_iff`).
   -/
-def Satisfiable (Γ : L.FormulaSet n) :=
+@[pp_with_univ] def Satisfiable (Γ : L.FormulaSet n) :=
   ∃ (𝓢 : Structure.{u} L), ∃ ρ, ∀ p ∈ Γ, 𝓢 ⊨[ρ] p
 
 theorem Satisfiable.weaken :
@@ -199,11 +199,13 @@ end Theory
 def Satisfiable.of_model {T : L.Theory} (M : Type u) [L.IsStructure M] [T.IsModel M] : Satisfiable.{u} T :=
   Theory.satisfiable_iff.mpr ⟨.of M⟩
 
-/-- The theory of a structure `M` contains all sentences satisfied by `M` as axioms. -/
+/-- The theory of a structure `M` includes all the sentences satisfied by `M` as its axioms. -/
 def theory (L : Language) (M : Type u) [L.IsStructure M] : L.Theory := { p | M ⊨ₛ p }
 
 instance : (L.theory M).IsModel M where
   satisfy_theory _ h := h
+
+@[simp] theorem mem_theory {p : L.Sentence} : p ∈ L.theory M ↔ M ⊨ₛ p := by rfl
 
 theorem theory.satisfiable : Satisfiable.{u} (L.theory M) := .of_model M
 
@@ -254,7 +256,7 @@ def ElementaryEquivalent (M : L.Structure) (N : L.Structure) :=
 infixr:25 " ≃ᴱ " => ElementaryEquivalent
 
 theorem ElementaryEquivalent.iff_theory_eq : M ≃ᴱ N ↔ L.theory M = L.theory N := by
-  simp [ElementaryEquivalent, Set.ext_iff, theory]
+  simp [ElementaryEquivalent, Set.ext_iff]
 
 structure Embedding (M : L.Structure) (N : L.Structure) extends M ↪ N where
   on_func {n} : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)

@@ -94,9 +94,20 @@ def order : Language where
   Func _ := Empty
   Rel := order.Rel
 
+namespace order
+
 instance : Order order where
   leDef := .le ⬝ʳ [#0, #1]ᵥ
   ltDef := .lt ⬝ʳ [#0, #1]ᵥ
+
+open Std in
+instance : Repr order where
+  reprFunc := nofun
+  reprRel
+  | .le, prec, v => (if prec ≥ 60 then Format.paren else id) (v 0 60 ++ " ≤ " ++ v 1 60)
+  | .lt, prec, v => (if prec ≥ 60 then Format.paren else id) (v 0 60 ++ " < " ++ v 1 60)
+
+end order
 
 namespace Theory
 

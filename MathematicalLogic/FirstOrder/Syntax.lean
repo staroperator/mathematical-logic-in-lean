@@ -552,7 +552,7 @@ instance : _root_.Repr (L.Term n) := ⟨reprTerm⟩
 
 private def reprFormula : L.Formula n → ℕ → Format
 | r ⬝ʳ v, prec => Repr.reprRel r prec λ i => reprTerm (v i)
-| t₁ ≐ t₂, prec => (if prec ≥ 25 then Format.paren else id) (reprTerm t₁ 25 ++ " = " ++ reprTerm t₂ 25)
+| t₁ ≐ t₂, prec => (if prec ≥ 60 then Format.paren else id) (reprTerm t₁ 60 ++ " = " ++ reprTerm t₂ 60)
 | (∀' (p ⇒ ⊥)) ⇒ ⊥, prec => (if prec ≥ 100 then Format.paren else id) ("∃ " ++ reprFormula p 100)
 | (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec => (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ∧ " ++ reprFormula q 57)
 | (p ⇒ q) ⇒ ⊥, prec => (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ∨ " ++ reprFormula q 56)

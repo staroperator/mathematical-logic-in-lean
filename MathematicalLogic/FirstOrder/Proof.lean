@@ -482,6 +482,52 @@ macro_rules
 /-- Close the goal with given proof term. -/
 macro "pexact" t:(ppSpace colGt term) : tactic => `(tactic| papply $t with 0)
 
+/--
+  If `k`-th assumption is `p₁ ⇒ p₂ ⇒ ⋯ ⇒ pₙ ⇒ q`, `pspecialize k` replace it with `q` and generate
+  proof goals for each `pᵢ` (goals for `pᵢ` will occur before the original goal).
+  `pspecialize k with d` controls the number of `Proof.mp`. -/
+syntax "pspecialize" ppSpace colGt num ("with" num)? : tactic
+
+macro_rules
+| `(tactic| pspecialize $n with $d) => `(tactic| (
+  eapply cut_append; (on_goal 2 => pswap 0 $(mkNatLit (n.getNat+1)); pclear 0); on_goal 1 => papplya $n with $d))
+| `(tactic| pspecialize $n) => `(tactic| (
+  eapply cut_append
+  on_goal 1 => papplya $n with 1
+  repeat on_goal -1 =>
+    eapply cut_append
+    on_goal 2 => pswap 0 1; pclear 0
+    on_goal 1 => papplya 0 with 1; pclear 0
+  on_goal -1 => pswap 0 $(mkNatLit (n.getNat + 1)); pclear 0))
+
+open Lean.PrettyPrinter Lean.PrettyPrinter.Delaborator Lean.PrettyPrinter.Delaborator.SubExpr
+
+syntax multilineProofTheory := ppDedent(ppLine term)
+syntax multilineProofHyp := "," ppDedent(ppLine "[" num "] " term)
+syntax multilineProof := multilineProofTheory multilineProofHyp* ppDedent(ppLine "⊢ " term)
+
+@[delab app.FirstOrder.Language.Proof] def delabProofGoal : Delab := do
+  let expr ← instantiateMVars <| ← getExpr
+  let mut some (_, _, Γ, p) := expr.app4? ``Proof | failure
+  let defaultDelab ← `($(← delab Γ) ⊢ $(← delab p))
+  let defaultDelabStr := defaultDelab.raw.prettyPrint.pretty
+  -- display as one-line if fitted
+  if defaultDelabStr.length <= 100 then
+    return defaultDelab
+  let mut hyps : TSyntaxArray ``multilineProofHyp := #[]
+  repeat
+    if let some (_, _, Δ, q) := Γ.app4? ``FormulaSet.append then
+      let q' ← delab q
+      let q' ← `(multilineProofHyp| , [$(mkNatLit hyps.size)] $q':term)
+      hyps := hyps.push q'
+      Γ := Δ
+    else
+      break
+  let Γ' ← delab Γ
+  let Γ' ← `(multilineProofTheory| $Γ':term)
+  let p' ← delab p
+  return ⟨← `(multilineProof| $Γ':multilineProofTheory $hyps.reverse* ⊢ $p':term)⟩
+
 end Tactic
 
 theorem composition : Γ ⊢ (p ⇒ q) ⇒ (q ⇒ r) ⇒ p ⇒ r := by
@@ -708,6 +754,11 @@ theorem neg_imp_iff : Γ ⊢ ~ (p ⇒ q) ⇔ p ⩑ ~ q := by
     · papply iff_congr_and
       · pexact double_neg_iff
       · pexact iff_refl
+
+theorem imp_contra_iff : Γ ⊢ (~ p ⇒ ~ q) ⇔ (q ⇒ p) := by
+  papply iff_intro
+  · pexact imp_contra
+  · pintros; papplya 1; papplya 2; passumption
 
 theorem neg_andN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋀ i, v i) ⇔ ⋁ i, ~ v i := by
   induction m with simp [Formula.orN, Formula.andN]
@@ -1153,10 +1204,17 @@ theorem iff_congr_foralls : T ⊢ ∀* (p ⇔ q) ⇒ ∀* p ⇔ ∀* q := by
   · papply iff_mpr; rw [generalization_alls]; passumption
 
 /-- The deductive closure of a theory. -/
-abbrev theorems (T : L.Theory) : L.Theory := { p | T ⊢ p }
+def theorems (T : L.Theory) : L.Theory := { p | T ⊢ p }
 
-/-- A theory is decidable if its provability is decidable. -/
-abbrev Decidable (T : L.Theory) := DecidablePred T.theorems
+@[simp] theorem mem_theorems : p ∈ T.theorems ↔ T ⊢ p := by rfl
+
+theorem subset_theorems : T ⊆ T.theorems := λ _ h => hyp h
+
+theorem theorems_subset_theorems_iff_subtheory {T₁ T₂ : L.Theory} : T₁.theorems ⊆ T₂.theorems ↔ T₁ ⊆ᵀ T₂ :=
+  ⟨λ h => ⟨λ _ h' => h (hyp h')⟩, λ h _ h' => h'.cut h⟩
+
+theorem theorems_idem : T.theorems.theorems = T.theorems :=
+  subset_theorems.antisymm' (theorems_subset_theorems_iff_subtheory.mpr ⟨λ _ h => h⟩)
 
 end Theory
 

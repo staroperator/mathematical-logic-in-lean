@@ -11,7 +11,7 @@ This file formalizes the soundness theorem of first-order logic.
 
 namespace FirstOrder.Language
 
-variable {L : Language}
+variable {L : Language} {M : Type u} [IsStructure L M]
 
 theorem Entails.ax : p ∈ L.Axiom → Γ ⊨ p := by
   intro h M ρ _
@@ -53,31 +53,18 @@ theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
 theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) :=
   of_satisfiable.{0} .empty
 
-variable {T : L.Theory} {M : Type u} [L.IsStructure M] [T.IsModel M]
+variable {T : L.Theory} [T.IsModel M]
 
-theorem theory.complete : Complete (L.theory M) := by
-  intro p
-  by_cases h : M ⊨ₛ p
-  · exact Or.inl (.hyp h)
-  · exact Or.inr (.hyp h)
-
-theorem theory.consistent : Consistent (L.theory M) :=
-  .of_satisfiable satisfiable
-
-namespace Theory
-
-theorem soundness : T ⊢ p → M ⊨ₛ p := by
+theorem Theory.soundness : T ⊢ p → M ⊨ₛ p := by
   intro h
   apply Language.soundness h (M := .of M)
   exact IsModel.satisfy_theory
 
-theorem IsModel.of_subtheory (T₂ : L.Theory) [T₁ ⊆ᵀ T₂] [IsModel T₂ M] : IsModel T₁ M where
+theorem Theory.IsModel.of_subtheory (T₂ : L.Theory) [T₁ ⊆ᵀ T₂] [IsModel T₂ M] : IsModel T₁ M where
   satisfy_theory _ h := T₂.soundness (Subtheory.subtheory _ h)
 
-instance subtheory_theory : T ⊆ᵀ L.theory M :=
+instance Theory.subtheory_theory : T ⊆ᵀ L.theory M :=
   .of_subset (λ _ h => soundness (.hyp h))
-
-end Theory
 
 theorem Complete.provable_iff_satisfied (h : Complete T) : T ⊢ p ↔ M ⊨ₛ p := by
   by_cases h' : T ⊢ p <;> simp [h']
@@ -87,8 +74,20 @@ theorem Complete.provable_iff_satisfied (h : Complete T) : T ⊢ p ↔ M ⊨ₛ 
     | inr h => apply Theory.soundness h
 
 theorem Complete.eq_theory (h : Complete T) : T.theorems = L.theory M := by
-  ext p
-  simp [theory]
+  ext p; simp
   exact h.provable_iff_satisfied
+
+theorem theory.consistent : Consistent (L.theory M) :=
+  .of_satisfiable satisfiable
+
+theorem theory.complete : Complete (L.theory M) := by
+  intro p
+  by_cases h : M ⊨ₛ p
+  · exact Or.inl (.hyp h)
+  · exact Or.inr (.hyp h)
+
+theorem theory.theorems_eq_self : (L.theory M).theorems = L.theory M := by
+  apply Theory.subset_theorems.antisymm'
+  intro p h; simp [complete.provable_iff_satisfied (M := M)] at h; exact h
 
 end FirstOrder.Language

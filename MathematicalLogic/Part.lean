@@ -132,6 +132,9 @@ theorem zero_or_pos_of_dom (h : a.Dom) : 0 < a ∨ 0 ∈ a := by
   rw [←some_get h]; simp [-some_get]
   rcases Nat.eq_zero_or_pos (a.get h) with h' | h' <;> simp [h']
 
+theorem not_pos_iff_of_dom (h : a.Dom) : ¬ 0 < a ↔ 0 ∈ a := by
+  rw [←some_get h]; simp [-some_get, eq_comm (a := 0)]
+
 end
 
 def find_aux (f : ℕ →. ℕ)
