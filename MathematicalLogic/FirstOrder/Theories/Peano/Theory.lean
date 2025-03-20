@@ -97,7 +97,7 @@ instance : Repr peano where
   | .succ, prec, v => Repr.addAppParen ("S " ++ v 0 argPrec) prec
   | .add, prec, v => (if prec ≥ 65 then Format.paren else id) (v 0 65 ++ " + " ++ v 1 65)
   | .mul, prec, v => (if prec ≥ 70 then Format.paren else id) (v 0 70 ++ " * " ++ v 1 70)
-  reprRel r := nomatch r
+  reprRel := nofun
 
 end peano
 

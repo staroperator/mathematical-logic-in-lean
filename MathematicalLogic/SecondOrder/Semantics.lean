@@ -1,80 +1,101 @@
 import MathematicalLogic.SecondOrder.Syntax
 
-universe u
+universe u v
 
 namespace SecondOrder.Language
+
+class IsStructure (L : Language) (M : Type u) where
+  interpFunc : L.Func n → Vec M n → M
+  interpRel : L.Rel n → Vec M n → Prop
+
+variable {L : Language}
+
+def interpTy (M : Type u) : Ty → Type u
+| .var => M
+| .func n => Vec M n → M
+| .rel n => Vec M n → Prop
+
+def Assignment (M : Type u) (l : List Ty) := ⦃T : Ty⦄ → l.Fin T → interpTy M T
+
+namespace Assignment
+
+def nil : Assignment M [] := nofun
+notation "[]ₐ" => Assignment.nil
+
+def cons (u : interpTy M T) (ρ : Assignment M l) : Assignment M (T :: l)
+| _, .fz => u
+| _, .fs x => ρ x
+infixr:80 " ∷ₐ " => Assignment.cons
+
+@[simp] theorem cons_zero : (u ∷ₐ ρ) 0 = u := rfl
+@[simp] theorem cons_one {ρ : Assignment M (T :: l)} : (u ∷ₐ ρ) 1 = (ρ 0 : interpTy M T) := rfl
+@[simp] theorem cons_two {ρ : Assignment M (T₁ :: T₂ :: l)} : (u ∷ₐ ρ) 2 = (ρ 1 : interpTy M T₂) := rfl
+@[simp] theorem cons_three {ρ : Assignment M (T₁ :: T₂ :: T₃ :: l)} : (u ∷ₐ ρ) 3 = (ρ 2 : interpTy M T₃) := rfl
+@[simp] theorem cons_four {ρ : Assignment M (T₁ :: T₂ :: T₃ :: T₄ :: l)} : (u ∷ₐ ρ) 4 = (ρ 3 : interpTy M T₄) := rfl
+
+end Assignment
+
+open IsStructure
+
+variable {M : Type u} [IsStructure L M] {l} {ρ : Assignment M l} {p q : L.Formula l}
+
+def interp (M : Type u) [L.IsStructure M] (ρ : Assignment M l) : L.Term l → M
+| #x => ρ x
+| f ⬝ᶠ v => interpFunc f λ i => interp M ρ (v i)
+| f ⬝ᶠᵛ v => ρ f λ i => interp M ρ (v i)
+notation:80 "⟦ " t " ⟧ₜ " M ", " ρ:80 => interp M ρ t
+
+@[simp] theorem interp_var : ⟦ (#x : L.Term l) ⟧ₜ M, ρ = ρ x := rfl
+@[simp] theorem interp_fconst : ⟦ (f ⬝ᶠ v : L.Term l) ⟧ₜ M, ρ = interpFunc f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
+@[simp] theorem interp_fvar : ⟦ (f ⬝ᶠᵛ v : L.Term l) ⟧ₜ M, ρ = ρ f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
+
+def satisfy (M : Type u) [L.IsStructure M] : {l : List Ty} → L.Formula l → Assignment M l → Prop
+| _, r ⬝ʳ v, ρ => interpRel r λ i => ⟦ v i ⟧ₜ M, ρ
+| _, r ⬝ʳᵛ v, ρ => ρ r λ i => ⟦ v i ⟧ₜ M, ρ
+| _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ
+| _, ⊥, _ => False
+| _, p ⇒ q, ρ => satisfy M p ρ → satisfy M q ρ
+| _, ∀' p, ρ => ∀ (u : M), satisfy M p (u ∷ₐ ρ)
+| _, ∀ᶠ[n] p, ρ => ∀ (f : Vec M n → M), satisfy M p (f ∷ₐ ρ)
+| _, ∀ʳ[n] p, ρ => ∀ (r : Vec M n → Prop), satisfy M p (r ∷ₐ ρ)
+notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
+
+@[simp] theorem satisfy_rconst : M ⊨[ρ] (r ⬝ʳ v : L.Formula l) ↔ interpRel r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
+@[simp] theorem satisfy_rvar : M ⊨[ρ] (r ⬝ʳᵛ v : L.Formula l) ↔ ρ r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
+@[simp] theorem satisfy_eq : M ⊨[ρ] (t₁ ≐ t₂ : L.Formula l) ↔ ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ := by rfl
+@[simp] theorem satisfy_false : ¬ M ⊨[ρ] (⊥ : L.Formula l) := by tauto
+@[simp] theorem satisfy_imp : M ⊨[ρ] p ⇒ q ↔ M ⊨[ρ] p → M ⊨[ρ] q := by rfl
+@[simp] theorem satisfy_true : M ⊨[ρ] (⊤ : L.Formula l) := by tauto
+@[simp] theorem satisfy_neg : M ⊨[ρ] ~ p ↔ ¬ M ⊨[ρ] p := by rfl
+@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by simp [ClassicalPropNotation.and_def]
+@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by simp [ClassicalPropNotation.or_def]; tauto
+@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by simp [ClassicalPropNotation.iff_def]; tauto
+@[simp] theorem satisfy_all {p : L.Formula (_ :: l)} : M ⊨[ρ] ∀' p ↔ ∀ (u : M), M ⊨[u ∷ₐ ρ] p := by rfl
+@[simp] theorem satisfy_allf {p : L.Formula (_ :: l)} : M ⊨[ρ] ∀ᶠ[n] p ↔ ∀ (f : Vec M n → M), M ⊨[f ∷ₐ ρ] p := by rfl
+@[simp] theorem satisfy_allr {p : L.Formula (_ :: l)} : M ⊨[ρ] ∀ʳ[n] p ↔ ∀ (r : Vec M n → Prop), M ⊨[r ∷ₐ ρ] p := by rfl
+@[simp] theorem satisfy_ex {p : L.Formula (_ :: l)} : M ⊨[ρ] ∃' p ↔ ∃ (u : M), M ⊨[u ∷ₐ ρ] p := by simp [Formula.ex]
+@[simp] theorem satisfy_exf {p : L.Formula (_ :: l)} : M ⊨[ρ] ∃ᶠ[n] p ↔ ∃ (f : Vec M n → M), M ⊨[f ∷ₐ ρ] p := by simp [Formula.exf]
+@[simp] theorem satisfy_exr {p : L.Formula (_ :: l)} : M ⊨[ρ] ∃ʳ[n] p ↔ ∃ (r : Vec M n → Prop), M ⊨[r ∷ₐ ρ] p := by simp [Formula.exr]
+
+abbrev satisfys (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ₐ] p
+infix:50 " ⊨ₛ " => satisfys
 
 structure Structure (L : Language) where
   Dom : Type u
   interpFunc : L.Func n → Vec Dom n → Dom
   interpRel : L.Rel n → Vec Dom n → Prop
 
-variable {L : Language}
-
 namespace Structure
 
-variable {M : L.Structure}
-
 instance : CoeSort L.Structure (Type u) := ⟨(·.Dom)⟩
+instance {M : L.Structure} : L.IsStructure M := ⟨M.interpFunc, M.interpRel⟩
+@[reducible] def of (M : Type u) [L.IsStructure M] : L.Structure := ⟨M, IsStructure.interpFunc, IsStructure.interpRel⟩
 
-@[reducible] def interpTy (M : L.Structure) : Ty → Type u
-| Ty.var => M
-| Ty.func n => Vec M n → M
-| Ty.rel n => Vec M n → Prop
-
-def Assignment (M: L.Structure) (Γ : List Ty) := ⦃T : Ty⦄ → Γ.Fin T → M.interpTy T
-
-def Assignment.nil : M.Assignment [] := by rintro _ ⟨⟩
-notation "[]ₐ" => Assignment.nil
-
-def Assignment.cons (u : M.interpTy T) (ρ : M.Assignment Γ) : M.Assignment (T :: Γ)
-| _, .fz => u
-| _, .fs x => ρ x
-infixr:80 " ∷ₐ " => Assignment.cons
-
-def interp (M : L.Structure) {Γ} (ρ : M.Assignment Γ) : L.Term Γ → M
-| #x => ρ x
-| f ⬝ᶠ v => M.interpFunc f λ i => M.interp ρ (v i)
-| f ⬝ᶠᵛ v => ρ f λ i => M.interp ρ (v i)
-notation:80 "⟦ " t " ⟧ₜ " M ", " ρ:80 => interp M ρ t
-@[simp] theorem interp_var : ⟦ #x ⟧ₜ M, ρ = ρ x := rfl
-@[simp] theorem interp_fconst : ⟦ f ⬝ᶠ v ⟧ₜ M, ρ = M.interpFunc f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
-@[simp] theorem interp_fvar : ⟦ f ⬝ᶠᵛ v ⟧ₜ M, ρ = ρ f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
-
-def satisfy (M : L.Structure) (ρ : M.Assignment Γ) : L.Formula Γ → Prop
-| r ⬝ʳ v => M.interpRel r λ i => ⟦ v i ⟧ₜ M, ρ
-| r ⬝ʳᵛ v => ρ r λ i => ⟦ v i ⟧ₜ M, ρ
-| t₁ ≐ t₂ => ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ
-| ⊥ => False
-| p ⇒ q => M.satisfy ρ p → M.satisfy ρ q
-| ∀' p => ∀ (u : M), M.satisfy (u ∷ₐ ρ) p
-| ∀ᶠ n p => ∀ (f : Vec M n → M), M.satisfy (f ∷ₐ ρ) p
-| ∀ʳ n p => ∀ (r : Vec M n → Prop), M.satisfy (r ∷ₐ ρ) p
-notation:50 M " ⊨[" ρ "] " p:50 => satisfy M ρ p
-@[simp] theorem satisfy_rconst : M ⊨[ρ] r ⬝ʳ v ↔ M.interpRel r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
-@[simp] theorem satisfy_rvar : M ⊨[ρ] r ⬝ʳᵛ v ↔ ρ r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
-@[simp] theorem satisfy_eq : M ⊨[ρ] t₁ ≐ t₂ ↔ ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ := by rfl
-@[simp] theorem satisfy_false : ¬ M ⊨[ρ] ⊥ := by tauto
-@[simp] theorem satisfy_imp : M ⊨[ρ] p ⇒ q ↔ M ⊨[ρ] p → M ⊨[ρ] q := by rfl
-@[simp] theorem satisfy_true : M ⊨[ρ] ⊤ := by tauto
-@[simp] theorem satisfy_neg : M ⊨[ρ] ~ p ↔ ¬ M ⊨[ρ] p := by rfl
-@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by simp [ClassicalPropNotation.and_def]
-@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by simp [ClassicalPropNotation.or_def]; tauto
-@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by simp [ClassicalPropNotation.iff_def]; tauto
-@[simp] theorem satisfy_all : M ⊨[ρ] ∀' p ↔ ∀ (u : M), M ⊨[u ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_allf : M ⊨[ρ] ∀ᶠ n p ↔ ∀ (f : Vec M n → M), M ⊨[f ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_allr : M ⊨[ρ] ∀ʳ n p ↔ ∀ (r : Vec M n → Prop), M ⊨[r ∷ₐ ρ] p := by rfl
-@[simp] theorem satisfy_ex : M ⊨[ρ] ∃' p ↔ ∃ (u : M), M ⊨[u ∷ₐ ρ] p := by simp [Formula.ex]
-@[simp] theorem satisfy_exf : M ⊨[ρ] ∃ᶠ n p ↔ ∃ (f : Vec M n → M), M ⊨[f ∷ₐ ρ] p := by simp [Formula.exf]
-@[simp] theorem satisfy_exr : M ⊨[ρ] ∃ʳ n p ↔ ∃ (r : Vec M n → Prop), M ⊨[r ∷ₐ ρ] p := by simp [Formula.exr]
-
-abbrev satisfySentence (M : L.Structure) (p : L.Sentence) :=
-  M ⊨[[]ₐ] p
-infix:50 " ⊨ₛ " => satisfySentence
+variable {M N : L.Structure}
 
 structure Embedding (M : L.Structure) (N : L.Structure) extends M ↪ N where
-  on_func : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (M.interpFunc f v) = N.interpFunc f (toEmbedding ∘ v)
-  on_rel : ∀ (r : L.Rel n) (v : Vec M n), M.interpRel r v ↔ N.interpRel r (toEmbedding ∘ v)
+  on_func : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)
+  on_rel : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEmbedding ∘ v)
 infixr:25 " ↪ᴹ " => Embedding
 
 namespace Embedding
@@ -94,8 +115,8 @@ def trans (e₁ : M ↪ᴹ N) (e₂ : N ↪ᴹ 𝓢) : M ↪ᴹ 𝓢 where
 end Embedding
 
 structure Isomorphism (M : L.Structure) (N : L.Structure) extends M ≃ N where
-  on_func : ∀ (f : L.Func n) (v : Vec M n), toEquiv (M.interpFunc f v) = N.interpFunc f (toEquiv ∘ v)
-  on_rel : ∀ (r : L.Rel n) (v : Vec M n), M.interpRel r v ↔ N.interpRel r (toEquiv ∘ v)
+  on_func : ∀ (f : L.Func n) (v : Vec M n), toEquiv (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEquiv ∘ v)
+  on_rel : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEquiv ∘ v)
 infix:25 " ≃ᴹ " => Isomorphism
 
 namespace Isomorphism
@@ -122,21 +143,21 @@ def toEmbedding (i : M ≃ᴹ N) : M ↪ᴹ N where
   on_func := i.on_func
   on_rel := i.on_rel
 
-def onTy (i : M ≃ᴹ N) : {T : Ty} → M.interpTy T → N.interpTy T
+def onTy (i : M ≃ᴹ N) : {T : Ty} → interpTy M T → interpTy N T
 | .var, x => i x
 | .func _, f => λ v => i (f (i.symm ∘ v))
 | .rel _, r => λ v => r (i.symm ∘ v)
 
-def onAssignment (i : M ≃ᴹ N) : M.Assignment Γ → N.Assignment Γ :=
+def onAssignment (i : M ≃ᴹ N) : Assignment M l → Assignment N l :=
   λ ρ _ x => i.onTy (ρ x)
 
-theorem on_term (i : M ≃ᴹ N) (t : L.Term Γ) (ρ : M.Assignment Γ) :
+theorem on_term (i : M ≃ᴹ N) (t : L.Term l) (ρ : Assignment M l) :
   i (⟦t⟧ₜ M, ρ) = ⟦t⟧ₜ N, i.onAssignment ρ := by
   induction t with simp [onAssignment, onTy]
   | fconst f v ih => rw [i.on_func]; congr; ext; simp [ih]
   | fvar f v ih => congr!; simp [←ih, symm]
 
-theorem on_formula (i : M ≃ᴹ N) (p : L.Formula Γ) (ρ : M.Assignment Γ) :
+theorem on_formula (i : M ≃ᴹ N) (p : L.Formula l) (ρ : Assignment M l) :
   M ⊨[ρ] p ↔ N ⊨[i.onAssignment ρ] p := by
   induction p with simp [onAssignment, onTy]
   | rconst r v => rw [i.on_rel]; congr!; simp [i.on_term]
@@ -179,17 +200,25 @@ end Structure
 
 namespace Theory
 
+class IsModel (T : L.Theory) (M : Type u) [L.IsStructure M] : Prop where
+  satisfy_theory : ∀ p ∈ T, M ⊨ₛ p
+
 structure Model (T : L.Theory) extends L.Structure where
   satisfy_theory : ∀ p ∈ T, toStructure ⊨ₛ p
 
-instance {T : L.Theory} : CoeOut T.Model L.Structure := ⟨(·.toStructure)⟩
-instance {T : L.Theory} : CoeSort T.Model (Type u) := ⟨(·.Dom)⟩
+variable {T : L.Theory} {M : T.Model} {p q : L.Sentence}
 
-def Entails (T : L.Theory) (p : L.Sentence) :=
-  ∀ (M : Model.{u} T), M ⊨ₛ p
-infix:50 " ⊨ " => Entails
+namespace Model
+
+instance : CoeOut T.Model L.Structure := ⟨(·.toStructure)⟩
+instance : CoeSort T.Model (Type u) := ⟨(·.Dom)⟩
+instance : T.IsModel M := ⟨M.satisfy_theory⟩
+
+@[reducible] def of (M : Type u) [L.IsStructure M] [T.IsModel M] : T.Model := ⟨Structure.of M, IsModel.satisfy_theory⟩
+
+end Model
 
 def Categorical (T : L.Theory) :=
-  ∀ (M : T.Model) (N : T.Model), M ≃ᴹ N.toStructure
+  ∀ (M : Model.{u} T) (N : Model.{v} T), Nonempty (M ≃ᴹ N.toStructure)
 
 end SecondOrder.Language.Theory

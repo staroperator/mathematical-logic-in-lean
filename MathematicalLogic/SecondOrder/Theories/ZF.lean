@@ -1,166 +1,179 @@
 import MathematicalLogic.ZFSet
 import MathematicalLogic.SecondOrder.Semantics
 
+abbrev InaccessibleCardinal := { κ : Cardinal // κ.IsInaccessible }
+
 namespace SecondOrder.Language
 
-inductive SetTheory.Func : ℕ → Type where
+private inductive zf.Func : ℕ → Type where
 | empty : Func 0
 | insert : Func 2
-| union : Func 1
+| sUnion : Func 1
 | powerset : Func 1
 | omega : Func 0
 
-inductive SetTheory.Rel : ℕ → Type where
+private inductive zf.Rel : ℕ → Type where
 | mem : Rel 2
 
-def SetTheory : Language where
-  Func := SetTheory.Func
-  Rel := SetTheory.Rel
+def zf : Language where
+  Func := zf.Func
+  Rel := zf.Rel
 
-namespace SetTheory
+namespace zf
 
-instance : EmptyCollection (SetTheory.Term Γ) := ⟨.empty ⬝ᶠ []ᵥ⟩
-instance : Insert (SetTheory.Term Γ) (SetTheory.Term Γ) := ⟨(.insert ⬝ᶠ [·, ·]ᵥ)⟩
+instance : EmptyCollection (zf.Term l) := ⟨.empty ⬝ᶠ []ᵥ⟩
+instance : Insert (zf.Term l) (zf.Term l) := ⟨(.insert ⬝ᶠ [·, ·]ᵥ)⟩
 
-def sUnion (t : SetTheory.Term Γ) : SetTheory.Term Γ := .union ⬝ᶠ [t]ᵥ
+def sUnion (t : zf.Term l) : zf.Term l := .sUnion ⬝ᶠ [t]ᵥ
 scoped prefix:110 "⋃₀ " => sUnion
 
-def powerset (t : SetTheory.Term Γ) : SetTheory.Term Γ := .powerset ⬝ᶠ [t]ᵥ
+def powerset (t : zf.Term l) : zf.Term l := .powerset ⬝ᶠ [t]ᵥ
 scoped prefix:100 "𝓟" => powerset
 
-def omega : SetTheory.Term Γ := .omega ⬝ᶠ []ᵥ
+def omega : zf.Term l := .omega ⬝ᶠ []ᵥ
 scoped notation "ω" => omega
 
-def mem (t₁ t₂ : SetTheory.Term Γ) : SetTheory.Formula Γ := .mem ⬝ʳ [t₁, t₂]ᵥ
+def mem (t₁ t₂ : zf.Term l) : zf.Formula l := .mem ⬝ʳ [t₁, t₂]ᵥ
 scoped infix:60 " ∈' " => mem
 
-def global_choice : SetTheory.Sentence := ∃ᶠ 1 (∀' (∃' (#0 ∈' #1) ⇒ 1 ⬝ᶠᵛ [#0]ᵥ ∈' #0))
+def globalChoice : zf.Sentence := ∃ᶠ[1] (∀' (∃' (#0 ∈' #1) ⇒ 1 ⬝ᶠᵛ [#0]ᵥ ∈' #0))
 
-end SetTheory
+def V (κ : InaccessibleCardinal.{u}) : Type (u + 1) := (ZFSet.V κ.1.ord).toSet
+
+namespace V
+
+@[simp] theorem val_inj {x y : V κ} : x = y ↔ x.1 = y.1 := Subtype.val_inj.symm
+
+open ZFSet in
+instance : zf.IsStructure (V κ) where
+  interpFunc
+  | .empty, _ => ⟨∅, by
+    simp [mem_V_iff, rank_empty, Order.one_le_iff_pos]
+    exact (Cardinal.isLimit_ord (le_of_lt κ.2.1)).pos⟩
+  | .insert, v => ⟨insert (v 0).1 (v 1).1, by
+    simp [mem_V_iff, rank_insert]; constructor
+    · apply (Cardinal.isLimit_ord (le_of_lt κ.2.1)).succ_lt
+      rw [←mem_V_iff]
+      exact (v 0).2
+    · rw [←mem_V_iff]; exact (v 1).2⟩
+  | .sUnion, v => ⟨⋃₀ (v 0).1, by
+    simp [mem_V_iff]
+    apply lt_of_le_of_lt (rank_sUnion_le _)
+    rw [←mem_V_iff]
+    exact (v 0).2⟩
+  | .powerset, v => ⟨ZFSet.powerset (v 0).1, by
+    simp [mem_V_iff, rank_powerset]
+    apply (Cardinal.isLimit_ord (le_of_lt κ.2.1)).succ_lt
+    rw [←mem_V_iff]
+    exact (v 0).2⟩
+  | .omega, v => ⟨.omega, by
+    simp [mem_V_iff, rank_omega, Cardinal.lt_ord]; exact κ.2.1⟩
+  interpRel
+  | .mem, v => (v 0).1 ∈ (v 1).1
+
+variable {t t₁ t₂ : zf.Term l} {ρ : Assignment (V κ) l}
+
+@[simp] theorem interp_empty : (⟦ (∅ : zf.Term l) ⟧ₜ V κ, ρ).1 = ∅ := rfl
+@[simp] theorem interp_insert : (⟦ insert t₁ t₂ ⟧ₜ V κ, ρ).1 = insert (⟦ t₁ ⟧ₜ V κ, ρ).1 (⟦ t₂ ⟧ₜ V κ, ρ).1 := rfl
+@[simp] theorem interp_sUnion : (⟦ ⋃₀ t ⟧ₜ V κ, ρ).1 = (⋃₀ (⟦ t ⟧ₜ V κ, ρ).1 : ZFSet) := rfl
+@[simp] theorem interp_powerset : (⟦ 𝓟 t ⟧ₜ V κ, ρ).1 = ZFSet.powerset (⟦ t ⟧ₜ V κ, ρ).1 := rfl
+@[simp] theorem interp_omega : (⟦ ω ⟧ₜ V κ, ρ).1 = ZFSet.omega := rfl
+@[simp] theorem satisfy_mem : V κ ⊨[ρ] t₁ ∈' t₂ ↔ (⟦ t₁ ⟧ₜ V κ, ρ).1 ∈ (⟦ t₂ ⟧ₜ V κ, ρ).1 := by rfl
+
+end zf.V
 
 namespace Theory
 
-open SetTheory
+open zf
 
-inductive ZF₂ : SetTheory.Theory where
+inductive ZF₂ : zf.Theory where
 | ax_ext : ZF₂ (∀' (∀' ((∀' (#0 ∈' #2 ⇔ #0 ∈' #1)) ⇒ #1 ≐ #0)))
 | ax_empty : ZF₂ (∀' (~ #0 ∈' ∅))
 | ax_insert : ZF₂ (∀' (∀' (∀' (#0 ∈' insert #2 #1 ⇔ #0 ∈' #1 ⩒ #0 ≐ #2))))
 | ax_union : ZF₂ (∀' (∀' (#0 ∈' ⋃₀ #1 ⇔ ∃' (#0 ∈' #2 ⩑ #1 ∈' #0))))
 | ax_powerset : ZF₂ (∀' (∀' (#0 ∈' 𝓟 #1 ⇔ ∀' (#0 ∈' #1 ⇒ #0 ∈' #2))))
-| ax_replacement : ZF₂ (∀' (∀ᶠ 1 (∃' (∀' (#0 ∈' #1 ⇔ ∃' (#0 ∈' #4 ⩑ #1 ≐ 3 ⬝ᶠᵛ [#0]ᵥ))))))
+| ax_replacement : ZF₂ (∀' (∀ᶠ[1] (∃' (∀' (#0 ∈' #1 ⇔ ∃' (#0 ∈' #4 ⩑ #1 ≐ 3 ⬝ᶠᵛ [#0]ᵥ))))))
 | ax_infinity : ZF₂ (∅ ∈' ω ⩑ ∀' (#0 ∈' ω ⇒ insert #0 #0 ∈' ω) ⩑ (∀' (∅ ∈' #0 ⩑ ∀' (#0 ∈' #1 ⇒ insert #0 #0 ∈' #1) ⇒ ∀' (#0 ∈' ω ⇒ #0 ∈' #1))))
 | ax_regularity : ZF₂ (∀' (∃' (#0 ∈' #1) ⇒ ∃' (#0 ∈' #1 ⩑ ~ ∃' (#0 ∈' #2 ⩑ #0 ∈' #1))))
 
 namespace ZF₂
 
-attribute [local simp] Structure.interp Structure.satisfy Structure.satisfySentence Structure.Assignment.cons Vec.eq_nil
-set_option maxHeartbeats 500000
-
 open ZFSet in
-@[simps] def 𝓥 (κ : Cardinal.{u}) (hκ : κ.IsInaccessible) : Model.{u+1} ZF₂ where
-  Dom := (V κ.ord).toSet
-  interpFunc
-  | .empty, _ => ⟨∅, by
-    simp [mem_V_iff, rank_empty, Order.one_le_iff_pos]
-    exact (Cardinal.isLimit_ord (le_of_lt hκ.1)).pos⟩
-  | .insert, v => ⟨insert (v 0).val (v 1), by
-    simp [mem_V_iff, rank_insert]; constructor
-    · apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
-      rw [←mem_V_iff]
-      exact (v 0).property
-    · rw [←mem_V_iff]; exact (v 1).property⟩
-  | .union, v => ⟨⋃₀ (v 0), by
-    simp [mem_V_iff]
-    apply lt_of_le_of_lt (rank_sUnion_le _)
-    rw [←mem_V_iff]
-    exact (v 0).property⟩
-  | .powerset, v => ⟨ZFSet.powerset (v 0), by
-    simp [mem_V_iff, rank_powerset]
-    apply (Cardinal.isLimit_ord (le_of_lt hκ.1)).succ_lt
-    rw [←mem_V_iff]
-    exact (v 0).property⟩
-  | .omega, v => ⟨omega, by
-    simp [mem_V_iff, rank_omega, Cardinal.lt_ord]; exact hκ.1⟩
-  interpRel
-  | .mem, v => (v 0).val ∈ (v 1).val
+instance : ZF₂.IsModel (V κ) where
   satisfy_theory p h := by
-    cases h with simp [SetTheory.sUnion, SetTheory.powerset, SetTheory.omega, SetTheory.mem]
+    cases h with simp [Vec.eq_one, mem_omega_iff]
     | ax_ext =>
-      intro x h₁ y h₂ h
+      intro x y h
       ext z
       constructor <;> intro h'
-      · refine (h _ ?_).left h'; exact V_transitive _ h₁ h'
-      · refine (h _ ?_).right h'; exact V_transitive _ h₂ h'
-    | ax_insert => aesop
+      · refine (h ⟨z, ?_⟩).mp h'; exact V_transitive _ x.2 h'
+      · refine (h ⟨z, ?_⟩).mpr h'; exact V_transitive _ y.2 h'
+    | ax_insert => intro _ _ _; exact or_comm
     | ax_union =>
-      intro x h₁ y _
+      intro x y
       constructor
-      · intro z h₂ h₃; exists z, h₂, V_transitive _ h₁ h₂
-      · aesop
+      · intro ⟨z, h₁, h₂⟩; exists ⟨z, V_transitive _ x.2 h₁⟩
+      · intro ⟨z, h₁, h₂⟩; exists z.1
     | ax_powerset =>
-      intro x _ y h₁
+      intro x y
       constructor
-      · aesop
-      · intro h₂ z h₃; exact h₂ _ (V_transitive _ h₁ h₃) h₃
+      · intro h z; apply h
+      · intro h z h'; exact h ⟨z, V_transitive _ y.2 h'⟩ h'
     | ax_replacement =>
-      intro x h₁ f
+      intro x f
       classical
-      let g : ZFSet → ZFSet := λ y => if h : y ∈ V κ.ord then f [⟨y, h⟩]ᵥ else ∅
+      let g : ZFSet → ZFSet := λ y => if h : y ∈ V κ.1.ord then (f [⟨y, h⟩]ᵥ).1 else ∅
       have : Definable₁ g := @Classical.allZFSetDefinable 1 _
-      exists image g x, image_mem_V_of_inaccessible hκ h₁ λ y h =>
-        by simp [g, V_transitive _ h₁ h]; apply Subtype.property
-      intro y h₂
-      constructor
-      · simp [mem_image]
-        rintro y h₃ rfl
-        exists y, h₃, V_transitive _ h₁ h₃
-        rw [Vec.eq_one λ _ => _]
-        simp [g, V_transitive _ h₁ h₃]
-      · intro z h₃ h₄ h₅
-        rw [Vec.eq_one λ _ => _] at h₅
-        simp [←Subtype.val_inj] at h₅
-        simp [mem_image]
-        exists z, h₃
-        simp [g, h₄, h₅]
+      refine ⟨⟨image g x.1, ?_⟩, ?_⟩
+      · simp; apply image_mem_V_of_inaccessible κ.2 x.2
+        intro y h; simp [g, V_transitive _ x.2 h]; exact (f _).2
+      · intro y
+        constructor
+        · simp; intro z h h'
+          exists ⟨z, V_transitive _ x.2 h⟩, h
+          simp [←h', g, V_transitive _ x.2 h]
+        · intro ⟨z, h, h'⟩
+          simp [h']
+          exists z.1, h
+          simp [g, V_transitive _ x.2 h]
     | ax_infinity =>
-      constructor
-      · simp [mem_omega_iff]
-        rintro _ _ n rfl
+      refine ⟨?_, ?_, ?_⟩
+      · exists 0
+      · intro x n h; simp [h]
         exists n + 1
-      · simp [mem_omega_iff]
-        rintro _ _ h₁ h₂ _ _ n rfl
+      · intro x h₁ h₂ y n h; simp [h]; clear y h
         induction n with simp
         | zero => exact h₁
         | succ n ih =>
-          refine h₂ _ ?h (ih ?h)
+          refine h₂ ⟨ofNat n, ?_⟩ ih
           simp [mem_V_iff, rank_ofNat, Cardinal.lt_ord]
-          exact (Cardinal.nat_lt_aleph0 n).trans hκ.1
+          exact (Cardinal.nat_lt_aleph0 n).trans κ.2.1
     | ax_regularity =>
-      intro x h₁ y _ h₂
-      have : x ≠ ∅ := by simp [eq_empty]; exists y
+      intro x y _
+      have : x.1 ≠ ∅ := by simp [eq_empty]; exists y.1
       apply ZFSet.regularity at this
-      rcases this with ⟨z, h₃, h₄⟩
-      exists z, h₃, V_transitive _ h₁ h₃
-      intro _ h₅ _; simp [eq_empty] at h₄; exact h₄ _ h₅
+      rcases this with ⟨z, h₁, h₂⟩; simp [eq_empty] at h₂
+      exists ⟨z, V_transitive _ x.2 h₁⟩, h₁
+      intro _ h₃ h₄; exact h₂ _ h₃ h₄
 
-variable {M : Model.{u} ZF₂} {x y z : M}
+variable {M : Model.{u} ZF₂} {t t₁ t₂ : zf.Term l} {ρ : Assignment M l} {x y z : M}
 
 open Classical
 
 instance : Membership M M := ⟨λ y x => M.interpRel .mem [x, y]ᵥ⟩
-
+@[simp] theorem satisfy_mem : M ⊨[ρ] t₁ ∈' t₂ ↔ ⟦ t₁ ⟧ₜ M, ρ ∈ ⟦ t₂ ⟧ₜ M, ρ := by
+  simp [zf.mem, Membership.mem, Vec.eq_two]; rfl
 @[ext] theorem ext : (∀ z, z ∈ x ↔ z ∈ y) → x = y := by
   have := M.satisfy_theory _ .ax_ext x y
-  simp [Vec.eq_two, SetTheory.mem, ←iff_iff_implies_and_implies] at this
-  exact this
+  simp at this; exact this
 
 instance : EmptyCollection M := ⟨M.interpFunc .empty []ᵥ⟩
+@[simp] theorem interp_empty : ⟦ (∅ : zf.Term l) ⟧ₜ M, ρ = ∅ := by
+  simp [EmptyCollection.emptyCollection, Vec.eq_nil]; rfl
+instance : Inhabited M := ⟨∅⟩
 @[simp] theorem mem_empty : ¬ x ∈ (∅ : M) := by
   have := M.satisfy_theory _ .ax_empty
-  simp [Vec.eq_two, SetTheory.mem] at this
-  apply this
-instance : Inhabited M := ⟨∅⟩
+  simp at this; apply this
 
 def Nonempty (x : M) := ∃ y, y ∈ x
 theorem nonempty_iff : Nonempty x ↔ x ≠ ∅ := by
@@ -170,24 +183,22 @@ theorem nonempty_iff : Nonempty x ↔ x ≠ ∅ := by
     apply h₁; ext z; simp [h₂ z, mem_empty]
 
 instance : Insert M M := ⟨(M.interpFunc .insert [·, ·]ᵥ)⟩
+@[simp] theorem interp_insert : ⟦ insert t₁ t₂ ⟧ₜ M, ρ = insert (⟦ t₁ ⟧ₜ M, ρ) (⟦ t₂ ⟧ₜ M, ρ) := by
+  simp [Insert.insert, Vec.eq_two]; rfl
 @[simp] theorem mem_insert : z ∈ insert x y ↔ z ∈ y ∨ z = x := by
   have := M.satisfy_theory _ .ax_insert x y z
-  simp [Vec.eq_two, SetTheory.mem, ←iff_iff_implies_and_implies, ←or_iff_not_imp_left] at this
-  exact this
+  simp at this; exact this
 
 instance : Singleton M M := ⟨(insert · ∅)⟩
 @[simp] theorem mem_singleton : y ∈ ({x} : M) ↔ y = x := by
   simp [Singleton.singleton]
 
-def sUnion (x : M) : M := M.interpFunc .union [x]ᵥ
+def sUnion (x : M) : M := M.interpFunc .sUnion [x]ᵥ
+@[simp] theorem interp_sUnion : ⟦ ⋃₀ t ⟧ₜ M, ρ = sUnion (⟦ t ⟧ₜ M, ρ) := by
+  simp [zf.sUnion, sUnion, Vec.eq_one]; rfl
 @[simp] theorem mem_sUnion : y ∈ sUnion x ↔ ∃ z, z ∈ x ∧ y ∈ z := by
   have := M.satisfy_theory _ .ax_union x y
-  simp [Vec.eq_two, Vec.eq_one, SetTheory.sUnion, SetTheory.mem, -forall_exists_index, ←iff_iff_implies_and_implies] at this
-  exact this
-
-instance : Union M := ⟨(sUnion {·, ·})⟩
-@[simp] theorem mem_union : z ∈ x ∪ y ↔ z ∈ x ∨ z ∈ y := by
-  simp [Union.union, or_comm]
+  simp at this; exact this
 
 instance : HasSubset M := ⟨(∀ ⦃z⦄, z ∈ · → z ∈ ·)⟩
 theorem subset_iff : x ⊆ y ↔ ∀ z ∈ x, z ∈ y := by rfl
@@ -208,29 +219,26 @@ theorem ssubset_trans : x ⊂ y → y ⊂ z → x ⊂ z := by
   by_contra h₃; subst h₃
   apply h₁'; exact subset_antisymm h₁ h₂
 
-def power (x : M) : M := M.interpFunc .powerset [x]ᵥ
-@[simp] theorem mem_power : y ∈ power x ↔ y ⊆ x := by
+def powerset (x : M) : M := M.interpFunc .powerset [x]ᵥ
+@[simp] theorem interp_powerset : ⟦ 𝓟 t ⟧ₜ M, ρ = powerset (⟦ t ⟧ₜ M, ρ) := by
+  simp [zf.powerset, powerset, Vec.eq_one]; rfl
+@[simp] theorem mem_power : y ∈ powerset x ↔ y ⊆ x := by
   have := M.satisfy_theory _ .ax_powerset x y
-  simp [Vec.eq_two, Vec.eq_one, SetTheory.powerset, SetTheory.mem, ←iff_iff_implies_and_implies] at this
-  exact this
+  simp at this; exact this
 
 lemma exists_replace (x : M) (f : M → M) :
   ∃ (y : M), ∀ z, z ∈ y ↔ ∃ z' ∈ x, z = f z' := by
   have := M.satisfy_theory _ .ax_replacement x (f ·.head)
-  simp [Vec.head, Vec.eq_two, SetTheory.mem, -forall_exists_index, ←iff_iff_implies_and_implies] at this
-  exact this
+  simp at this; exact this
 
-noncomputable def replace (x : M) (f : ∀ y ∈ x, M) : M :=
-  sUnion (choose (exists_replace x λ y => if h : y ∈ x then {f y h} else ∅))
-@[simp] theorem mem_replace : y ∈ replace x f ↔ ∃ z h, y = f z h := by
-  have := choose_spec (exists_replace x λ y => if h : y ∈ x then {f y h} else ∅)
-  simp [replace, this]
-  constructor
-  · aesop
-  · intro ⟨z, h, h'⟩; exists {f z h}; aesop
+noncomputable def replace (x : M) (f : M → M) : M :=
+  choose (exists_replace x f)
+@[simp] theorem mem_replace : y ∈ replace x f ↔ ∃ z ∈ x, y = f z := by
+  simp [replace]
+  apply choose_spec (exists_replace x f)
 
 noncomputable def sep (x : M) (p : M → Prop) : M :=
-  sUnion (replace x λ y _ => if p y then {y} else ∅)
+  sUnion (replace x λ y => if p y then {y} else ∅)
 @[simp] theorem mem_sep : x ∈ sep y p ↔ x ∈ y ∧ p x := by
   simp [sep]; aesop
 
@@ -239,27 +247,25 @@ noncomputable instance : Inter M := ⟨λ x y => sep x (· ∈ y)⟩
   simp [Inter.inter]
 
 def omega (M : ZF₂.Model) : M := M.interpFunc .omega []ᵥ
+@[simp] theorem interp_omega : ⟦ ω ⟧ₜ M, ρ = omega M := by simp [zf.omega, omega, Vec.eq_nil]; rfl
 
 theorem empty_mem_omega : ∅ ∈ omega M := by
   have := M.satisfy_theory _ .ax_infinity
-  simp [Vec.eq_two, SetTheory.omega, SetTheory.mem] at this
-  exact this.left
+  simp at this; exact this.1
 
 theorem succ_mem_omega : x ∈ omega M → insert x x ∈ omega M := by
   have := M.satisfy_theory _ .ax_infinity
-  simp [Vec.eq_two, SetTheory.omega, SetTheory.mem] at this
-  exact this.right.left x
+  simp at this; apply this.2.1
 
 theorem omega_minimal : ∅ ∈ x → (∀ y ∈ x, insert y y ∈ x) → omega M ⊆ x := by
   have := M.satisfy_theory _ .ax_infinity
-  simp [Vec.eq_two, SetTheory.omega, SetTheory.mem] at this
-  exact this.right.right x
+  simp at this; apply this.2.2
 
 def ofNat : ℕ → M
 | 0 => ∅
 | n + 1 => insert (ofNat n) (ofNat n)
 
-theorem mem_omega : x ∈ omega M ↔ ∃ n, x = ofNat n := by
+theorem mem_omega_iff : x ∈ omega M ↔ ∃ n, x = ofNat n := by
   constructor
   · let y : M := sep (omega M) (λ x => ∃ n, x = ofNat n)
     have h₁ : ∅ ∈ y := by simp [y, empty_mem_omega]; exists 0
@@ -276,9 +282,7 @@ theorem mem_omega : x ∈ omega M ↔ ∃ n, x = ofNat n := by
 
 theorem regularity (x : M) : Nonempty x → ∃ y ∈ x, ¬ Nonempty (x ∩ y) := by
   have := M.satisfy_theory _ .ax_regularity x
-  simp [Vec.eq_two, SetTheory.mem] at this
-  simp [Nonempty]
-  exact this
+  simp at this; simp [Nonempty]; exact this
 
 theorem not_mem_self : ¬ x ∈ x := by
   have : Nonempty {x} := by simp [Nonempty]
@@ -308,11 +312,12 @@ theorem ofNat_injective : Function.Injective (@ofNat M) := by
   rcases h₂ with h₂ | h₂ <;> apply @ofNat_ssubset M at h₂ <;> simp [h₁] at h₂
 
 noncomputable def iUnionOmega (f : ℕ → M) : M :=
-  sUnion (replace (omega M) (λ _ h => f (choose (mem_omega.1 h))))
+  sUnion (replace (omega M) (λ x => if h : x ∈ omega M then f (choose (mem_omega_iff.mp h)) else ∅))
 @[simp] theorem mem_iUnionOmega : x ∈ iUnionOmega f ↔ ∃ n, x ∈ f n := by
-  simp [iUnionOmega, mem_omega]
+  simp [iUnionOmega, mem_omega_iff]
   constructor
-  · aesop
+  · intro ⟨_, ⟨_, ⟨n, rfl⟩, rfl⟩, h⟩
+    simp at h; exact ⟨_, h⟩
   · intro ⟨n, h₁⟩
     exists f n; simp [h₁]
     exists ofNat n; simp; congr
@@ -369,6 +374,19 @@ theorem mem_wf : @WellFounded M (· ∈ ·) := by
 instance : IsWellFounded M (· ∈ ·) := ⟨mem_wf⟩
 instance : WellFoundedRelation M := ⟨_, mem_wf⟩
 
+/--
+  Since GC (global choice) is true in the metalanguage (Lean), it is also true in any model of
+  second-order ZF. In other words, GC (which implies AC) is no longer "independent" in second-order
+  ZF.
+  -/
+theorem satisfy_global_choice : M ⊨ₛ globalChoice := by
+  simp [globalChoice, Vec.eq_one]
+  exists λ v => if h : ∃ y, y ∈ v 0 then choose h else ∅
+  intro x y h
+  have : ∃ y, y ∈ x := ⟨y, h⟩
+  simp [this]
+  exact choose_spec this
+
 open Cardinal in
 def card (x : M) : Cardinal.{u} := #{ y | y ∈ x }
 
@@ -378,7 +396,7 @@ theorem card_mono : x ⊆ y → card x ≤ card y := by
   refine ⟨λ ⟨z, h'⟩ => ⟨z, h h'⟩, ?_⟩
   intro ⟨z₁, h₁⟩ ⟨z₂, h₂⟩; simp
 
-theorem card_power : card (power x) = 2 ^ card x := by
+theorem card_powerset : card (powerset x) = 2 ^ card x := by
   rw [card, card, ←Cardinal.mk_powerset, Cardinal.eq]
   simp [Set.powerset]
   refine ⟨
@@ -391,17 +409,17 @@ theorem card_power : card (power x) = 2 ^ card x := by
 theorem card_omega : card (omega M) = Cardinal.aleph0 := by
   rw [card, Cardinal.aleph0, ←Cardinal.mk_uLift, Cardinal.eq]
   refine ⟨
-    λ ⟨x, h⟩ => ⟨choose (by simp [mem_omega] at h; exact h)⟩,
-    λ ⟨n⟩ => ⟨ofNat n, by simp [mem_omega]⟩,
+    λ ⟨x, h⟩ => ⟨choose (by simp [mem_omega_iff] at h; exact h)⟩,
+    λ ⟨n⟩ => ⟨ofNat n, by simp [mem_omega_iff]⟩,
     ?_, ?_⟩
-  · intro ⟨x, h⟩; simp [mem_omega] at h
+  · intro ⟨x, h⟩; simp [mem_omega_iff] at h
     rcases h with ⟨n, h⟩; subst h
     simp; symm; exact choose_spec (⟨n, rfl⟩ : ∃ m, ofNat n = ofNat m)
   · intro ⟨n⟩; simp
     apply ofNat_injective
     symm; exact choose_spec (⟨n, rfl⟩ : ∃ m, ofNat n = ofNat m)
 
-theorem card_iUnion_ge_iSup : card (sUnion (replace x f)) ≥ iSup λ y : {y // y ∈ x} => card (f y y.2) := by
+theorem card_iUnion_ge_iSup : card (sUnion (replace x f)) ≥ iSup λ y : {y // y ∈ x} => card (f y) := by
   apply ciSup_le'
   intro ⟨y, h⟩
   apply card_mono
@@ -411,7 +429,7 @@ noncomputable def kappa (M : Model.{u} ZF₂) : Cardinal.{u} := iSup (@card M)
 
 theorem card_lt_kappa : card x < kappa M := by
   apply lt_of_lt_of_le (Cardinal.cantor _)
-  rw [←card_power]
+  rw [←card_powerset]
   apply le_ciSup (Cardinal.bddAbove_range _)
 
 theorem exists_of_card_lt_kappa : c < kappa M → ∃ (x : M), c = card x := by
@@ -441,7 +459,7 @@ theorem kappa_strong_limit : (kappa M).IsStrongLimit := by
   · exact ne_zero_of_lt kappa_gt_aleph0
   · intro c h
     apply exists_of_card_lt_kappa at h; rcases h with ⟨x, h⟩
-    subst h; rw [←card_power]
+    subst h; rw [←card_powerset]
     exact card_lt_kappa
 
 theorem kappa_regular : (kappa M).IsRegular := by
@@ -463,8 +481,8 @@ theorem kappa_regular : (kappa M).IsRegular := by
       apply kappa_strong_limit.2 at this
       rcases exists_of_card_lt_kappa this with ⟨z, h⟩
       exists z; rw [Cardinal.lt_ord, ←h]; apply Cardinal.cantor
-    choose g h₂ using this
-    have h₃ : Ordinal.lsub (λ y => f (e.symm y)) ≤ (iSup λ y : {y // y ∈ x} => card (g y y.2)).ord := by
+    choose! g h₂ using this
+    have h₃ : Ordinal.lsub (λ y => f (e.symm y)) ≤ (iSup λ y : {y // y ∈ x} => card (g y)).ord := by
       rw [Ordinal.lsub_le_iff]
       intro ⟨y, h⟩
       apply (h₂ y h).trans_le
@@ -538,7 +556,7 @@ theorem toZFSet_insert : toZFSet (insert x y) = insert (toZFSet x) (toZFSet y) :
 theorem toZFSet_union : toZFSet (sUnion x) = ZFSet.sUnion (toZFSet x) := by
   ext; aesop (add simp mem_toZFSet)
 
-theorem toZFSet_power : toZFSet (power x) = ZFSet.powerset (toZFSet x) := by
+theorem toZFSet_powerset : toZFSet (powerset x) = ZFSet.powerset (toZFSet x) := by
   ext y; simp [mem_toZFSet]; constructor
   · aesop
   · intro h
@@ -559,7 +577,7 @@ theorem toZFSet_nat : toZFSet (ofNat n : M) = ZFSet.ofNat n := by
   | succ _ ih => simp [toZFSet_insert, ih]
 
 theorem toZFSet_omega : toZFSet (omega M) = ZFSet.omega := by
-  ext; simp [mem_toZFSet, mem_omega, ZFSet.mem_omega_iff]; aesop (add simp toZFSet_nat)
+  ext; simp [mem_toZFSet, mem_omega_iff, ZFSet.mem_omega_iff]; aesop (add simp toZFSet_nat)
 
 theorem rank_toZFSet : (toZFSet x).rank = rank x := by
   induction' x using mem_wf.induction with x ih
@@ -588,42 +606,35 @@ theorem toZFSet_surjective_V_kappa {x : ZFSet} :
   rcases h₁ with ⟨x', h₁⟩
   rw [←ZFSet.card, ←lift_inj.{u,u+1}, ZFSet.card_eq, ←lift_id #x.toSet, card, lift_mk_eq.{u+1,u,u+1}] at h₁
   rcases h₁ with ⟨e⟩
-  exists replace x' λ z h => f (e.symm ⟨z, h⟩)
+  exists sUnion (replace x' λ z => if h : z ∈ x' then {f (e.symm ⟨z, h⟩)} else ∅)
   ext y; simp [mem_toZFSet]; constructor
-  · rintro ⟨_, ⟨_, h₁, rfl⟩, rfl⟩
+  · rintro ⟨_, ⟨_, ⟨_, h₃, rfl⟩, h₄⟩, rfl⟩
+    simp [h₃] at h₄; subst h₄
     rw [h₂ _ (Subtype.property _)]
     apply Subtype.property
-  · intro h; exists f y; simp [h₂ _ h]
-    exists e ⟨y, h⟩, Subtype.property _
-    simp
+  · intro h
+    exists f y; simp [h₂ _ h]
+    exists {f y}; simp
+    exists e ⟨y, h⟩, (e _).2
+    split_ifs with h' <;> try simp
+    exfalso; exact h' (e _).2
 
-noncomputable def model_iso_𝓥 (M : Model.{u} ZF₂) :
-  Σ' (κ : Cardinal.{u}) (hκ : κ.IsInaccessible), M.toStructure ≃ᴹ 𝓥 κ hκ :=
-  ⟨kappa M, kappa_inaccessible, {
-    toEquiv := Equiv.ofBijective
-      (λ x => ⟨toZFSet x, by simp [ZFSet.mem_V_iff, rank_toZFSet]; exact rank_lt_kappa⟩)
-      ⟨λ _ _ h => toZFSet_injective (Subtype.val_inj.2 h),
-      λ ⟨x, h⟩ => by
-        simp at h; simp_rw [@Subtype.mk_eq_mk ZFSet]
-        exact toZFSet_surjective_V_kappa h⟩
-    on_func :=
-      λ
-      | .empty, v => by simp; exact toZFSet_empty
-      | .insert, v => by rw [Vec.eq_two (_ ∘ _), Vec.eq_two v]; simp; exact toZFSet_insert
-      | .union, v => by rw [Vec.eq_one (_ ∘ _), Vec.eq_one v]; simp; exact toZFSet_union
-      | .powerset, v => by rw [Vec.eq_one (_ ∘ _), Vec.eq_one v]; simp; exact toZFSet_power
-      | .omega, v => by simp; exact toZFSet_omega
-    on_rel :=
-      λ
-      | .mem, v => by rw [Vec.eq_two (_ ∘ _), Vec.eq_two v]; simp; rfl
-  }⟩
-
-theorem satisfy_global_choice : M ⊨ₛ global_choice := by
-  simp [Vec.eq_one, Vec.eq_two, SetTheory.global_choice, SetTheory.mem]
-  exists λ x => if h : ∃ y, y ∈ x.head then choose h else ∅
-  intro x y h
-  have : ∃ y, y ∈ x := ⟨y, h⟩
-  simp [this]
-  exact choose_spec this
+theorem iso_V (M : Model.{u} ZF₂) :
+  ∃ (κ : InaccessibleCardinal.{u}), _root_.Nonempty (M.toStructure ≃ᴹ .of (V κ)) := by
+  refine ⟨⟨kappa M, ?_⟩, ⟨Equiv.ofBijective (λ x => ⟨toZFSet x, ?_⟩) ⟨?_, ?_⟩, ?_, ?_⟩⟩
+  · exact kappa_inaccessible
+  · simp [ZFSet.mem_V_iff, rank_toZFSet]; exact rank_lt_kappa
+  · intro _ _ h; simp at h; rw [Subtype.mk_eq_mk] at h; exact toZFSet_injective h
+  · intro ⟨x, h⟩; simp at h; simp [@Subtype.mk_eq_mk ZFSet]; exact toZFSet_surjective_V_kappa h
+  · intro _ f v
+    cases f with rw [←Subtype.val_inj]
+    | empty => simp [Vec.eq_nil]; exact toZFSet_empty
+    | insert => rw [Vec.eq_two (_ ∘ _), Vec.eq_two v]; exact toZFSet_insert
+    | sUnion => rw [Vec.eq_one (_ ∘ _), Vec.eq_one v]; exact toZFSet_union
+    | powerset => rw [Vec.eq_one (_ ∘ _), Vec.eq_one v]; exact toZFSet_powerset
+    | omega => simp [Vec.eq_nil]; exact toZFSet_omega
+  · intro _ r v
+    cases r with
+    | mem => rw [Vec.eq_two (_ ∘ _), Vec.eq_two v]; exact toZFSet_mem.symm
 
 end SecondOrder.Language.Theory.ZF₂

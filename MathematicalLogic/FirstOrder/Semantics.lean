@@ -15,8 +15,8 @@ namespace FirstOrder.Language
   valued. Note: structures do not have to be nonempty.
   -/
 class IsStructure (L : Language) (M : Type u) where
-  interpFunc : L.Func n → Vec M n → M
-  interpRel : L.Rel n → Vec M n → Prop
+  interpFunc : L.Func m → Vec M m → M
+  interpRel : L.Rel m → Vec M m → Prop
 
 variable {L : Language} {M : Type u} [L.IsStructure M] {t t₁ t₂ : L.Term n} {p q : L.Formula n}
 
@@ -122,8 +122,8 @@ theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
 /-- Bundled version of `IsStructure`. -/
 structure Structure (L : Language) where
   Dom : Type u
-  interpFunc {n} : L.Func n → Vec Dom n → Dom
-  interpRel {n} : L.Rel n → Vec Dom n → Prop
+  interpFunc : L.Func m → Vec Dom m → Dom
+  interpRel : L.Rel m → Vec Dom m → Prop
 
 namespace Structure
 
@@ -259,8 +259,8 @@ theorem ElementaryEquivalent.iff_theory_eq : M ≃ᴱ N ↔ L.theory M = L.theor
   simp [ElementaryEquivalent, Set.ext_iff]
 
 structure Embedding (M : L.Structure) (N : L.Structure) extends M ↪ N where
-  on_func {n} : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)
-  on_rel {n} : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEmbedding ∘ v)
+  on_func : ∀ (f : L.Func m) (v : Vec M m), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)
+  on_rel : ∀ (r : L.Rel m) (v : Vec M m), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEmbedding ∘ v)
 infixr:25 " ↪ᴹ " => Embedding
 
 namespace Embedding
@@ -315,8 +315,8 @@ theorem is_elementary_iff (e : M ↪ᴹ N) :
 end Embedding
 
 structure Isomorphism (M : L.Structure) (N : L.Structure) extends M ≃ N where
-  on_func {n} : ∀ (f : L.Func n) (v : Vec M n), toEquiv (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEquiv ∘ v)
-  on_rel {n} : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEquiv ∘ v)
+  on_func : ∀ (f : L.Func m) (v : Vec M m), toEquiv (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEquiv ∘ v)
+  on_rel : ∀ (r : L.Rel m) (v : Vec M m), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEquiv ∘ v)
 infix:25 " ≃ᴹ " => Isomorphism
 
 namespace Isomorphism

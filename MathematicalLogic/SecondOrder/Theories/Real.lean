@@ -18,49 +18,18 @@ def orderedRing : Language where
   Func := orderedRing.Func
   Rel := orderedRing.Rel
 
-namespace OrderedField
+namespace orderedRing
 
-instance : Zero (orderedRing.Term Γ) := ⟨.zero ⬝ᶠ []ᵥ⟩
-instance : One (orderedRing.Term Γ) := ⟨.one ⬝ᶠ []ᵥ⟩
-instance : Add (orderedRing.Term Γ) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
-instance : Neg (orderedRing.Term Γ) := ⟨(.neg ⬝ᶠ [·]ᵥ)⟩
-instance : Sub (orderedRing.Term Γ) := ⟨(· + -·)⟩
-instance : Mul (orderedRing.Term Γ) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
+instance : Zero (orderedRing.Term l) := ⟨.zero ⬝ᶠ []ᵥ⟩
+instance : One (orderedRing.Term l) := ⟨.one ⬝ᶠ []ᵥ⟩
+instance : Add (orderedRing.Term l) := ⟨(.add ⬝ᶠ [·, ·]ᵥ)⟩
+instance : Neg (orderedRing.Term l) := ⟨(.neg ⬝ᶠ [·]ᵥ)⟩
+instance : Mul (orderedRing.Term l) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 
-def le (t₁ t₂ : orderedRing.Term Γ) : orderedRing.Formula Γ := .le ⬝ʳ [t₁, t₂]ᵥ
+def le (t₁ t₂ : orderedRing.Term l) : orderedRing.Formula l := .le ⬝ʳ [t₁, t₂]ᵥ
 scoped infix:60 " ⪯ " => le
 
-end OrderedField
-
-namespace Theory
-
-open OrderedField
-
-inductive Real : orderedRing.Theory where
-| ax_add_assoc : Real (∀' (∀' (∀' (#2 + #1 + #0 ≐ #2 + (#1 + #0)))))
-| ax_add_comm : Real (∀' (∀' (#1 + #0 ≐ #0 + #1)))
-| ax_add_zero : Real (∀' (#0 + 0 ≐ #0))
-| ax_add_neg : Real (∀' (#0 + (-#0) ≐ 0))
-| ax_mul_assoc : Real (∀' (∀' (∀' (#2 * #1 * #0 ≐ #2 * (#1 * #0)))))
-| ax_mul_comm : Real (∀' (∀' (#1 * #0 ≐ #0 * #1)))
-| ax_mul_one : Real (∀' (#0 * 1 ≐ #0))
-| ax_has_inv : Real (∀' (~ #0 ≐ 0 ⇒ ∃' (#1 * #0 ≐ 1)))
-| ax_left_distrib : Real (∀' (∀' (∀' (#2 * (#1 + #0) ≐ #2 * #1 + #2 * #0))))
-| ax_zero_ne_one : Real (~ 0 ≐ 1)
-| ax_le_refl : Real (∀' (#0 ⪯ #0))
-| ax_le_antisymm : Real (∀' (∀' (#1 ⪯ #0 ⇒ #0 ⪯ #1 ⇒ #1 ≐ #0)))
-| ax_le_trans : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ #1 ⪯ #0 ⇒ #2 ⪯ #0))))
-| ax_le_total : Real (∀' (∀' (#1 ⪯ #0 ⩒ #0 ⪯ #1)))
-| ax_add_le_add : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ #2 + #0 ⪯ #1 + #0))))
-| ax_mul_le_mul : Real (∀' (∀' (∀' (#2 ⪯ #1 ⇒ 0 ⪯ #0 ⇒ #2 * #0 ⪯ #1 * #0))))
-| ax_exists_lub : Real (∀ʳ 1 (∃' (1 ⬝ʳᵛ [#0]ᵥ) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1)) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⩑ ∀' (∀' (3 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⇒ #1 ⪯ #0))))
-
-namespace Real
-
-attribute [local simp] Structure.interp Structure.satisfy Structure.satisfySentence Structure.Assignment.cons Vec.eq_nil Vec.eq_one Vec.eq_two
-
-noncomputable def 𝓡 : Real.Model where
-  Dom := ℝ
+instance Real : orderedRing.IsStructure ℝ where
   interpFunc
   | .zero, _ => 0
   | .one, _ => 1
@@ -69,8 +38,48 @@ noncomputable def 𝓡 : Real.Model where
   | .mul, v => v 0 * v 1
   interpRel
   | .le, v => v 0 ≤ v 1
+
+namespace Real
+
+variable {t t₁ t₂ : orderedRing.Term l} {ρ : Assignment ℝ l}
+
+@[simp] theorem interp_zero : ⟦ (0 : orderedRing.Term l) ⟧ₜ ℝ, ρ = 0 := rfl
+@[simp] theorem interp_one : ⟦ (1 : orderedRing.Term l) ⟧ₜ ℝ, ρ = 1 := rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ ℝ, ρ = ⟦ t₁ ⟧ₜ ℝ, ρ + ⟦ t₂ ⟧ₜ ℝ, ρ := rfl
+@[simp] theorem interp_neg : ⟦ -t ⟧ₜ ℝ, ρ = - ⟦ t ⟧ₜ ℝ, ρ := rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ ℝ, ρ = ⟦ t₁ ⟧ₜ ℝ, ρ * ⟦ t₂ ⟧ₜ ℝ, ρ := rfl
+@[simp] theorem satisfy_le : ℝ ⊨[ρ] t₁ ⪯ t₂ ↔ ⟦ t₁ ⟧ₜ ℝ, ρ ≤ ⟦ t₂ ⟧ₜ ℝ, ρ := by rfl
+
+end orderedRing.Real
+
+namespace Theory
+
+open orderedRing
+
+inductive Real : orderedRing.Theory where
+| ax_add_assoc : Real (∀' ∀' ∀' (#2 + #1 + #0 ≐ #2 + (#1 + #0)))
+| ax_add_comm : Real (∀' ∀' (#1 + #0 ≐ #0 + #1))
+| ax_add_zero : Real (∀' (#0 + 0 ≐ #0))
+| ax_add_neg : Real (∀' (#0 + (-#0) ≐ 0))
+| ax_mul_assoc : Real (∀' ∀' ∀' (#2 * #1 * #0 ≐ #2 * (#1 * #0)))
+| ax_mul_comm : Real (∀' ∀' (#1 * #0 ≐ #0 * #1))
+| ax_mul_one : Real (∀' (#0 * 1 ≐ #0))
+| ax_has_inv : Real (∀' (~ #0 ≐ 0 ⇒ ∃' (#1 * #0 ≐ 1)))
+| ax_left_distrib : Real (∀' ∀' ∀' (#2 * (#1 + #0) ≐ #2 * #1 + #2 * #0))
+| ax_zero_ne_one : Real (~ 0 ≐ 1)
+| ax_le_refl : Real (∀' (#0 ⪯ #0))
+| ax_le_antisymm : Real (∀' ∀' (#1 ⪯ #0 ⇒ #0 ⪯ #1 ⇒ #1 ≐ #0))
+| ax_le_trans : Real (∀' ∀' ∀' (#2 ⪯ #1 ⇒ #1 ⪯ #0 ⇒ #2 ⪯ #0))
+| ax_le_total : Real (∀' ∀' (#1 ⪯ #0 ⩒ #0 ⪯ #1))
+| ax_add_le_add : Real (∀' ∀' ∀' (#2 ⪯ #1 ⇒ #2 + #0 ⪯ #1 + #0))
+| ax_mul_le_mul : Real (∀' ∀' ∀' (#2 ⪯ #1 ⇒ 0 ⪯ #0 ⇒ #2 * #0 ⪯ #1 * #0))
+| ax_exists_lub : Real (∀ʳ[1] (∃' (1 ⬝ʳᵛ [#0]ᵥ) ⇒ ∃' ∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⇒ ∃' (∀' (2 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⩑ ∀' (∀' (3 ⬝ʳᵛ [#0]ᵥ ⇒ #0 ⪯ #1) ⇒ #1 ⪯ #0))))
+
+namespace Real
+
+instance : Real.IsModel ℝ where
   satisfy_theory p h := by
-    cases h with simp [OrderedField.le]
+    cases h with simp [Vec.eq_one]
     | ax_add_assoc => apply add_assoc
     | ax_add_comm => apply add_comm
     | ax_mul_assoc => apply mul_assoc
@@ -79,20 +88,28 @@ noncomputable def 𝓡 : Real.Model where
     | ax_left_distrib => apply left_distrib
     | ax_le_antisymm => apply le_antisymm
     | ax_le_trans => apply le_trans
-    | ax_le_total => intro _ _; apply le_of_lt
+    | ax_le_total => apply le_total
     | ax_mul_le_mul => intro _ _ _; apply mul_le_mul_of_nonneg_right
     | ax_exists_lub =>
       intro R a h₁ b h₂
       exists sSup (R [·]ᵥ)
       exact Real.isLUB_sSup ⟨a, h₁⟩ ⟨b, h₂⟩
 
-variable {M : Real.Model}
+variable {M : Real.Model} {t t₁ t₂ : orderedRing.Term l} {ρ : Assignment M l} {n m : ℕ}
 
 instance : Zero M := ⟨M.interpFunc .zero []ᵥ⟩
 instance : One M := ⟨M.interpFunc .one []ᵥ⟩
 instance : Add M := ⟨(M.interpFunc .add [·, ·]ᵥ)⟩
 instance : Neg M := ⟨(M.interpFunc .neg [·]ᵥ)⟩
 instance : Mul M := ⟨(M.interpFunc .mul [·, ·]ᵥ)⟩
+instance : LE M := ⟨(M.interpRel .le [·, ·]ᵥ)⟩
+
+@[simp] theorem interp_zero : ⟦ (0 : orderedRing.Term l) ⟧ₜ M, ρ = 0 := by simp [OfNat.ofNat, Zero.zero, Vec.eq_nil]; rfl
+@[simp] theorem interp_one : ⟦ (1 : orderedRing.Term l) ⟧ₜ M, ρ = 1 := by simp [OfNat.ofNat, One.one, Vec.eq_nil]; rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ + ⟦ t₂ ⟧ₜ M, ρ := by simp [HAdd.hAdd, Add.add, Vec.eq_two]; rfl
+@[simp] theorem interp_neg : ⟦ -t ⟧ₜ M, ρ = - ⟦ t ⟧ₜ M, ρ := by simp [Neg.neg, Vec.eq_one]; rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ * ⟦ t₂ ⟧ₜ M, ρ := by simp [HMul.hMul, Mul.mul, Vec.eq_two]; rfl
+@[simp] theorem satisfy_le : M ⊨[ρ] t₁ ⪯ t₂ ↔ ⟦ t₁ ⟧ₜ M, ρ ≤ ⟦ t₂ ⟧ₜ M, ρ := by simp [orderedRing.le, LE.le, Vec.eq_two]; rfl
 
 theorem add_comm (a b : M) : a + b = b + a := by
   have := M.satisfy_theory _ .ax_add_comm a b
@@ -167,26 +184,24 @@ noncomputable instance : Field M where
   qsmul := _
   nnqsmul := _
 
-instance : LE M := ⟨(M.interpRel .le [·, ·]ᵥ)⟩
-
 noncomputable instance : LinearOrder M where
   le_refl a := by
     have := M.satisfy_theory _ .ax_le_refl a
-    simp [OrderedField.le] at this; exact this
+    simp at this; exact this
   le_antisymm a b := by
     have := M.satisfy_theory _ .ax_le_antisymm a b
-    simp [OrderedField.le] at this; exact this
+    simp at this; exact this
   le_trans a b := by
     have := M.satisfy_theory _ .ax_le_trans a b
-    simp [OrderedField.le] at this; exact this
+    simp at this; exact this
   le_total a b := by
     have := M.satisfy_theory _ .ax_le_total a b
-    simp [OrderedField.le, ←or_iff_not_imp_left] at this; exact this
+    simp at this; exact this
   decidableLE := _
 
 theorem add_le_add_right (a b c : M) : a ≤ b → a + c ≤ b + c := by
   have := M.satisfy_theory _ .ax_add_le_add a b c
-  simp [OrderedField.le] at this; exact this
+  simp at this; exact this
 
 lemma zero_le_neg_iff (a : M) : 0 ≤ -a ↔ a ≤ 0 := by
   constructor
@@ -201,7 +216,7 @@ lemma zero_le_neg_iff (a : M) : 0 ≤ -a ↔ a ≤ 0 := by
 
 theorem mul_le_mul_right (a b c : M) : a ≤ b → 0 ≤ c → a * c ≤ b * c := by
   have := M.satisfy_theory _ .ax_mul_le_mul a b c
-  simp [OrderedField.le] at this; exact this
+  simp at this; exact this
 
 noncomputable instance : LinearOrderedField M where
   mul_comm := mul_comm
@@ -234,7 +249,7 @@ noncomputable instance : LinearOrderedField M where
 theorem exists_lub (s : Set M) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
   intro ⟨x, h₁⟩ ⟨y, h₂⟩
   have := M.satisfy_theory _ .ax_exists_lub
-  simp [OrderedField.le] at this
+  simp at this
   exact this (·.head ∈ s) x h₁ y h₂
 
 noncomputable def ofReal (x : ℝ) : M :=
@@ -557,18 +572,25 @@ theorem ofReal_inv : @ofReal M x⁻¹ = (ofReal x)⁻¹ := by
   · rw [←mul_eq_one_iff_eq_inv₀, ←ofReal_mul, inv_mul_cancel₀ h, ofReal_one]
     intro h'; rw [←ofReal_zero] at h'; exact h (ofReal_injective h')
 
-noncomputable def model_iso_𝓡 (M : Real.Model) : 𝓡 ≃ᴹ M.toStructure where
-  toEquiv := Equiv.ofBijective ofReal ⟨ofReal_injective, ofReal_surjective⟩
-  on_func
-  | .zero, v => by simp; apply ofReal_zero
-  | .one, v => by simp; apply ofReal_one
-  | .add, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_add
-  | .neg, v => by rw [Vec.eq_one (_ ∘ _)]; apply ofReal_neg
-  | .mul, v => by rw [Vec.eq_two (_ ∘ _)]; apply ofReal_mul
-  on_rel
-  | .le, v => by rw [Vec.eq_two (_ ∘ _)]; symm; apply ofReal_le
+theorem iso_Real (M : Real.Model) : Nonempty (M.toStructure ≃ᴹ .of ℝ) := by
+  refine ⟨.symm ⟨Equiv.ofBijective ofReal ⟨?_, ?_⟩, ?_, ?_⟩⟩
+  · exact ofReal_injective
+  · exact ofReal_surjective
+  · intro _ f v
+    cases f with
+    | zero => simp [Vec.eq_nil]; exact ofReal_zero
+    | one => simp [Vec.eq_nil]; exact ofReal_one
+    | add => rw [Vec.eq_two (_ ∘ _)]; exact ofReal_add
+    | neg => rw [Vec.eq_one (_ ∘ _)]; exact ofReal_neg
+    | mul => rw [Vec.eq_two (_ ∘ _)]; exact ofReal_mul
+  · intro _ r v
+    cases r with
+    | le => rw [Vec.eq_two (_ ∘ _)]; exact ofReal_le.symm
 
-noncomputable def categorical : Real.Categorical
-| M₁, M₂ => .trans (.symm (model_iso_𝓡 M₁)) (model_iso_𝓡 M₂)
+theorem categorical : Real.Categorical := by
+  intro M₁ M₂
+  rcases iso_Real M₁ with ⟨i₁⟩
+  rcases iso_Real M₂ with ⟨i₂⟩
+  exact ⟨i₁.trans i₂.symm⟩
 
 end SecondOrder.Language.Theory.Real

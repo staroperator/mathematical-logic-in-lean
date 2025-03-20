@@ -26,41 +26,41 @@ namespace Language
 variable {L : Language}
 
 inductive Term (L : Language) : List Ty → Type where
-| var : Γ.Fin Ty.var → L.Term Γ
-| fconst : L.Func n → (Fin n → L.Term Γ) → L.Term Γ
-| fvar : Γ.Fin (Ty.func n) → (Fin n → L.Term Γ) → L.Term Γ
+| var : l.Fin Ty.var → L.Term l
+| fconst : L.Func n → (Fin n → L.Term l) → L.Term l
+| fvar : l.Fin (Ty.func n) → (Fin n → L.Term l) → L.Term l
 prefix:max "#" => Term.var
 infix:70 " ⬝ᶠ " => Term.fconst
 infix:70 " ⬝ᶠᵛ " => Term.fvar
 
 inductive Formula (L : Language) : List Ty → Type where
-| rconst {Γ n} : L.Rel n → (Fin n → L.Term Γ) → L.Formula Γ
-| rvar {Γ n} : Γ.Fin (Ty.rel n) → (Fin n → L.Term Γ) → L.Formula Γ
-| eq : L.Term Γ → L.Term Γ → L.Formula Γ
-| false : L.Formula Γ
-| imp : L.Formula Γ → L.Formula Γ → L.Formula Γ
-| all : L.Formula (Ty.var :: Γ) → L.Formula Γ
-| allf {Γ} (n) : L.Formula (Ty.func n :: Γ) → L.Formula Γ
-| allr {Γ} (n) : L.Formula (Ty.rel n :: Γ) → L.Formula Γ
+| rconst : L.Rel n → (Fin n → L.Term l) → L.Formula l
+| rvar : l.Fin (Ty.rel n) → (Fin n → L.Term l) → L.Formula l
+| eq : L.Term l → L.Term l → L.Formula l
+| false : L.Formula l
+| imp : L.Formula l → L.Formula l → L.Formula l
+| all : L.Formula (Ty.var :: l) → L.Formula l
+| allf (n) : L.Formula (Ty.func n :: l) → L.Formula l
+| allr (n) : L.Formula (Ty.rel n :: l) → L.Formula l
 
 namespace Formula
 
 infix:70 " ⬝ʳ " => rconst
 infix:70 " ⬝ʳᵛ " => rvar
-infix:60 (priority := high) " ≐ " => eq
-instance : ClassicalPropNotation (L.Formula Γ) := ⟨false, imp⟩
+infix:60 " ≐ " => eq
+instance : ClassicalPropNotation (L.Formula l) := ⟨false, imp⟩
 
-notation "∀' " => all
-notation "∀ᶠ " => allf
-notation "∀ʳ " => allr
-def ex (p : L.Formula (_ :: Γ)) := ~ ∀' (~ p)
-def exf (n) (p : L.Formula (_ :: Γ)) := ~ ∀ᶠ n (~ p)
-def exr (n) (p : L.Formula (_ :: Γ)) := ~ ∀ʳ n (~ p)
-notation "∃' " => ex
-notation "∃ᶠ " => exf
-notation "∃ʳ " => exr
+prefix:100 "∀' " => all
+notation:100 "∀ᶠ[" n "]" p:100 => allf n p
+notation:100 "∀ʳ[" n "]" p:100 => allr n p
+def ex (p : L.Formula (_ :: l)) := ~ ∀' (~ p)
+def exf (n) (p : L.Formula (_ :: l)) := ~ ∀ᶠ[n] (~ p)
+def exr (n) (p : L.Formula (_ :: l)) := ~ ∀ʳ[n] (~ p)
+prefix:100 "∃' " => ex
+notation:100 "∃ᶠ[" n "]" p:100 => exf n p
+notation:100 "∃ʳ[" n "]" p:100 => exr n p
 
-@[simp] theorem false_eq : false = (⊥ : L.Formula n) := rfl
+@[simp] theorem false_eq : false = (⊥ : L.Formula l) := rfl
 @[simp] theorem imp_eq : imp p q = p ⇒ q := rfl
 
 end Formula
