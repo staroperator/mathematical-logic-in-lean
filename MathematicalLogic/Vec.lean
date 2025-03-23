@@ -44,6 +44,9 @@ namespace Fin
 @[simp] theorem succ_six_eq_seven : Fin.succ (6 : Fin (n + 7)) = 7 := rfl
 @[simp] theorem succ_seven_eq_eight : Fin.succ (7 : Fin (n + 8)) = 8 := rfl
 @[simp] theorem succ_eight_eq_nine : Fin.succ (8 : Fin (n + 9)) = 9 := rfl
+@[simp] theorem succ_nine_eq_ten : Fin.succ (9 : Fin (n + 10)) = 10 := rfl
+@[simp] theorem succ_ten_eq_eleven : Fin.succ (10 : Fin (n + 11)) = 11 := rfl
+@[simp] theorem succ_eleven_eq_twelve : Fin.succ (11 : Fin (n + 12)) = 12 := rfl
 
 @[elab_as_elim] def cases1 {motive : Fin 1 → Sort _}
   (zero : motive 0) (i : Fin 1) : motive i := i.cases zero (·.elim0)
@@ -59,14 +62,11 @@ namespace Fin
   (i : Fin 4) : motive i :=
   i.cases zero λ i => i.cases one λ j => j.cases two λ k => k.cases three (·.elim0)
 
-attribute [simp] forall_fin_one forall_fin_two
+attribute [simp] forall_fin_one forall_fin_two exists_fin_one exists_fin_two
 @[simp] theorem forall_fin_three {p : Fin 3 → Prop} : (∀ (i : Fin 3), p i) ↔ p 0 ∧ p 1 ∧ p 2 := by simp [forall_fin_succ]
 @[simp] theorem forall_fin_four {p : Fin 4 → Prop} : (∀ (i : Fin 4), p i) ↔ p 0 ∧ p 1 ∧ p 2 ∧ p 3 := by simp [forall_fin_succ]
-
-theorem ofNat_succ (n : ℕ) : (OfNat.ofNat (n + 1) : Fin (m + n + 2)) = succ (OfNat.ofNat n : Fin (m + n + 1)) := by
-  simp [OfNat.ofNat, Nat.cast]
-  simp [natCast_def]
-  rw [Nat.mod_eq_of_lt (by simp [Nat.lt_succ]), Nat.mod_eq_of_lt (by simp [Nat.lt_succ])]
+@[simp] theorem exists_fin_three {p : Fin 3 → Prop} : (∃ (i : Fin 3), p i) ↔ p 0 ∨ p 1 ∨ p 2 := by simp [exists_fin_succ]
+@[simp] theorem exists_fin_four {p : Fin 4 → Prop} : (∃ (i : Fin 4), p i) ↔ p 0 ∨ p 1 ∨ p 2 ∨ p 3 := by simp [exists_fin_succ]
 
 /--
   `castAdd' x m` embeds `x : Fin n` in `Fin (m + n)`. This is contrary to `castAdd m i` which embeds
@@ -116,6 +116,7 @@ macro_rules
 @[simp] theorem cons_nine {v : Vec α (n + 9)} : (a ∷ᵥ v) 9 = v 8 := rfl
 @[simp] theorem cons_ten {v : Vec α (n + 10)} : (a ∷ᵥ v) 10 = v 9 := rfl
 @[simp] theorem cons_eleven {v : Vec α (n + 11)} : (a ∷ᵥ v) 11 = v 10 := rfl
+@[simp] theorem cons_twelve {v : Vec α (n + 12)} : (a ∷ᵥ v) 12 = v 11 := rfl
 
 @[app_unexpander nil] def unexpandNil : Lean.PrettyPrinter.Unexpander
 | `($(_)) => `([]ᵥ)
@@ -257,7 +258,7 @@ theorem max_le_iff {v : Vec ℕ n} : v.max ≤ m ↔ ∀ i, v i ≤ m := by
 
 theorem max_eq_nth (v : Vec ℕ (n + 1)) : ∃ i, v.max = v i := by
   induction n with
-  | zero => simp [max]; exists 0
+  | zero => simp [max, Vec.head]
   | succ n ih =>
     rw [max]
     by_cases h : v.head ≤ v.tail.max

@@ -8,9 +8,9 @@ import MathematicalLogic.FirstOrder.Proof.Init
 
 This file formalizes a Hilbert-style proof system of first-order logic.
 
-1. `Axiom` and `Proof` defines the first-order axioms and Hilbert-style proofs as inductive families.
-  `Proof Γ p` (or `Γ ⊢ p`) where `Γ` is a set of formulas, says that `p` (proof goal) is provable
-  from first-order axioms and propositions in `Γ` (hypotheses).
+1. `Axiom` and `Proof` define the first-order axioms and Hilbert-style proofs as inductive families.
+  `Proof Γ p` (or `Γ ⊢ p`) where `Γ` is a set of formulas, says that proposition `p` is provable
+  from the first-order axioms and the propositions in `Γ` (hypotheses).
 2. A few tactics are provided to facilitate proof writing -- e.g. `pintro` to introduce local
   hypothesis as a formula added to `Γ`, `papply` to apply a theorem onto the proof goal, and `prw`
   to rewrite the equalities or iffs in the proof goal.
@@ -280,7 +280,7 @@ macro "phave" t:(ppSpace colGt term) : tactic =>
 macro "psuffices" t:(ppSpace colGt term) : tactic =>
   `(tactic| (refine cut_append (p := $t) ?_ ?_; swap))
 
-/-- Remove the `n`-th assumption. -/
+/-- `pclear n` removes the `n`-th assumption. -/
 elab "pclear" n:(ppSpace colGt num) : tactic => do
   let mut weakenTerm ← `(FormulaSet.subset_append)
   for _ in [:n.getNat] do
@@ -291,7 +291,7 @@ elab "pclear" n:(ppSpace colGt num) : tactic => do
 /-- Remove all assumptions except the theory (or formula set) itself. -/
 macro "pclears" : tactic => `(tactic| repeat pclear 0)
 
-/-- Swap the `n`-th assumption and the `m`-th assumption. -/
+/-- `pswap n m` swaps the `n`-th assumption and the `m`-th assumption. -/
 elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
   let mut n := n.getNat
   let mut m := m.getNat
@@ -307,13 +307,16 @@ elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
     | throwError "pswap failed"
   replaceMainGoal [mainGoal]
 
-/-- Replaces the `n`-th assumption with a new proposition `p`, and generate a new goal to prove `p`. -/
+/--
+  `preplace n p` replaces the `n`-th assumption with a new proposition `p`, and generate a new goal
+  to prove `p`.
+  -/
 macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
 
 /--
-  Revert a hypothesis through deduction theorem. `prevert n` revert the `n`-th assumption, while
-  `prevert` revert the `0`-th assumption.
+  Revert a hypothesis through deduction theorem. `prevert n` reverts the `n`-th assumption, and
+  `prevert` reverts the `0`-th assumption.
   -/
 macro "prevert" n:(ppSpace colGt num)? : tactic =>
   match n with
@@ -371,8 +374,8 @@ partial def isSubtheoryOf (L n Γ Δ : Expr) : MetaM (Option Expr) := do
   `f` should be a term of type `Γ ⊢ p₁ ⇒ p₂ ⇒ ⋯ ⇒ pₙ ⇒ q`, and `goal` should be a type `Δ ⊢ pₙ` (in
   whnf) where `Γ ⊆ᵀ Δ`.
   
-  `apply f goal d` will create a term `Proof.mp (Proof.mp (... (Proof.mp f ?m₁)) ?mₙ₋₁) ?mₙ` of
-  type `goal`, return the term and a list of `?m₁, ⋯, ?mₙ`.
+  `papply f goal d` will create a term `Proof.mp (Proof.mp (... (Proof.mp f ?m₁)) ?mₙ₋₁) ?mₙ` of
+  type `goal` and return the term with a list of `?m₁, ⋯, ?mₙ`.
   -/
 private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × List MVarId) := do
   let (fmvars, _, ftype) ← forallMetaTelescopeReducing (← instantiateMVars (← inferType f))
@@ -557,7 +560,7 @@ theorem double_neg_imp : Γ ⊢ ~ ~ p ⇒ p := by
 namespace Tactic
 
 /-- Proof by contradiction. -/
-macro "pcontra" : tactic => `(tactic| (papply double_neg_imp; pintro))
+macro "pcontra" : tactic => `(tactic| (papply double_neg_imp with 1; pintro))
 
 end Tactic
 
@@ -967,9 +970,7 @@ macro "ptrans" t:(ppSpace colGt term)? : tactic =>
 end Tactic
 
 @[prw] theorem eq_andN_refl {v : Vec (L.Term n) m} : Γ ⊢ ⋀ i, v i ≐ v i := by
-  papply andN_intro
-  intro
-  prefl
+  apply andN_intro; intro; prefl
 
 @[prw] theorem eq_andN_cons :
   Γ ⊢ t₁ ≐ t₂ ⇒ (⋀ i, v₁ i ≐ v₂ i) ⇒ ⋀ i,  (t₁ ∷ᵥ v₁) i ≐ (t₂ ∷ᵥ v₂) i := and_intro
@@ -1026,7 +1027,7 @@ theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ �
     papply iff_congr_forall
     pintro
     papply ih
-    papply andN_intro
+    apply andN_intro
     intro i
     cases i using Fin.cases with simp [Formula.shift, Formula.subst_andN]
     | zero => prefl
@@ -1049,10 +1050,10 @@ syntax prwRule := ("← "?) term
 
 def prwRuleToTactic (rule : TSyntax ``prwRule) : MacroM (TSyntax ``tacticSeq) := do
   match rule with
-  | `(prwRule | $n:num) => `(tacticSeq| pexact $(← hypTerm n.getNat))
-  | `(prwRule | $t:term) => `(tacticSeq| pexact $t)
-  | `(prwRule | ← $n:num) => `(tacticSeq| psymm; pexact $(← hypTerm n.getNat))
-  | `(prwRule | ← $t:term) => `(tacticSeq| psymm; pexact $t)
+  | `(prwRule | $n:num) => `(tacticSeq| papplya $n)
+  | `(prwRule | $t:term) => `(tacticSeq| papply $t)
+  | `(prwRule | ← $n:num) => `(tacticSeq| psymm; papplya $n)
+  | `(prwRule | ← $t:term) => `(tacticSeq| psymm; papply $t)
   | _ => Macro.throwError "unknown syntax for prwRule {rule}"
 
 def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : TacticM (List MVarId) := do
@@ -1064,15 +1065,16 @@ def prwSolve (rule : TSyntax ``prwRule) (goal : MVarId) (debug? : Bool) : Tactic
   let mut success := false
   repeat
     let goal :: currentGoals' := currentGoals | break
-    if debug? then logInfo m!"prw: try to solve {(← goal.withContext (instantiateMVars (← goal.getType)))}"
+    if debug? then goal.withContext (logInfo m!"prw: try to solve {(← (instantiateMVars (← goal.getType)))}")
     currentGoals := currentGoals'
     try
       let newGoals' ← withReducible (evalTacticAt tac goal)
       newGoals := newGoals ++ newGoals'
       success := true
-    catch _ =>
+    catch err =>
+      if debug? then goal.withContext (logInfo m!"{rule} failed because: {err.toMessageData}")
       for i in [:prwThms.size] do
-        let thm := prwThms[prwThms.size-1-i]!
+        let thm := prwThms[prwThms.size - 1 - i]!
         try
           currentGoals := currentGoals ++ (← withReducible (evalTacticAt (←`(tactic| papply $(mkIdent thm))) goal))
           if debug? then logInfo m!"prw: {thm} succeed"
@@ -1108,8 +1110,7 @@ def runPrwAtAssumption (rules : TSepArray ``prwRule ",") (target : ℕ) (debug? 
     let sep := rules.elemsAndSeps.getD (i * 2 + 1) Syntax.missing
     withTacticInfoContext (mkNullNode #[rule, sep]) do
       let [rwGoal, mainGoal] ← evalTacticAt (← `(tactic| eapply cut_append)) (← getMainGoal) | throwError "prw failed"
-      let [rwGoal] ← evalTacticAt
-        (← `(tactic| papply iff_mp with 2; (on_goal 2 => passumption $(mkNatLit target)))) rwGoal
+      let [rwGoal] ← evalTacticAt (← `(tactic| papply iff_mp with 2; (on_goal 2 => passumption $(mkNatLit target)))) rwGoal
         | throwError "prw failed"
       let newGoals ← prwSolve rule rwGoal debug?
       let mainGoal :: _ ← evalTacticAt (← `(tactic| (pswap 0 $(mkNatLit (target+1)); pclear 0))) mainGoal | throwError "prw failed"
@@ -1147,6 +1148,39 @@ theorem ne_symm : Γ ⊢ ~ t₁ ≐ t₂ ⇒ ~ t₂ ≐ t₁ := by
 
 theorem ne_comm (t₁ t₂) : Γ ⊢ ~ t₁ ≐ t₂ ⇔ ~ t₂ ≐ t₁ := by
   papply iff_intro <;> pexact ne_symm
+
+theorem exists_of_exists_unique : Γ ⊢ ∃!' p ⇒ ∃' p := by
+  papply exists_elim'
+  pintros 2
+  papply and_left at 0
+  papply exists_intro #0
+  simp [←Formula.subst_comp, Subst.comp_def]; simp_vec; rw [←Subst.shift_def, Subst.zero_cons_shift, Formula.subst_id]
+  passumption
+
+theorem unique_of_exists_unique : Γ ⊢ ∃!' p ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ ⇒ t₁ ≐ t₂ := by
+  papply exists_elim'
+  pintros
+  papply and_right at 2
+  ptrans #0
+  · papply forall_elim ↑ₜt₁ at 2; papplya 2; rw [Term.shift_def, ←Formula.subst_swap_single]; passumption
+  · papply forall_elim ↑ₜt₂ at 2; psymm; papplya 2; rw [Term.shift_def, ←Formula.subst_swap_single]; passumption
+
+theorem iff_congr_exists_unique : Γ ⊢ ∀' (p ⇔ q) ⇒ ∃!' p ⇔ ∃!' q := by
+  pintro
+  papply iff_congr_exists
+  pintro
+  papply iff_congr_and
+  · papply forall_elim #0 at 0
+    simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
+    rw [←Subst.shift_def, Subst.zero_cons_shift, Formula.subst_id, Formula.subst_id]
+    passumption
+  · papply iff_congr_forall
+    pintro
+    papply iff_congr_imp
+    · papply forall_elim #0 at 0
+      simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
+      passumption
+    · prefl
 
 /-- Compactness theorem (for proofs). -/
 theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
@@ -1206,7 +1240,7 @@ theorem foralls_imp : T ⊢ ∀* (p ⇒ q) ⇒ ∀* p ⇒ ∀* q := by
 
 theorem iff_congr_foralls : T ⊢ ∀* (p ⇔ q) ⇒ ∀* p ⇔ ∀* q := by
   pintro
-  papply iff_intro <;> papply foralls_imp <;> papply foralls_intro
+  papply iff_intro <;> papply foralls_imp <;> apply foralls_intro
   · papply iff_mp; rw [generalization_alls]; passumption
   · papply iff_mpr; rw [generalization_alls]; passumption
 
@@ -1269,12 +1303,18 @@ theorem Consistent.unprovable_of_disprovable : Consistent Γ → Γ ⊢ ~ p → 
   papply h₁
   exact h₂
 
+@[simp] theorem inconsistent_iff : ¬ Consistent Γ ↔ Γ ⊢ ⊥ := by simp [Consistent]
+
 /--
   A theory (formula set in general) is complete if for each `p` it either proves `p` or proves `~ p`.
   
-  Note: it does not assume the theory to be consistent.
+  Note: we do not assume the theory to be consistent. Under this definition, inconsistent theories
+  are also complete.
   -/
 def Complete (Γ : L.FormulaSet n) := ∀ p, Γ ⊢ p ∨ Γ ⊢ ~ p
+
+theorem Complete.of_inconsistent : ¬ Consistent Γ → Complete Γ := by
+  intro h p; simp at h; left; papply false_elim; exact h
 
 theorem Complete.disprovable_of_unprovable (h : Complete Γ) : Γ ⊬ p → Γ ⊢ ~ p := by
   rcases h p with h₁ | h₁ <;> simp [h₁]

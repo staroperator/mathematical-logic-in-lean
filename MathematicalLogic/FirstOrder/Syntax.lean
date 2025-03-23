@@ -376,6 +376,7 @@ prefix:max "↑ₚ" => shift
 @[simp] theorem shift_neg : ↑ₚ(~ p) = ~ ↑ₚp := rfl
 @[simp] theorem shift_and : ↑ₚ(p ⩑ q) = ↑ₚp ⩑ ↑ₚq := rfl
 @[simp] theorem shift_or : ↑ₚ(p ⩒ q) = ↑ₚp ⩒ ↑ₚq := rfl
+@[simp] theorem shift_iff : ↑ₚ(p ⇔ q) = ↑ₚp ⇔ ↑ₚq := rfl
 
 theorem subst_id (p : L.Formula n) : p[Subst.id]ₚ = p := by
   induction p with simp
@@ -403,7 +404,10 @@ theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ t[σ]�
 
 def exUnique (p : L.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
-prefix:max "∃!' " => exUnique
+prefix:100 "∃!' " => exUnique
+@[simp] theorem subst_exUnique : (∃!' p)[σ]ₚ = ∃!' p[⇑ₛσ]ₚ := by
+  simp [exUnique, ←Formula.subst_comp]
+  congr; ext i; cases i using Fin.cases <;> simp [Term.shift_subst_lift, ←Term.shift_def]
 
 def shiftN : (m : ℕ) → L.Formula n → L.Formula (n + m)
 | 0, p => p

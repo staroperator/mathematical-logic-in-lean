@@ -10,6 +10,12 @@ section
 
 variable {L : Language} [∀ n, Encodable (L.Func n)]
 
+def Term.varPR : Primrec 1 :=
+  mul.comp₂ (const 2) (proj 0)
+theorem Term.varPR_eval (h : x < n) :
+  varPR [x]ᵥ = Encodable.encode (#⟨x, h⟩ : L.Term n) := by
+  simp [varPR, Term.encode_var]
+
 def Term.funcPR : Primrec 3 :=
   succ.comp₁ (mul.comp₂ (const 2) (pair.comp₂ (proj 0) (pair.comp₂ (proj 1) (proj 2))))
 @[simp] theorem Term.funcPR_eval {v : Vec (L.Term n) m} :
@@ -171,6 +177,14 @@ def Formula.andNPR : Primrec 2 :=
     rw [←Nat.sub_sub, ←Nat.add_assoc,
       ←Nat.sub_add_comm (n := m - k) (Nat.le_sub_of_add_le (by simp [Nat.add_comm, h₁])),
       Nat.sub_add_cancel (Nat.le_add_right_of_le (Nat.le_sub_of_add_le (by simp [Nat.add_comm, h₁])))]
+
+def Formula.allsPR : Primrec 2 :=
+  iterate Formula.allPR
+@[simp] theorem Formula.allsPR_eval {p : L.Formula n} :
+  allsPR [n, Encodable.encode p]ᵥ = Encodable.encode (∀* p) := by
+  simp [allsPR, iterate_eval]
+  induction n with simp [Formula.alls]
+  | succ n ih => simp [ih]
 
 def Formula.depth : L.Formula n → ℕ
 | p ⇒ q => max p.depth q.depth
@@ -1029,7 +1043,7 @@ theorem Complete.theorems_recursive_of_recursive [L.HasConstEncodeZero] (h : Com
     constructor
     · intro n p; simp; exact isProofPR_dom
     · intro p; simp [h.unprovable_iff_disprovable h', ←provable_iff_isProofPR_eval_pos]
-  · simp [Consistent] at h'
+  · simp at h'
     rw [IsEnumerable.iff_semi_decidable]
     exists Partrec.loop
     intro p

@@ -470,6 +470,12 @@ end Partrec
 
 variable {α : Type u} [Encodable α] {s : Set α}
 
+/--
+  A set is recursive if it can be decided by a recursive function `f`.
+  
+  Note: for flexibility, we only require `f`'s totality on the image of `Encodable.encode`, instead
+  of the whole `ℕ`.
+  -/
 class Recursive (s : Set α) where
   char : Partrec 1
   char_dom : ∀ (x : α), (char [Encodable.encode x]ᵥ).Dom
@@ -497,6 +503,7 @@ instance dec (s : Set α) [Recursive s] (x : α) : Decidable (x ∈ s) := by
 
 end Recursive
 
+/-- `Prop` version of `Recursive`. -/
 def IsRecursive (s : Set α) := Nonempty (Recursive s)
 
 theorem IsRecursive.def : IsRecursive s ↔
@@ -510,6 +517,10 @@ theorem IsRecursive.compl_iff : IsRecursive s ↔ IsRecursive sᶜ := by
   · intro ⟨h⟩; exact ⟨Recursive.compl⟩
   · intro ⟨h⟩; rw [←compl_compl s]; exact ⟨Recursive.compl⟩
 
+/--
+  A set is enumerable (also called recursively enumerable, or RE) if it can be decided through a
+  "μ-operator search" over a recursive function. The equivalent definitions are
+  `IsEnumerable.iff_range_partrec` and `IsEnumerable.iff_semi_decidable`. -/
 class Enumerable (s : Set α) where
   enum : Partrec 2
   enum_dom : ∀ n (x : α), (enum [n, Encodable.encode x]ᵥ).Dom
@@ -527,6 +538,7 @@ instance Recursive.enumerable [Recursive s] : Enumerable s where
   enum_dom n x := by simp [Vec.eq_one]; exact char_dom x
   mem_iff x := by simp [Vec.eq_one]; exact mem_iff x
 
+/-- `Prop` version of `Enumerable`. -/
 def IsEnumerable (s : Set α) := Nonempty (Enumerable s)
 
 theorem IsRecursive.enumerable : IsRecursive s → IsEnumerable s := by

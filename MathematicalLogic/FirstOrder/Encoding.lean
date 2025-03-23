@@ -254,6 +254,19 @@ theorem Formula.encode_lt_all {p : L.Formula (n + 1)} :
   apply (Nat.le_add_right _ _).trans'
   exact Nat.le_mul_of_pos_left _ (by simp)
 
+theorem Formula.encode_le_alls {p : L.Formula n} :
+  Encodable.encode p + n ≤ Encodable.encode (∀* p) := by
+  induction n with simp [Formula.alls]
+  | succ n ih => exact (Nat.add_lt_add_right encode_lt_all _).trans_le ih
+
+theorem Formula.encode_le_alls_n {p : L.Formula n} :
+  n ≤ Encodable.encode (∀* p) :=
+  (Nat.le_add_left _ _).trans encode_le_alls
+
+theorem Formula.encode_le_alls_p {p : L.Formula n} :
+  Encodable.encode p ≤ Encodable.encode (∀* p) :=
+  (Nat.le_add_right _ _).trans encode_le_alls
+
 theorem Formula.encode_le_subst {p : L.Formula n} {σ : L.Subst n m} :
   x ∈ p.free → Encodable.encode (σ x) ≤ Encodable.encode (p[σ]ₚ) := by
   intro h

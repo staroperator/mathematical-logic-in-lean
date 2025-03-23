@@ -4,20 +4,20 @@ import MathematicalLogic.FirstOrder.Proof
 
 # Theory of orders
 
-This file formalizes the basic theories of orders -- the theory of paritial order `PO` and the
+This file formalizes the basic theories of orders -- the theory of partial order `PO` and the
 theory of linear (total) order `LO`.
 
 ## Design note
 
 We always use less-equal `⪯` and less-than `≺` for orders, and do not define greater-equal `⪰` or
-greater-than `≻`. When naming the theorems, we may use `ge` or `gt` when it is actually `le` or
-`lt`, e.g. `LO.lt_or_ge` is the `lt_or_le` in Mathlib -- we are more comfortable to such names.
+greater-than `≻`. When naming theorems, we may use `ge` or `gt` when it is actually `le` or `lt` 
+(e.g. `LO.lt_or_ge` is the `lt_or_le` in Mathlib).
 
 -/
 
 namespace FirstOrder.Language
 
-/-- Language with two formulas that represent less-equal `⪯` and less-than `≺`. -/
+/-- Language with two binary formulas that represent less-equal `⪯` and less-than `≺`. -/
 class Order (L : Language) where
   leDef : L.Formula 2
   ltDef : L.Formula 2
@@ -87,8 +87,7 @@ private inductive order.Rel : ℕ → Type where
 | lt : Rel 2
 
 /--
-  The language of order, with only two binary predicates, `⪯` and `≺`. This is the minimal language
-  (or the free language) satisfying `Order`.
+  The language of order, with only two binary relations, `⪯` and `≺`.
   -/
 def order : Language where
   Func _ := Empty
@@ -233,6 +232,9 @@ theorem lt_trans : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇒ t₂ ≺ t₃ ⇒ t₁ �
   · passumption
   · papply le_of_lt
     passumption
+
+theorem lt_trans' : ↑ᵀ^[n] PO ⊢ t₂ ≺ t₃ ⇒ t₁ ≺ t₂ ⇒ t₁ ≺ t₃ := by
+  pintros; papply lt_trans <;> passumption
 
 end PO
 

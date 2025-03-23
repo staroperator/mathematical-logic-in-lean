@@ -24,6 +24,7 @@ inductive Primrec : ℕ → Type where
 
 namespace Primrec
 
+abbrev comp₀ (f : Primrec 0) : Primrec n := f.comp []ᵥ
 abbrev comp₁ (f : Primrec 1) (g : Primrec n) := f.comp [g]ᵥ
 abbrev comp₂ (f : Primrec 2) (g₁ g₂ : Primrec n) := f.comp [g₁, g₂]ᵥ
 abbrev comp₃ (f : Primrec 3) (g₁ g₂ g₃ : Primrec n) := f.comp [g₁, g₂, g₃]ᵥ
@@ -44,6 +45,7 @@ instance : CoeFun (Primrec n) (λ _ => Vec ℕ n → ℕ) := ⟨eval⟩
 @[simp] theorem succ_eval : succ v = v.head.succ := rfl
 @[simp] theorem proj_eval : proj i v = v i := rfl
 @[simp low] theorem comp_eval : comp f g v = f (λ i => g i v) := rfl
+@[simp] theorem comp₀_eval : comp₀ f v = f []ᵥ := by simp [Vec.eq_nil]
 @[simp] theorem comp₁_eval : comp₁ f g v = f [g v]ᵥ := by simp [Vec.eq_one]
 @[simp] theorem comp₂_eval : comp₂ f g₁ g₂ v = f [g₁ v, g₂ v]ᵥ := by simp [Vec.eq_two]
 @[simp] theorem comp₃_eval : comp₃ f g₁ g₂ g₃ v = f [g₁ v, g₂ v, g₃ v]ᵥ := by simp [Vec.eq_three]

@@ -22,6 +22,9 @@ import MathematicalLogic.FirstOrder.Computability
 import MathematicalLogic.FirstOrder.Theories.Order.Theory
 
 import MathematicalLogic.FirstOrder.Theories.Peano.Theory
+import MathematicalLogic.FirstOrder.Theories.Peano.Hierarchy
+import MathematicalLogic.FirstOrder.Theories.Peano.BetaFunction
+import MathematicalLogic.FirstOrder.Theories.Peano.Representation
 
 import MathematicalLogic.SecondOrder.Syntax
 import MathematicalLogic.SecondOrder.Semantics
