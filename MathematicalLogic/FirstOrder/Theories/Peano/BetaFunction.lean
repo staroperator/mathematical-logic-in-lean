@@ -25,7 +25,7 @@ namespace Vec
 def unbeta (v : Vec ℕ n) := Nat.unbeta (.ofFn v)
 
 theorem beta_unbeta (v : Vec ℕ n) (i : Fin n) : Nat.beta (unbeta v) i = v i := by
-  have := Nat.beta_unbeta_coe (.ofFn v) (i.cast (List.length_ofFn v).symm)
+  have := Nat.beta_unbeta_coe (.ofFn v) (i.cast List.length_ofFn.symm)
   simp at this; exact this
 
 end Vec
@@ -731,7 +731,7 @@ theorem beta_total (t₁ t₂) : ↑ᵀ^[n] PA ⊢ ∃' (beta #0 ↑ₜt₁ ↑�
       · prw [lt_succ_iff_le]
         papply left_le_pair
         passumption
-      · papply exists_intro #1; simp [Term.shift_subst_lift, Term.shift_subst_single]; simp [Subst.single]
+      · papply exists_intro #1; simp [Term.shift_subst_single]; simp [Subst.single]
         papply and_intro
         · prw [lt_succ_iff_le]
           papply right_le_pair
@@ -771,7 +771,7 @@ theorem nbeta_iff : ↑ᵀ^[n] PA ⊢ nbeta t t₁ t₂ ⇔ ~ beta t t₁ t₂ :
       papply exists_intro #1; simp [Term.shift_subst_single]
       papply and_intro
       · prw [lt_succ_iff_le]; papply left_le_pair; passumption
-      · papply exists_intro #0; simp [Term.shift_subst_lift, Term.shift_subst_single]; simp [Subst.single]
+      · papply exists_intro #0; simp [Term.shift_subst_single]; simp [Subst.single]
         papply and_intro
         · prw [lt_succ_iff_le]; papply right_le_pair; passumption
         papply and_intro
@@ -782,7 +782,7 @@ theorem nbeta_iff : ↑ᵀ^[n] PA ⊢ nbeta t t₁ t₂ ⇔ ~ beta t t₁ t₂ :
           papply exists_intro #1; simp [Term.shift_subst_single]
           papply and_intro
           · prw [lt_succ_iff_le]; papply left_le_pair; passumption
-          · papply exists_intro #0; simp [Term.shift_subst_lift, Term.shift_subst_single]; simp [Subst.single]
+          · papply exists_intro #0; simp [Term.shift_subst_single]; simp [Subst.single]
             papply and_intro
             · prw [lt_succ_iff_le]; papply right_le_pair; passumption
             papply and_intro
@@ -1266,7 +1266,7 @@ theorem chinese_remainder (l p q) :
   pintros 4
   psuffices ∀[≺ S l] ∃' ∀[≺ #1] ∃' ∃' (p[#1 ∷ᵥ #2 ∷ᵥ λ i => #(i.addNat 5)]ₚ ⩑ q[#0 ∷ᵥ #2 ∷ᵥ λ i => #(i.addNat 5)]ₚ ⩑ mod #1 #3 #0)
   · papply forall_elim l at 0
-    simp [←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
+    simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
     papplya 0
     pexact lt_succ_self
   · papply ind <;> simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
@@ -1389,7 +1389,7 @@ theorem chinese_remainder (l p q) :
             · papply forall_elim #0 at 14; simp [Subst.lift, Subst.single]
               papplya 14; papply PO.lt_trans <;> passumption
             pintros 2
-            simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+            simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
             papply exists_elim
             · papply forall_elim #1 at 14; simp [Subst.lift, Subst.single]
               papplya 14; papply PO.lt_trans <;> passumption
@@ -1406,7 +1406,7 @@ theorem chinese_remainder (l p q) :
                 · papply forall_elim #2 at 9; simp [Subst.lift, Subst.single]
                   papplya 9; passumption 2
                 pintros 2
-                simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+                simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
                 phave #0 ≐ #1
                 · papply and_right at 1; papply forall_elim #0 at 1
                   simp [←Formula.subst_comp, Subst.comp_def, Subst.single]
@@ -1417,7 +1417,7 @@ theorem chinese_remainder (l p q) :
                 · papply forall_elim #2 at 12; simp [←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
                   papplya 12; passumption 3
                 pintro; papply exists_elim'; pintro; prw [and_imp_iff, and_imp_iff]; pintros 3
-                simp [Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+                simp [Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
                 phave #1 ≐ #3
                 · papply and_right at 5; papply forall_elim #1 at 5
                   simp [←Formula.subst_comp, Subst.comp_def, Subst.single]
@@ -1432,7 +1432,7 @@ theorem chinese_remainder (l p q) :
           · pintro
             papply exists_intro #6
             papply exists_intro #5
-            simp [Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+            simp [←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
             papply and_intro
             · prw [0]; papply and_left at 5; passumption 5
             papply and_intro
@@ -1560,13 +1560,13 @@ theorem beta_comprehension (l p) :
   papply and_intro
   · papply and_left at 0; passumption 0
   · papply forall_elim #1 at 3
-    simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+    simp [Term.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
     pspecialize 3 with 1
     · passumption 1
     papply exists_elim
     · passumption 3
     pintro; papply exists_elim'; pintro; prw [and_imp_iff, and_imp_iff]; pintros 3
-    simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift, Subst.single]
+    simp [Term.shift, Formula.shift, ←Term.subst_comp, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
     phave #1 ≐ #2
     · papply and_right at 3; papply forall_elim #1 at 3
       simp [←Formula.subst_comp, Subst.comp_def, Subst.single]

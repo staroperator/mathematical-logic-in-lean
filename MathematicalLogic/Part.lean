@@ -81,18 +81,18 @@ instance (priority := high) : PartialOrder (Part α) where
     rcases h₂ b hb with ⟨c, hc, h₄⟩
     exact ⟨c, hc, le_trans h₃ h₄⟩
   lt x y := ∃ b ∈ y, ∀ a ∈ x, a < b
-  lt_iff_le_not_le x y := by
-    simp only [not_forall, Classical.not_imp, not_exists, not_and, exists_prop]
+  lt_iff_le_not_ge x y := by
+    simp only [not_forall, not_exists, not_and, exists_prop]
     constructor
     · intro ⟨b, hb, h⟩
       constructor
       · intro a ha
         exact ⟨b, hb, le_of_lt (h a ha)⟩
-      · exact ⟨b, hb, λ a ha => not_le_of_lt (h a ha)⟩
+      · exact ⟨b, hb, λ a ha => not_le_of_gt (h a ha)⟩
     · intro ⟨h, ⟨b, hb, h'⟩⟩
       exists b, hb
       intro a ha
-      apply lt_of_le_not_le
+      apply lt_of_le_not_ge
       · rcases h a ha with ⟨c, hc, h''⟩
         rw [←mem_unique hb hc] at h''
         exact h''
@@ -160,7 +160,7 @@ def find_aux (f : ℕ →. ℕ)
   | 0 =>
     have h₄ : n < Classical.choose h := by
       by_contra h₄
-      apply eq_of_ge_of_not_gt h₁ at h₄
+      apply eq_of_le_of_not_lt' h₁ at h₄
       rcases (Classical.choose_spec h).left with ⟨y, h₅, h₆⟩
       simp [zero_def] at h₆
       rw [h₄] at h₅

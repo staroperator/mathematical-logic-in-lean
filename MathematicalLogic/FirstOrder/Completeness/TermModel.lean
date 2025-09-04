@@ -8,7 +8,7 @@ def Quotient.liftOnVec {s : Setoid α} (v : Vec (Quotient s) n) (f : Vec α n �
 
 theorem Quotient.liftOnVec_mk {s : Setoid α} {f : Vec α n → β} {h} :
   liftOnVec (s := s) (λ i => ⟦v i⟧) f h = f v := by
-  simp [liftOnVec, Quotient.finChoice_eq, Quotient.liftOn_mk]
+  simp [liftOnVec, Quotient.finChoice_eq]
 
 namespace FirstOrder.Language.FormulaSet
 

@@ -374,8 +374,8 @@ theorem mem_site_eval_iff : m ∈ site f g h v ↔ 0 < f v ∧ m ∈ g v ∨ 0 �
         m + 1, ⟨k ∷ᵥ v, ⟨?goal2, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;> simp [h₂]
       simp [Part.mem_find_iff, ←Vec.ext_iff]
       constructor
-      · exists 0; simp [h₁, h₂]
-      · intro k' hk; exists 0; simp [hk, h₁, h₂]
+      · exists 0; simp [h₁]
+      · intro k' hk; exists 0; simp [hk, h₁]
 
 theorem site_dom : (site f g h v).Dom ↔ 0 < f v ∧ (g v).Dom ∨ 0 ∈ f v ∧ (h v).Dom := by
   simp [Part.dom_iff_mem, mem_site_eval_iff]; aesop
@@ -493,7 +493,7 @@ theorem not_mem_iff (x : α) :
 def compl : Recursive sᶜ where
   char := (Primrec.nsign.toPart).comp₁ (char s)
   char_dom x := by simp; exact char_dom x
-  mem_iff x := by simp; simp [not_mem_iff, Part.zero_def, Part.eq_some_iff]
+  mem_iff x := by simp [not_mem_iff]
 
 instance dec (s : Set α) [Recursive s] (x : α) : Decidable (x ∈ s) := by
   simp [mem_iff x]

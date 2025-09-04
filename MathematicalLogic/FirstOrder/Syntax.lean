@@ -192,7 +192,7 @@ prefix:max "⇑ₛ" => Subst.lift
 @[simp] theorem Subst.lift_app_two {σ : L.Subst (n + 2) m} : ⇑ₛσ 2 = ↑ₜ(σ 1) := rfl
 
 theorem Term.shift_subst_lift : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by
-  simp_rw [shift, ←subst_comp]; congr
+  simp_rw [shift, ←subst_comp]; rfl
 theorem Subst.lift_id : ⇑ₛ(id : L.Subst n n) = id := by
   funext x; cases x using Fin.cases <;> simp
 theorem Subst.lift_comp : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛσ₂ := by
@@ -397,17 +397,17 @@ theorem shift_subst_single : (↑ₚp)[↦ₛ t]ₚ = p := by
 theorem shift_subst_assign : (↑ₚp)[≔ₛ t]ₚ = ↑ₚp := shift_subst_cons
 
 theorem shift_subst_lift : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by
-  simp_rw [shift, ←subst_comp]; congr
+  simp_rw [shift, ←subst_comp]; rfl
 
 theorem subst_swap_single : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ t[σ]ₜ]ₚ := by
-  simp_rw [←subst_comp]; congr; funext i; cases i using Fin.cases <;> simp [Term.shift_subst_single]
+  simp_rw [←subst_comp]; congr 1; funext i; cases i using Fin.cases <;> simp [Term.shift_subst_single]
 
 def exUnique (p : L.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛSubst.shift]ₚ ⇒ #0 ≐ #1))
 prefix:100 "∃!' " => exUnique
 @[simp] theorem subst_exUnique : (∃!' p)[σ]ₚ = ∃!' p[⇑ₛσ]ₚ := by
   simp [exUnique, ←Formula.subst_comp]
-  congr; ext i; cases i using Fin.cases <;> simp [Term.shift_subst_lift, ←Term.shift_def]
+  congr 5; ext i; cases i using Fin.cases <;> simp [Term.shift_subst_lift, ←Term.shift_def]
 
 def shiftN : (m : ℕ) → L.Formula n → L.Formula (n + m)
 | 0, p => p
@@ -460,11 +460,11 @@ theorem free_of_subst {σ : L.Subst n m} :
     constructor
     · rintro ⟨y, h₁, h₂⟩
       cases y using Fin.cases with
-      | zero => simp [Term.vars] at h₂; simp [Fin.succ_ne_zero] at h₂
+      | zero => simp [Term.vars] at h₂
       | succ y =>
         simp [Subst.lift, Term.shift, Term.vars_of_subst] at h₂
         rcases h₂ with ⟨z, h₂, h₃⟩
-        simp [Subst.shift, Term.vars] at h₃
+        simp [Term.vars] at h₃
         subst h₃
         exists y
     · rintro ⟨y, ⟨h₁, h₂⟩⟩

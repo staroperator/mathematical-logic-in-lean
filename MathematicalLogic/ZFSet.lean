@@ -72,7 +72,7 @@ theorem card_eq {x : ZFSet.{u}} : lift.{u+1, u} (card x) = #x.toSet :=
 
 theorem card_mono : x ⊆ y → card x ≤ card y := by
   intro h
-  rw [←lift_le, card_eq, card_eq, le_def]
+  rw [←lift_le, card_eq, card_eq, Cardinal.le_def]
   refine ⟨⟨λ ⟨z, h₁⟩ => ⟨z, h h₁⟩, ?_⟩⟩
   intro ⟨z₁, h₁⟩ ⟨z₂, h₂⟩; simp
 
@@ -92,7 +92,7 @@ theorem card_sUnion_range_le [Small.{u} α] {f : α → ZFSet.{u}} :
   card (sUnion (range f)) ≤ sum λ i => (f i).card := by
   rw [←lift_le, card_eq, lift_sum]
   simp_rw [card_eq]
-  rw [←mk_sigma, le_def]
+  rw [←mk_sigma, Cardinal.le_def]
   simp [toSet]
   refine ⟨⟨
     λ ⟨y, h⟩ =>
@@ -146,15 +146,15 @@ theorem V_zero : V 0 = ∅ := by simp [V]
 
 theorem V_succ : V (Order.succ α) = powerset (V α) := by simp [V]
 
-theorem V_limit {α : Ordinal.{u}} (h : α.IsLimit) : V α = sUnion (range (Ordinal.familyOfBFamily α λ β _ => V β)) := by
+theorem V_limit {α : Ordinal.{u}} (h : Order.IsSuccLimit α) : V α = sUnion (range (Ordinal.familyOfBFamily α λ β _ => V β)) := by
   simp [V, Ordinal.limitRecOn_limit (h := h)]
 
-theorem mem_V_limit {α : Ordinal.{u}} (h : α.IsLimit) : x ∈ V α ↔ ∃ β < α, x ∈ V β := by
+theorem mem_V_limit {α : Ordinal.{u}} (h : Order.IsSuccLimit α) : x ∈ V α ↔ ∃ β < α, x ∈ V β := by
   simp [V_limit h, Ordinal.mem_brange]
 
 lemma V_transitive : (V α).IsTransitive := by
   induction' α using Ordinal.induction with α ih
-  rcases α.zero_or_succ_or_limit with h | ⟨α, h⟩ | h
+  rcases α.zero_or_succ_or_isSuccLimit with h | ⟨α, h⟩ | h
   · simp [h, V_zero]
   · subst h
     simp [V_succ]
@@ -170,7 +170,7 @@ lemma V_transitive : (V α).IsTransitive := by
 theorem V_strict_mono : α < β → V α ∈ V β := by
   intro h
   induction' β using Ordinal.induction with β ih
-  rcases β.zero_or_succ_or_limit with h₁ | ⟨β, h₁⟩ | h₁
+  rcases β.zero_or_succ_or_isSuccLimit with h₁ | ⟨β, h₁⟩ | h₁
   · simp [h₁, Ordinal.not_lt_zero] at h
   · subst h₁; simp at h; simp [V_succ]
     rcases lt_or_eq_of_le h with h | h
@@ -198,12 +198,12 @@ theorem mem_V_iff : x ∈ V α ↔ x.rank < α := by
   constructor
   · intro h
     induction' α using Ordinal.induction with α ih generalizing x
-    rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
+    rcases α.zero_or_succ_or_isSuccLimit with h₁ | ⟨α, rfl⟩ | h₁
     · simp [h₁, V_zero] at h
-    · simp [h₁, V_succ] at *
-      rw [rank_le_iff]
+    · simp [V_succ] at h
+      rw [Order.lt_succ_iff, rank_le_iff]
       intro y h₂; apply ih
-      · rfl
+      · exact Order.lt_succ α
       · apply h; exact h₂
     · simp [mem_V_limit h₁] at h
       rcases h with ⟨β, h₂, h₃⟩
@@ -215,13 +215,12 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
   α < κ.ord → (V α).card < κ := by
   intro h
   induction' α using Ordinal.induction with α ih
-  rcases α.zero_or_succ_or_limit with h₁ | ⟨α, h₁⟩ | h₁
+  rcases α.zero_or_succ_or_isSuccLimit with h₁ | ⟨α, h₁⟩ | h₁
   · simp [h₁, V_zero, card_empty]
-    have := (isLimit_ord (le_of_lt hκ.1)).pos
-    simp [lt_ord] at this
-    exact this
+    have := (isSuccLimit_ord (le_of_lt hκ.1)).1
+    simpa [← pos_iff_ne_zero] using this
   · subst h₁; simp [V_succ, card_powerset] at *
-    apply hκ.2.2.2
+    apply hκ.2.2
     apply ih
     · rfl
     · trans Order.succ α
@@ -229,7 +228,7 @@ theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) 
       · exact h
   · simp [V_limit h₁]
     apply lt_of_le_of_lt (card_sUnion_range_le)
-    apply sum_lt_of_isRegular hκ.2.1
+    apply sum_lt_of_isRegular hκ.isRegular
     · simp [lt_ord] at h; simp [h]
     · intro i
       apply ih
@@ -241,7 +240,7 @@ theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessib
   intro h
   apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
   apply card_V_lt_of_inaccessible hκ
-  apply (isLimit_ord (le_of_lt hκ.1)).succ_lt
+  apply (isSuccLimit_ord (le_of_lt hκ.1)).succ_lt
   rw [←mem_V_iff]
   exact h
 
@@ -249,7 +248,7 @@ theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible
   x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
   intro h₁ h₂
   rw [mem_V_iff, rank_image]
-  apply lsub_lt_ord_of_isRegular hκ.2.1
+  apply lsub_lt_ord_of_isRegular hκ.isRegular
   · rw [←PSet.card]
     rw [←mk_out x] at h₁
     exact card_lt_of_mem_V_inaccessible hκ h₁

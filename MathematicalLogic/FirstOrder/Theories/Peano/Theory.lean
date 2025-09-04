@@ -12,15 +12,15 @@ under `PA`.
 
 namespace FirstOrder.Language
 
-private inductive peano.Func : ℕ → Type where
-| zero : Func 0
-| succ : Func 1
-| add : Func 2
-| mul : Func 2
+inductive peanoFunc : ℕ → Type where
+| zero : peanoFunc 0
+| succ : peanoFunc 1
+| add : peanoFunc 2
+| mul : peanoFunc 2
 
 /-- The language of first-order arithmetic. -/
 def peano : Language where
-  Func := peano.Func
+  Func := peanoFunc
   Rel _ := Empty
 
 variable {t t₁ t₂ t₃ t₄: peano.Term n}

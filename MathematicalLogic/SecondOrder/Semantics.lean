@@ -204,7 +204,9 @@ class IsModel (T : L.Theory) (M : Type u) [L.IsStructure M] : Prop where
   satisfy_theory : ∀ p ∈ T, M ⊨ₛ p
 
 structure Model (T : L.Theory) extends L.Structure where
-  satisfy_theory : ∀ p ∈ T, toStructure ⊨ₛ p
+  satisfy_theory :
+    haveI : L.IsStructure toStructure := Structure.instIsStructureDom
+    ∀ p ∈ T, toStructure ⊨ₛ p
 
 variable {T : L.Theory} {M : T.Model} {p q : L.Sentence}
 

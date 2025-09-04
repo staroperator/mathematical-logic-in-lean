@@ -97,7 +97,7 @@ variable {L : Language}
 
 theorem Axiom.subst {σ : L.Subst n m} : p ∈ L.Axiom → p[σ]ₚ ∈ L.Axiom := by
   intro h
-  induction h generalizing m <;> simp [Term.shift_subst_lift, Formula.shift_subst_lift, Formula.subst_swap_single, Formula.subst_andN]
+  induction h generalizing m <;> simp [Formula.shift_subst_lift, Formula.subst_swap_single, Formula.subst_andN]
   case all ih => exact all ih
   all_goals constructor
 

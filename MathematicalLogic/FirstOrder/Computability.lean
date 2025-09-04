@@ -172,7 +172,7 @@ def Formula.andNPR : Primrec 2 :=
     simp; rw [ih (Nat.le_of_succ_le h₁), Vec.encode_eq, vget_eval' (by simp; exact Nat.zero_lt_of_lt h₁), andPR_eval]
     congr
     ext i
-    simp [Vec.tail, Function.comp_def]
+    simp [Vec.tail]
     congr 2
     rw [←Nat.sub_sub, ←Nat.add_assoc,
       ←Nat.sub_add_comm (n := m - k) (Nat.le_sub_of_add_le (by simp [Nat.add_comm, h₁])),
@@ -206,7 +206,7 @@ theorem Formula.depthPR_eval {p : L.Formula n} :
   | imp p q ih₁ ih₂ =>
     simp [Formula.encode_imp]
     rw [depthPR, covrec_eval, ←depthPR]
-    simp [Nat.mul_add_mod, Vec.eq_two]
+    simp [Vec.eq_two]
     simp [Nat.mul_add_div]
     rw [vget_eval', vget_eval']; simp [ih₁, ih₂]
     all_goals
@@ -217,14 +217,14 @@ theorem Formula.depthPR_eval {p : L.Formula n} :
   | all p ih =>
     simp [Formula.encode_all]
     rw [depthPR, covrec_eval, ←depthPR]
-    simp [Nat.mul_add_mod, Vec.eq_two, Vec.head]
-    simp [Nat.mul_add_div]
+    simp [Vec.eq_two, Vec.head]
+    simp
     rw [vget_eval']; simp [ih]
     apply Nat.succ_le_succ
     apply (Nat.le_add_right _ _).trans'
     apply Nat.le_mul_of_pos_left
     simp
-  | _ => rw [depthPR, covrec_eval]; simp [Nat.mul_add_mod, Formula.encode_rel, Formula.encode_eq, Formula.encode_false]
+  | _ => rw [depthPR, covrec_eval]; simp [Formula.encode_rel, Formula.encode_eq, Formula.encode_false]
 
 def Formula.substPR : Primrec 4 :=
   (paired (covrec (unpaired
@@ -279,16 +279,16 @@ theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
   intro d k l p h₁ h₂
   induction p generalizing d k with simp [depth] at h₂
   | rel r v =>
-    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_rel, Nat.mul_add_mod, Nat.mul_add_div]
+    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_rel, Nat.mul_add_div]
     simp [Vec.encode_eq, vmap_eval]
     congr with i
     simp [Vec.eq_four]; simp [←Vec.encode_eq, Subst.liftNPR_eval, Term.substPR_eval]
   | eq t₁ t₂ =>
-    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_eq, Nat.mul_add_mod, Nat.mul_add_div]
-    constructor <;> simp [Vec.eq_four] <;> simp [←Vec.encode_eq, Subst.liftNPR_eval, Term.substPR_eval]
+    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_eq, Nat.mul_add_div]
+    constructor <;> simp [Vec.eq_four] <;> simp [Subst.liftNPR_eval, Term.substPR_eval]
   | false => subst h₁; rw [←h, covrec_eval]; simp [Formula.encode_false]
   | imp p q ih₁ ih₂ =>
-    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_imp, Nat.mul_add_mod, Nat.mul_add_div]
+    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_imp, Nat.mul_add_div]
     constructor
     · rw [vget_eval']
       · rw [ih₁ d k rfl h₂.left]
@@ -306,7 +306,7 @@ theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
         apply Nat.right_le_pair
   | all p ih =>
     cases' d with d <;> simp at h₂
-    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_all, Nat.mul_add_mod, Nat.mul_add_div]
+    subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_all]
     rw [vget_eval']
     · rw [Nat.add_right_comm d 1 k, Nat.add_assoc d k 1, ih d (k + 1) rfl h₂, Subst.liftN]
     · apply Nat.pair_lt_pair_left'
@@ -520,16 +520,16 @@ theorem isFormulaPR_eval_pos_iff : 0 < L.isFormulaPR [n, m]ᵥ ↔ ∃ (p : L.Fo
   · rintro ⟨p, rfl, h₂⟩
     induction p generalizing d k with subst h₁
     | rel r v =>
-      rw [←h, covrec_eval, h]; simp [Formula.encode_rel, Nat.mul_add_mod, Nat.mul_add_div, Vec.eq_two]
+      rw [←h, covrec_eval, h]; simp [Formula.encode_rel, Nat.mul_add_div, Vec.eq_two]
       simp [PrimCodable.isRelPR_eval_pos_iff, isvec_eval_pos_iff, Vec.encode_eq, vmap_eval, vand_eval_pos_iff, isTermPR_eval_pos_iff]
     | eq t₁ t₂ =>
-      rw [←h, covrec_eval, h]; simp [Formula.encode_eq, Nat.mul_add_mod, Nat.mul_add_div, Vec.eq_two]
+      rw [←h, covrec_eval, h]; simp [Formula.encode_eq, Nat.mul_add_div, Vec.eq_two]
       simp [isTermPR_eval_pos_iff]
     | false =>
       rw [←h, covrec_eval, h]; simp [Formula.encode_false]
     | imp p q ih₁ ih₂ =>
       simp [Formula.depth] at h₂
-      rw [←h, covrec_eval, h]; simp [Formula.encode_imp, Nat.mul_add_mod, Nat.mul_add_div, Vec.eq_two]; simp
+      rw [←h, covrec_eval, h]; simp [Formula.encode_imp, Nat.mul_add_div, Vec.eq_two]; simp
       constructor
       · rw [vget_eval']
         · exact ih₁ _ _ rfl h₂.left
@@ -548,7 +548,7 @@ theorem isFormulaPR_eval_pos_iff : 0 < L.isFormulaPR [n, m]ᵥ ↔ ∃ (p : L.Fo
     | all p ih =>
       simp [Formula.depth] at h₂
       cases' d with d <;> simp at h₂
-      rw [←h, covrec_eval, h]; simp [Formula.encode_all, Nat.mul_add_mod, Nat.mul_add_div, Vec.eq_two]; simp [Nat.add_right_comm]
+      rw [←h, covrec_eval, h]; simp [Formula.encode_all, Vec.eq_two]; simp [Nat.add_right_comm]
       rw [vget_eval']
       · exact ih d (k + 1) rfl h₂
       · apply Nat.pair_lt_pair_left'
@@ -686,7 +686,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       rcases h with ⟨_, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, h⟩
       simp at h; subst h
       exact .imp_imp_self
-    · simp [Fin.forall_fin_succ, isFormulaPR_eval_pos_iff] at h
+    · simp [isFormulaPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, _, _, ⟨p, rfl⟩, ⟨q, rfl⟩, ⟨r, rfl⟩, h⟩
       simp at h; subst h
       exact .imp_distrib
@@ -714,7 +714,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       rcases h with ⟨_, _, _, _, ⟨t₁, rfl⟩, ⟨t₂, rfl⟩, h⟩
       simp at h; subst h
       exact .eq_symm
-    · simp [Fin.forall_fin_succ, isTermPR_eval_pos_iff] at h
+    · simp [isTermPR_eval_pos_iff] at h
       rcases h with ⟨_, _, _, _, _, _, ⟨t₁, rfl⟩, ⟨t₂, rfl⟩, ⟨t₃, rfl⟩, h⟩
       simp at h; subst h
       exact .eq_trans
@@ -765,7 +765,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       · apply Formula.encode_lt_imp_left.trans'
         apply Formula.encode_lt_imp_right.trans'
         exact Formula.encode_lt_imp_right
-      · simp [Fin.forall_fin_succ, isFormulaPR_eval_pos_iff]
+      · simp [isFormulaPR_eval_pos_iff]
     | @imp_contra _ p q =>
       exists 2; simp
       refine ⟨Encodable.encode p, ?_, Encodable.encode q, ?_, ?_⟩
@@ -822,7 +822,7 @@ theorem isAxiomPR_eval_pos_iff [HasConstEncodeZero L] {p : L.Formula n} :
       · apply Formula.encode_lt_imp_right.trans'
         apply Formula.encode_lt_imp_left.trans'
         exact Formula.encode_lt_eq_right
-      · simp [Fin.forall_fin_succ, isTermPR_eval_pos_iff]
+      · simp [isTermPR_eval_pos_iff]
     | @eq_congr_func m _ v₁ v₂ f =>
       exists 9; simp
       refine ⟨m, ?_, Encodable.encode f, ?_, Encodable.encode v₁, ?_, Encodable.encode v₂, ?_, ?_⟩
@@ -912,7 +912,7 @@ def isProofOfPR (T : L.Theory) [Recursive T] : Partrec 1 :=
         (.const 0)))
 
 lemma isProofOfPR.inner_dom (n ih) : (inner T [n, ih]ᵥ).Dom := by
-  simp [inner, Partrec.site_dom, Partrec.sand_dom]
+  simp [inner, Partrec.site_dom]
   by_cases h₁ : n.bodd <;> simp [h₁]
   apply Part.zero_or_pos_of_dom
   simp [Partrec.sand_dom]
@@ -948,7 +948,6 @@ theorem isProofOfPR_eval_pos_of_proof [L.HasConstEncodeZero] :
     simp [isProofOfPR] at ih₁ ih₂ ⊢
     rw [Partrec.covrec_eval isProofOfPR.inner_dom]
     nth_rw 1 [isProofOfPR.inner]
-    simp [Partrec.mem_site_eval_iff]
     have h₁ : n < 2 * n.pair m + 1 := by
       apply Nat.lt_succ_of_le
       apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
@@ -957,8 +956,44 @@ theorem isProofOfPR_eval_pos_of_proof [L.HasConstEncodeZero] :
       apply Nat.lt_succ_of_le
       apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
       apply Nat.right_le_pair
-    rw [vget_eval' h₁, vget_eval' h₂, ←ih₁, ←ih₂]
-    simp [Formula.isImpPR_eval_pos_iff]
+    simp only [Partrec.mem_site_eval_iff]
+    left
+    constructor
+    · simp
+    · -- simp/simp only timeout here!
+      simp_rw [Partrec.ofPrim_eval, Part.mem_some_iff, ite_eval, andv_eval_pos_iff]
+      simp only [Nat.reduceAdd, Fin.forall_fin_four, Vec.cons_three, Vec.cons_two, Vec.cons_one,
+        Vec.cons_zero]
+      conv =>
+        rhs
+        arg 1
+        rw [comp₂_eval, proj_eval, Vec.cons_one, Vec.cons_zero, comp₁_eval, fst_eval,
+          comp₁_eval, div2_eval, proj_eval, Vec.cons_zero, Vec.cons_zero, Vec.cons_zero,
+          Nat.div2_succ, Nat.bodd_mul, Nat.bodd_two, Bool.false_and, cond_false, Nat.div2_bit0,
+          Nat.unpair_pair, vget_eval' h₁, ←ih₁, Nat.lt_add_one_iff]
+        simp only [zero_le]
+        rw [true_and, comp₂_eval, proj_eval, Vec.cons_one, Vec.cons_zero, comp₁_eval, snd_eval,
+          comp₁_eval, div2_eval, proj_eval, Vec.cons_zero, Vec.cons_zero, Vec.cons_zero,
+          Nat.div2_succ, Nat.bodd_mul, Nat.bodd_two, Bool.false_and, cond_false, Nat.div2_bit0,
+          Nat.unpair_pair, vget_eval' h₂, ←ih₂, Nat.lt_add_one_iff]
+        simp only [zero_le]
+        rw [true_and, comp₁_eval, comp₁_eval, pred_eval, comp₂_eval, proj_eval, Vec.cons_one,
+          Vec.cons_zero, Vec.cons_zero, comp₁_eval, fst_eval, comp₁_eval, div2_eval, proj_eval,
+          Vec.cons_zero, Vec.cons_zero, Vec.cons_zero, Nat.div2_bit1, Nat.unpair_pair,
+          vget_eval' h₁, ←ih₁, Nat.pred_succ, Formula.isImpPR_eval_pos_iff]
+        simp only [Formula.imp_inj, exists_and_left, exists_eq', and_true, true_and]
+        rw [eq_eval_pos_iff, comp₁_eval, comp₁_eval, pred_eval, comp₂_eval, proj_eval, Vec.cons_one,
+          Vec.cons_zero, Vec.cons_zero, comp₁_eval, fst_eval, comp₁_eval, div2_eval, proj_eval,
+          Vec.cons_zero, Vec.cons_zero, Vec.cons_zero, Nat.div2_bit1, Nat.unpair_pair,
+          vget_eval' h₁, ←ih₁, Nat.pred_succ, Formula.impLeftPR_eval, comp₁_eval, pred_eval,
+          comp₂_eval, proj_eval, Vec.cons_one, Vec.cons_zero, Vec.cons_zero, comp₁_eval, snd_eval,
+          comp₁_eval, div2_eval, proj_eval, Vec.cons_zero, Vec.cons_zero, Vec.cons_zero,
+          Nat.div2_bit1, Nat.unpair_pair, vget_eval' h₂, ←ih₂, Nat.pred_succ]
+        simp only
+      rw [ite_true, comp₁_eval, succ_eval, Vec.head_cons, comp₁_eval, comp₁_eval, pred_eval,
+        comp₂_eval, proj_eval, Vec.cons_one, Vec.cons_zero, Vec.cons_zero, comp₁_eval, fst_eval,
+        comp₁_eval, div2_eval, proj_eval, Vec.cons_zero, Vec.cons_zero, Vec.cons_zero,
+        Nat.div2_bit1, Nat.unpair_pair, vget_eval' h₁, ←ih₁, Nat.pred_succ, Formula.impRightPR_eval]
 
 theorem proof_of_isProofOfPR_eval_pos [L.HasConstEncodeZero] :
   m + 1 ∈ isProofOfPR T [n]ᵥ → ∃ p, m = Encodable.encode p ∧ T ⊢ p := by

@@ -75,6 +75,7 @@ attribute [simp] forall_fin_one forall_fin_two exists_fin_one exists_fin_two
 def castAdd' (x : Fin n) (m : ℕ) : Fin (m + n) := (x.castAdd m).cast (Nat.add_comm _ _)
 @[simp] theorem castAdd'_zero : castAdd' (0 : Fin (n + 1)) m = (0 : Fin (m + n + 1)) := rfl
 @[simp] theorem castAdd'_succ : castAdd' (succ x) m = succ (castAdd' x m) := rfl
+@[simp] theorem castAdd'_one : castAdd' (1 : Fin (n + 2)) m = 1 := rfl
 
 @[simp] theorem addNat_succ : addNat x (m + 1) = succ (addNat x m) := rfl
 
@@ -82,8 +83,8 @@ theorem castAdd'_or_addNat (x : Fin (n + m)) : (∃ y, x = castAdd' y n) ∨ ∃
   by_cases h : x < m
   · left; exists ⟨x, h⟩
   · right; simp at h
-    exists ⟨x - m, by simp [Nat.sub_lt_iff_lt_add h, Nat.add_comm m n]⟩
-    simp [←val_inj, Nat.sub_add_cancel h]
+    exists ⟨x - m, by simp [Nat.sub_lt_iff_lt_add h]⟩
+    simp [Nat.sub_add_cancel h]
 
 end Fin
 

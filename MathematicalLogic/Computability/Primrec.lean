@@ -230,10 +230,10 @@ def mod : Primrec 2 :=
       split
       next h₂ =>
         rw [Nat.add_mod_eq_ite]
-        simp [Nat.mod_eq_of_lt ((Nat.le_add_left _ _).trans_lt h₂), not_le_of_lt h₂]
+        simp [Nat.mod_eq_of_lt ((Nat.le_add_left _ _).trans_lt h₂), not_le_of_gt h₂]
       next h₂ =>
         simp at h₂
-        apply eq_of_le_of_le (Nat.mod_lt _ h₁) at h₂
+        apply eq_of_le_of_ge (Nat.mod_lt _ h₁) at h₂
         rw [←Nat.div_add_mod n m, add_assoc, h₂]
         simp
   · simp at h₁; simp [h₁]
@@ -391,8 +391,8 @@ theorem rcons_eval {v : Vec ℕ n} :
     congr
     · rw [←vget_eval (v := v)]
     · rw [ih (Nat.le_of_succ_le h)]
-      congr; funext i
-      simp [Vec.tail, Vec.rcons, Fin.snoc]
+      congr 1; funext i
+      simp [Vec.rcons, Fin.snoc]
       by_cases h' : (i : ℕ) < k <;> simp [h']
       simp_rw [Nat.succ_add, ←Nat.add_succ, ←Nat.succ_sub h, Nat.succ_sub_succ]
 
@@ -401,7 +401,7 @@ def cov (f : Primrec (n + 2)) : Primrec (n + 1) :=
 theorem cov_eval {f : Primrec (n + 2)} :
   f.cov (m ∷ᵥ v) = Vec.paired (λ i : Fin m => f (i ∷ᵥ f.cov (i ∷ᵥ v) ∷ᵥ v)) := by
   induction m with
-  | zero => simp [Vec.eq_nil, Vec.paired, cov, prec_eval]
+  | zero => simp [Vec.paired, cov, prec_eval]
   | succ m ih =>
     conv =>
       lhs; rw [cov, prec_eval_succ, ←cov]
@@ -496,7 +496,7 @@ theorem bdMu_eval_le_self :
     rw [bdMu, prec_eval_succ, ←bdMu]; simp
     split
     · exact Nat.le_succ_of_le ih
-    · split <;> simp [Nat.le_succ]
+    · split <;> simp
 
 lemma bdMu_eval_gt :
   k < bdMu f (m ∷ᵥ v) → f (k ∷ᵥ v) = 0 := by
@@ -568,7 +568,7 @@ def bdForall (f : Primrec n) (g : Primrec (n + 1)) : Primrec n :=
   not (bdExists f (not g))
 @[simp] theorem bdForall_eval_pos_iff :
   0 < bdForall f g v ↔ ∀ k < f v, 0 < g (k ∷ᵥ v) := by
-  simp [bdForall, bdExists_eval_zero_iff, Nat.ne_zero_iff_zero_lt]
+  simp [bdForall, bdExists_eval_zero_iff]
 @[simp] theorem bdForall_eval_zero_iff :
   bdForall f g v = 0 ↔ ∃ k < f v, g (k ∷ᵥ v) = 0 := by
   rw [←not_iff_not]

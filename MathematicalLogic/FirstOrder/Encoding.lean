@@ -50,7 +50,7 @@ theorem Term.encode_decode {t : L.Term n} : decode n t.encode = some t := by
   induction t with simp [encode, decode, Nat.div2_val]
   | @func m f v ih =>
     rw [Nat.div2_val, Nat.mul_add_div]
-    · simp; rw [Nat.unpair_pair]; simp [Option.bind_eq_some]; clear f
+    · simp; rw [Nat.unpair_pair]; simp [Option.bind_eq_some_iff]; clear f
       induction m with simp [decodeVec, Vec.paired]
       | zero => simp [Vec.eq_nil]
       | succ m ih' =>
@@ -169,7 +169,7 @@ theorem Formula.encode_decode {p : L.Formula n} : decode n p.encode = some p := 
   | @rel m _ r v =>
     rw [Nat.mul_mod_right 4]; simp
     rw [Nat.mul_div_right, Nat.unpair_pair]
-    · simp [Option.bind_eq_some]; clear r
+    · simp [Option.bind_eq_some_iff]; clear r
       induction m with simp [Term.decodeVec, Vec.paired]
       | zero => simp [Vec.eq_nil]
       | succ m ih =>
@@ -270,7 +270,7 @@ theorem Formula.encode_le_alls_p {p : L.Formula n} :
 theorem Formula.encode_le_subst {p : L.Formula n} {σ : L.Subst n m} :
   x ∈ p.free → Encodable.encode (σ x) ≤ Encodable.encode (p[σ]ₚ) := by
   intro h
-  induction p generalizing m with simp [free] at h <;> simp [encode]
+  induction p generalizing m with simp [free] at h <;> simp
   | rel r v =>
     rcases h with ⟨i, h⟩
     apply (Nat.le_add_right _ _).trans'

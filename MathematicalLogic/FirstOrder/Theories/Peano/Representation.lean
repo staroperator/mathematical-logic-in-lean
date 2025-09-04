@@ -44,10 +44,35 @@ namespace peano
 | .mu f =>
   (∃' ((rep f)[≔ₛ S #0]ₚ)) ⩑ ∀[≺ #0] (rep f)[0 ∷ᵥ #0 ∷ᵥ λ i => #(i.addNat 2)]ₚ
 
+@[simp] theorem rep_const : (rep (.const m) : peano.Formula (n + 1)) = #0 ≐ m := by with_unfolding_all rfl
+
+@[simp] theorem rep_succ : rep .succ = #0 ≐ S #1 := by with_unfolding_all rfl
+
+@[simp] theorem rep_proj : rep (.proj i) = #0 ≐ #i.succ := by with_unfolding_all rfl
+
+theorem rep_comp :
+  rep (.comp (n := k) (m := n) f g) = ∃^[k] (
+    (⋀ i, (rep (g i))[#(i.castAdd' (n + 1)) ∷ᵥ λ j => #(j.succ.addNat k)]ₚ)
+    ⩑ (rep f)[#(Fin.addNat 0 k) ∷ᵥ λ i => #(i.castAdd' (n + 1))]ₚ) := by
+  with_unfolding_all rfl
+
+theorem rep_prec :
+  rep (.prec f g) = ∃' (
+    ∃' ((rep f)[#0 ∷ᵥ λ i => #(i.addNat 4)]ₚ ⩑ beta #0 #1 0)
+    ⩑ ∀[≺ #2] ∃' ∃' ((rep g)[#0 ∷ᵥ #2 ∷ᵥ #1 ∷ᵥ λ i => #(i.addNat 6)]ₚ ⩑ beta #1 #3 #2 ⩑ beta #0 #3 (S #2))
+    ⩑ beta #1 #0 #2
+    ⩑ ∀[≺ #0] (
+      ∃' ((rep f)[#0 ∷ᵥ λ i => #(i.addNat 5)]ₚ ⩑ nbeta #0 #1 0)
+      ⩒ ∃[≺ #3] ∃' ∃' ((rep g)[#0 ∷ᵥ #2 ∷ᵥ #1 ∷ᵥ λ i => #(i.addNat 7)]ₚ ⩑ beta #1 #3 #2 ⩑ nbeta #0 #3 (S #2)))) := by
+  with_unfolding_all rfl
+
+theorem rep_mu : rep (.mu f) = (∃' ((rep f)[≔ₛ S #0]ₚ)) ⩑ ∀[≺ #0] (rep f)[0 ∷ᵥ #0 ∷ᵥ λ i => #(i.addNat 2)]ₚ := by
+  with_unfolding_all rfl
+
 abbrev repPrim (f : Primrec n) := rep (.ofPrim f)
 
 theorem Sigma₁.rep : Sigma₁ (rep f) := by
-  induction f <;> with_unfolding_all simp [peano.rep]; aesop
+  induction f <;> with_unfolding_all simp [rep_comp, rep_prec, rep_mu]; aesop
 
 def repRel (f : Partrec n) : peano.Formula n :=
   ∃' ((rep f)[≔ₛ S #0]ₚ)
@@ -58,7 +83,7 @@ end peano
 
 theorem Proof.existsN_andN_of_andN_exists {L : Language} {Γ : L.FormulaSet n} {v : Vec (L.Formula (n + 1)) m} :
   Γ ⊢ (⋀ i, ∃' v i) ⇒ ∃^[m] (⋀ i, (v i)[#(i.castAdd' n) ∷ᵥ λ j => #(j.addNat m)]ₚ) := by
-  induction m with simp [Formula.exN, Formula.andN, Vec.head, Vec.tail, Function.comp]
+  induction m with simp [Formula.exN, Formula.andN, Vec.head, Vec.tail]
   | zero => pintro; pexact true_intro
   | succ m ih =>
     pintro
@@ -95,13 +120,13 @@ namespace Q
 theorem rep_iff_of_mem {f : Partrec n} (h : m ∈ f v) :
   ↑ᵀ^[k] Q ⊢ (rep f)[t ∷ᵥ λ i => v i]ₚ ⇔ t ≐ m := by
   classical
-  induction f generalizing k m t with (simp [rep]; try simp at h)
+  induction f generalizing k m t with try simp at h
   | const m => simp [h]; prefl
   | succ => simp [h, Vec.head]; prefl
   | proj i => simp [h]; prefl
   | comp f g ih₁ ih₂ =>
     rcases h with ⟨u, h₁, h₂⟩
-    simp [Formula.subst_exN, Formula.subst_andN, ←Formula.subst_comp, Subst.comp_def]
+    simp [rep_comp, Formula.subst_exN, Formula.subst_andN, ←Formula.subst_comp, Subst.comp_def]
     papply iff_intro
     · papply existsN_elim'
       apply forallN_intro; simp
@@ -140,7 +165,7 @@ theorem rep_iff_of_mem {f : Partrec n} (h : m ∈ f v) :
     apply Part.mem_unique (hw ⟨l, Nat.lt_succ_self _⟩) at h
     let a := Nat.find (p := λ a => ∀ i hi, Nat.beta a i = w ⟨i, hi⟩) ⟨w.unbeta, λ i hi => Vec.beta_unbeta w ⟨i, hi⟩⟩
     have ha : ∀ i hi, Nat.beta a i = w ⟨i, hi⟩ := Nat.find_spec (p := λ a => ∀ i hi, Nat.beta a i = w ⟨i, hi⟩) _
-    simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
+    simp [rep_prec, ←Formula.subst_comp, Subst.comp_def, Subst.lift]
     papply iff_intro
     · papply exists_elim'
       pintro; simp; prw [and_imp_iff, and_imp_iff, and_imp_iff]; pintros
@@ -195,7 +220,7 @@ theorem rep_iff_of_mem {f : Partrec n} (h : m ∈ f v) :
             papplya 0; rw [ha 0 (Nat.zero_lt_succ _)]
             prefl
           · papply orN_elim'
-            intro ⟨i, hi⟩; simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
+            intro ⟨i, hi⟩; simp [←Formula.subst_comp, Subst.comp_def]
             papply exists_elim'
             pintro
             papply exists_elim'
@@ -269,6 +294,7 @@ theorem rep_iff_of_mem {f : Partrec n} (h : m ∈ f v) :
   | mu f ih =>
     simp [Part.mem_find_iff, Part.pos_iff] at h; rcases h with ⟨⟨a, h₁, h₁'⟩, h₂⟩
     cases' a with a <;> simp at h₁'
+    simp [rep_mu]
     papply iff_intro
     · prw [and_imp_iff]
       papply exists_elim'
@@ -285,7 +311,7 @@ theorem rep_iff_of_mem {f : Partrec n} (h : m ∈ f v) :
         passumption
       · pintro
         papply forall_elim m at 1
-        simp [←Term.subst_comp, ←Formula.subst_comp]; simp [Term.shift_subst_single, Subst.comp_def]
+        simp [←Formula.subst_comp]; simp [Term.shift_subst_single, Subst.comp_def]
         papplya 1 at 0
         apply ih at h₁; simp_vec at h₁
         prw [h₁, Proof.eq_comm] at 0
@@ -329,7 +355,7 @@ theorem repRel_of_pos {f : Partrec n} :
   simp [Part.pos_iff]
   intro a h₁ h₂
   papply exists_intro (ofNat (a - 1))
-  simp [repRel, ←Formula.subst_comp, Subst.comp_def]; simp_vec
+  simp [←Formula.subst_comp, Subst.comp_def]; simp_vec
   rw [←ofNat_succ, Nat.sub_add_cancel h₂]
   exact rep_of_mem h₁
 
@@ -350,7 +376,7 @@ open Q
 namespace PA
 
 theorem rep_unique {f : Partrec n} : ↑ᵀ^[k] PA ⊢ (rep f)[t₁ ∷ᵥ σ]ₚ ⇒ (rep f)[t₂ ∷ᵥ σ]ₚ ⇒ t₁ ≐ t₂ := by
-  induction f generalizing k with simp [rep]
+  induction f generalizing k with simp [rep_comp, rep_prec, rep_mu]
   | const | succ | proj => pintros; prw [0, 1]; prefl
   | comp f g ih₁ ih₂ =>
     simp [Formula.subst_exN, Formula.subst_andN, ←Formula.subst_comp, Subst.comp_def]
@@ -380,7 +406,7 @@ theorem rep_unique {f : Partrec n} : ↑ᵀ^[k] PA ⊢ (rep f)[t₁ ∷ᵥ σ]�
     pintro
     prw [and_imp_iff, and_imp_iff, and_imp_iff]; pintros 4; pclear 0
     papply exists_elim'
-    pintro; simp [Term.shift_subst_lift, ←Formula.subst_comp, Subst.comp_def, Subst.lift, ←Term.shift_def]
+    pintro; simp [←Formula.subst_comp, Subst.comp_def, Subst.lift, ←Term.shift_def]
     prw [and_imp_iff, and_imp_iff, and_imp_iff]; pintros 4; pclear 0
     simp_vec; simp [Term.shift_subst_cons]
     psuffices ∀[≺ S ↑ₜ↑ₜ(σ 0)] ∀' ∀' (beta #1 #4 #2 ⇒ beta #0 #3 #2 ⇒ #1 ≐ #0)
@@ -403,8 +429,8 @@ theorem rep_unique {f : Partrec n} : ↑ᵀ^[k] PA ⊢ (rep f)[t₁ ∷ᵥ σ]�
         prw [and_imp_iff]; pintros 2
         papply exists_elim
         · passumption 6
-        pintro; simp [←Formula.subst_comp, Subst.comp_def]; simp [Term.shift_subst_cons, Subst.lift]
-        simp_vec; simp [Term.shift_subst_cons, ←Term.subst_comp, Subst.comp_def]
+        pintro; simp [←Formula.subst_comp, Subst.comp_def]; simp [Subst.lift]
+        simp_vec; simp [←Term.subst_comp, Subst.comp_def]
         simp [Formula.shift, Term.shift, ←Formula.subst_comp, ←Term.subst_comp, Subst.comp_def]
         prw [and_imp_iff]; pintros
         papply beta_unique at 0 with 2; swap
@@ -476,7 +502,7 @@ theorem rep_unique {f : Partrec n} : ↑ᵀ^[k] PA ⊢ (rep f)[t₁ ∷ᵥ σ]�
 set_option maxHeartbeats 300000
 
 theorem repPrim_total {f : Primrec n} (σ) : ↑ᵀ^[k] PA ⊢ ∃' (repPrim f)[⇑ₛσ]ₚ := by
-  induction f generalizing k with simp [repPrim, Partrec.ofPrim, rep]
+  induction f generalizing k with simp [repPrim, Partrec.ofPrim, rep_comp, rep_prec]
   | const m => papply exists_intro m; simp; prefl
   | succ => papply exists_intro (S (σ 0)); simp [Term.shift_subst_single]; prefl
   | proj i => papply exists_intro (σ i); simp [Term.shift_subst_single]; prefl
@@ -682,7 +708,7 @@ theorem repPrim_total {f : Primrec n} (σ) : ↑ᵀ^[k] PA ⊢ ∃' (repPrim f)[
               · papply forall_elim (S #2) at 4; simp [Subst.single]
                 papply exists_elim
                 · papplya 4; prw [succ_lt_succ_iff]; papply lt_succ_of_lt; passumption
-                pclear 4; pintro; simp [Subst.lift, Subst.single]
+                pclear 4; pintro; simp [Subst.lift]
                 prw [and_imp_iff]; pintros 2
                 papply and_left at 1
                 psuffices #1 ≐ #0
@@ -800,7 +826,7 @@ theorem enumerable_iff_weakly_representable (h : OmegaConsistent T) :
   constructor
   · intro ⟨_⟩
     exists ∃' (repRel (Enumerable.enum s))
-    simp [←Formula.subst_comp, Subst.lift, Vec.eq_one]
+    simp [Subst.lift, Vec.eq_one]
     intro x
     constructor
     · rw [Enumerable.mem_iff]; intro ⟨n, h₁⟩

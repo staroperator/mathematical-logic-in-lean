@@ -111,13 +111,13 @@ theorem onFormula_subst {σ : L₁.Subst n m} : φ.onFormula (p[σ]ₚ) = (φ.on
   | eq t₁ t₂ => simp [onTerm_subst]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
-    simp [ih]; congr; funext x; cases x using Fin.cases <;> simp [onTerm, onTerm_shift]
+    simp [ih]; congr 1; funext x; cases x using Fin.cases <;> simp [onTerm, onTerm_shift]
 
 theorem onFormula_shift : φ.onFormula (↑ₚp) = ↑ₚ(φ.onFormula p) := by
   simp [Formula.shift, onFormula_subst]; rfl
 
 theorem onFormula_subst_single : φ.onFormula (p[↦ₛ t]ₚ) = (φ.onFormula p)[↦ₛ (φ.onTerm t)]ₚ := by
-  simp [onFormula_subst]; congr; funext x; cases x using Fin.cases <;> rfl
+  simp [onFormula_subst]; congr 1; funext x; cases x using Fin.cases <;> rfl
 
 theorem on_axiom : p ∈ L₁.Axiom → φ.onFormula p ∈ L₂.Axiom := by
   intro h
@@ -364,7 +364,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     let q₂' := (φ.hom i₂ i h₄).onFormula q₂
     exists i, (~ q₁' ⇒ ~ q₂') ⇒ q₂' ⇒ q₁'
     constructor
-    · simp [Hom.onFormula, Hom.onFormula_neg, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
+    · simp [Hom.onFormula, q₁', q₂']; simp_rw [←Hom.comp_onFormula, homLimit_comp_hom]; simp [h₁, h₂]
     · exact .imp_contra
   | @forall_elim _ p t =>
     rcases term_of_homLimit t with ⟨i₁, t', h₁⟩
@@ -457,7 +457,7 @@ theorem axiom_of_homLimit [Nonempty ι] (h : p ∈ φ.directLimit.Axiom) :
     let r' := (φ.hom i₃ i h₅).onRel r
     exists i, (⋀ i, v₁' i ≐ v₂' i) ⇒ r' ⬝ʳ v₁' ⇒ r' ⬝ʳ v₂'
     constructor
-    · simp [Hom.onFormula, Hom.onTerm, Hom.onFormula_andN, v₁', v₂', r']
+    · simp [Hom.onFormula, Hom.onFormula_andN, v₁', v₂', r']
       simp_rw [←Hom.comp_onTerm, homLimit_comp_hom]
       simp [←h₁, ←h₂]
       apply Quotient.sound
@@ -524,7 +524,7 @@ theorem subset_of_monotone_union [Nonempty ι] {Γ : (i : ι) → (L i).FormulaS
       simp; exists q
     · simp_rw [←φ.hom_comp h₄ h₈, Hom.comp_onFormula]
       rw [←Function.comp_def, Set.image_comp]
-      apply Set.Subset.trans (Set.image_subset _ h₅)
+      apply Set.Subset.trans (Set.image_mono h₅)
       apply h₁
 
 def ofChain (L : ℕ → Language) (φ : ∀ i, L i →ᴸ L (i + 1)) : DirectedSystem L where
@@ -534,7 +534,7 @@ def ofChain (L : ℕ → Language) (φ : ∀ i, L i →ᴸ L (i + 1)) : Directed
     induction k, h₂ using Nat.le_induction with
     | base => simp [Nat.leRecOn_self]; ext <;> simp
     | succ k h₂ ih =>
-      simp; rw [Nat.leRecOn_succ (h1 := h₂), Nat.leRecOn_succ (h1 := le_trans h₁ h₂)];
+      rw [Nat.leRecOn_succ (h1 := h₂), Nat.leRecOn_succ (h1 := le_trans h₁ h₂)];
       have := ih (le_trans h₁ h₂)
       simp at this
       rw [Hom.comp_assoc, this]
@@ -554,7 +554,6 @@ theorem monotone_chain {L : ℕ → Language} {φ : ∀ i, L i →ᴸ L (i + 1)}
     simp_rw [←hom_comp _ h (Nat.le_succ j), Hom.comp_onFormula]
     rw [←Function.comp_def, Set.image_comp]
     simp only [ofChain_hom_succ]
-    apply Set.image_subset
-    exact ih
+    exact Set.image_mono ih
 
 end FirstOrder.Language.DirectedSystem

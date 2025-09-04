@@ -197,7 +197,7 @@ noncomputable instance : LinearOrder M where
   le_total a b := by
     have := M.satisfy_theory _ .ax_le_total a b
     simp at this; exact this
-  decidableLE := _
+  toDecidableLE := by classical infer_instance
 
 theorem add_le_add_right (a b c : M) : a ≤ b → a + c ≤ b + c := by
   have := M.satisfy_theory _ .ax_add_le_add a b c
@@ -218,14 +218,7 @@ theorem mul_le_mul_right (a b c : M) : a ≤ b → 0 ≤ c → a * c ≤ b * c :
   have := M.satisfy_theory _ .ax_mul_le_mul a b c
   simp at this; exact this
 
-noncomputable instance : LinearOrderedField M where
-  mul_comm := mul_comm
-  inv_zero := inv_zero
-  mul_inv_cancel a := mul_inv_cancel₀
-  qsmul := _
-  nnqsmul := _
-  decidableLE := _
-  le_total := le_total
+noncomputable instance : IsStrictOrderedRing M where
   add_le_add_left a b h c := by
     rw [add_comm c a, add_comm c b]
     exact add_le_add_right a b c h
@@ -240,11 +233,19 @@ noncomputable instance : LinearOrderedField M where
     rw [mul_neg_one, mul_neg_one, neg_neg] at h₄
     have h₅ := h₄.antisymm (le_of_lt h₃)
     simp [h₅] at h₃
-  mul_pos a b h₁ h₂ := by
+  le_of_add_le_add_left a b c h := by
+    apply add_le_add_right _ _ (-a) at h
+    simpa using h
+  mul_lt_mul_of_pos_left a b c h₁ h₂ := by
     apply lt_of_le_of_ne
-    · have h₃ := mul_le_mul_right _ _ _ (le_of_lt h₁) (le_of_lt h₂)
-      rw [zero_mul] at h₃; exact h₃
-    · simp [ne_of_gt h₁, ne_of_gt h₂]
+    · have h₃ := mul_le_mul_right _ _ _ h₁.le h₂.le
+      simpa [mul_comm c] using h₃
+    · simp [h₁.ne, h₂.ne.symm]
+  mul_lt_mul_of_pos_right a b c h₁ h₂ := by
+    apply lt_of_le_of_ne
+    · have h₃ := mul_le_mul_right _ _ _ h₁.le h₂.le
+      simpa [mul_comm c] using h₃
+    · simp [h₁.ne, h₂.ne.symm]
 
 theorem exists_lub (s : Set M) : s.Nonempty → BddAbove s → ∃ u, IsLUB s u := by
   intro ⟨x, h₁⟩ ⟨y, h₂⟩
@@ -283,7 +284,7 @@ theorem ofReal_lt : @ofReal M x < ofReal y ↔ x < y := by
     simp [isLUB_lt_iff ofReal_isLUB, upperBounds] at h₁
     rcases h₁ with ⟨a, h₁, h₂⟩
     by_contra h₃; simp at h₃
-    apply not_lt_of_le _ h₂
+    apply not_lt_of_ge _ h₂
     simp [isLUB_le_iff ofReal_isLUB, upperBounds]
     intro s h₄
     apply h₁
@@ -434,7 +435,7 @@ lemma exists_sqrt (a : M) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     have h₇ : (b + δ) ^ 2 ≤ a := by
       calc
         (b + δ) ^ 2 = b ^ 2 + δ * (2 * b + δ) := by rw [add_pow_two, mul_add, ←add_assoc, mul_comm δ, pow_two δ]
-        _ ≤ b ^ 2 + δ * (2 * b + 1) := by simp [add_le_add_iff_left, mul_le_mul_left h₆]; apply min_le_left
+        _ ≤ b ^ 2 + δ * (2 * b + 1) := by simp [add_le_add_iff_left, mul_le_mul_iff_right₀ h₆]; apply min_le_left
         _ ≤ b ^ 2 + (a - b ^ 2) := by
           rw [add_le_add_iff_left, ←le_div_iff₀]
           · apply min_le_right
@@ -454,7 +455,7 @@ lemma exists_sqrt (a : M) (h : 0 ≤ a) : ∃ b, 0 ≤ b ∧ b ^ 2 = a := by
     have h₈ : (b - δ) ^ 2 ≥ a := by
       calc
         (b - δ) ^ 2 = b ^ 2 - δ * (2 * b - δ) := by rw [sub_pow_two, mul_sub, ←sub_add, mul_comm δ, pow_two δ]
-        _ ≥ b ^ 2 - δ * (2 * b) := by apply sub_le_sub_left; rw [mul_le_mul_left h₇]; simp; exact le_of_lt h₇
+        _ ≥ b ^ 2 - δ * (2 * b) := by apply sub_le_sub_left; rw [mul_le_mul_iff_right₀ h₇]; simp; exact le_of_lt h₇
         _ ≥ b ^ 2 - (b ^ 2 - a) := by apply sub_le_sub_left; rw [←le_div_iff₀]; simp; exact h₆
         _ = a := by simp
     have h₉ : b - δ ∈ upperBounds s := by
@@ -486,8 +487,7 @@ theorem ofReal_mul {x y} : @ofReal M (x * y) = ofReal x * ofReal y := by
     rcases lt_or_eq_of_le h' with h' | h'
     · apply neg_pos_of_neg at h'
       apply this h at h'
-      simp [ofReal_neg, neg_mul] at h'
-      exact h'
+      simpa [ofReal_neg] using h'
     · simp [h', ofReal_zero]
   apply ofReal_isLUB.unique
   constructor

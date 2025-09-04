@@ -48,11 +48,13 @@ open ZFSet in
 instance : zf.IsStructure (V κ) where
   interpFunc
   | .empty, _ => ⟨∅, by
-    simp [mem_V_iff, rank_empty, Order.one_le_iff_pos]
-    exact (Cardinal.isLimit_ord (le_of_lt κ.2.1)).pos⟩
+    simp [mem_V_iff, rank_empty]
+    by_contra h
+    simp at h
+    simpa [h] using Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)⟩
   | .insert, v => ⟨insert (v 0).1 (v 1).1, by
     simp [mem_V_iff, rank_insert]; constructor
-    · apply (Cardinal.isLimit_ord (le_of_lt κ.2.1)).succ_lt
+    · apply (Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)).succ_lt
       rw [←mem_V_iff]
       exact (v 0).2
     · rw [←mem_V_iff]; exact (v 1).2⟩
@@ -63,7 +65,7 @@ instance : zf.IsStructure (V κ) where
     exact (v 0).2⟩
   | .powerset, v => ⟨ZFSet.powerset (v 0).1, by
     simp [mem_V_iff, rank_powerset]
-    apply (Cardinal.isLimit_ord (le_of_lt κ.2.1)).succ_lt
+    apply (Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)).succ_lt
     rw [←mem_V_iff]
     exact (v 0).2⟩
   | .omega, v => ⟨.omega, by
@@ -75,7 +77,7 @@ variable {t t₁ t₂ : zf.Term l} {ρ : Assignment (V κ) l}
 
 @[simp] theorem interp_empty : (⟦ (∅ : zf.Term l) ⟧ₜ V κ, ρ).1 = ∅ := rfl
 @[simp] theorem interp_insert : (⟦ insert t₁ t₂ ⟧ₜ V κ, ρ).1 = insert (⟦ t₁ ⟧ₜ V κ, ρ).1 (⟦ t₂ ⟧ₜ V κ, ρ).1 := rfl
-@[simp] theorem interp_sUnion : (⟦ ⋃₀ t ⟧ₜ V κ, ρ).1 = (⋃₀ (⟦ t ⟧ₜ V κ, ρ).1 : ZFSet) := rfl
+@[simp] theorem interp_sUnion : (⟦ ⋃₀ t ⟧ₜ V κ, ρ).1 = ZFSet.sUnion (⟦ t ⟧ₜ V κ, ρ).1 := rfl
 @[simp] theorem interp_powerset : (⟦ 𝓟 t ⟧ₜ V κ, ρ).1 = ZFSet.powerset (⟦ t ⟧ₜ V κ, ρ).1 := rfl
 @[simp] theorem interp_omega : (⟦ ω ⟧ₜ V κ, ρ).1 = ZFSet.omega := rfl
 @[simp] theorem satisfy_mem : V κ ⊨[ρ] t₁ ∈' t₂ ↔ (⟦ t₁ ⟧ₜ V κ, ρ).1 ∈ (⟦ t₂ ⟧ₜ V κ, ρ).1 := by rfl
@@ -99,7 +101,7 @@ inductive ZF₂ : zf.Theory where
 namespace ZF₂
 
 open ZFSet in
-instance : ZF₂.IsModel (V κ) where
+instance : ZF₂.IsModel (zf.V κ) where
   satisfy_theory p h := by
     cases h with simp [Vec.eq_one, mem_omega_iff]
     | ax_ext =>
@@ -126,7 +128,7 @@ instance : ZF₂.IsModel (V κ) where
       have : Definable₁ g := @Classical.allZFSetDefinable 1 _
       refine ⟨⟨image g x.1, ?_⟩, ?_⟩
       · simp; apply image_mem_V_of_inaccessible κ.2 x.2
-        intro y h; simp [g, V_transitive _ x.2 h]; exact (f _).2
+        intro y h; simp [g, V_transitive _ x.2 h]
       · intro y
         constructor
         · simp; intro z h h'
@@ -489,10 +491,10 @@ theorem kappa_regular : (kappa M).IsRegular := by
       simp; exact le_ciSup (Cardinal.bddAbove_range _) (⟨y, h⟩ : {y // y ∈ x})
     simp [h₁] at h₃
     apply le_trans' card_iUnion_ge_iSup at h₃
-    exact not_le_of_lt card_lt_kappa h₃
+    exact not_le_of_gt card_lt_kappa h₃
 
 theorem kappa_inaccessible : (kappa M).IsInaccessible :=
-  ⟨kappa_gt_aleph0, kappa_regular, kappa_strong_limit⟩
+  ⟨kappa_gt_aleph0, kappa_regular.2, kappa_strong_limit.2⟩
 
 noncomputable def rank : M → Ordinal.{u} := IsWellFounded.rank (· ∈ ·)
 
@@ -502,7 +504,7 @@ theorem rank_lt_kappa : rank x < (kappa M).ord := by
   apply Cardinal.iSup_lt_ord_of_isRegular kappa_regular
   · apply card_lt_kappa
   · intro ⟨y, h⟩
-    apply (Cardinal.isLimit_ord (le_of_lt kappa_gt_aleph0)).succ_lt
+    apply (Cardinal.isSuccLimit_ord (le_of_lt kappa_gt_aleph0)).succ_lt
     exact ih y h
 
 noncomputable def toZFSet (x : M) : ZFSet.{u} :=
