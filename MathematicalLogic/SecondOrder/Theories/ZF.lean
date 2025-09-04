@@ -38,7 +38,8 @@ scoped infix:60 " ∈' " => mem
 
 def globalChoice : zf.Sentence := ∃ᶠ[1] (∀' (∃' (#0 ∈' #1) ⇒ 1 ⬝ᶠᵛ [#0]ᵥ ∈' #0))
 
-def V (κ : InaccessibleCardinal.{u}) : Type (u + 1) := (ZFSet.V κ.1.ord).toSet
+open ZFSet in
+def V (κ : InaccessibleCardinal.{u}) : Type (u + 1) := (V_ κ.1.ord).toSet
 
 namespace V
 
@@ -48,28 +49,28 @@ open ZFSet in
 instance : zf.IsStructure (V κ) where
   interpFunc
   | .empty, _ => ⟨∅, by
-    simp [mem_V_iff, rank_empty]
+    simp [mem_vonNeumann, rank_empty]
     by_contra h
     simp at h
     simpa [h] using Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)⟩
   | .insert, v => ⟨insert (v 0).1 (v 1).1, by
-    simp [mem_V_iff, rank_insert]; constructor
+    simp [mem_vonNeumann, rank_insert]; constructor
     · apply (Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)).succ_lt
-      rw [←mem_V_iff]
+      rw [←mem_vonNeumann]
       exact (v 0).2
-    · rw [←mem_V_iff]; exact (v 1).2⟩
+    · rw [←mem_vonNeumann]; exact (v 1).2⟩
   | .sUnion, v => ⟨⋃₀ (v 0).1, by
-    simp [mem_V_iff]
+    simp [mem_vonNeumann]
     apply lt_of_le_of_lt (rank_sUnion_le _)
-    rw [←mem_V_iff]
+    rw [←mem_vonNeumann]
     exact (v 0).2⟩
   | .powerset, v => ⟨ZFSet.powerset (v 0).1, by
-    simp [mem_V_iff, rank_powerset]
+    simp [mem_vonNeumann, rank_powerset]
     apply (Cardinal.isSuccLimit_ord (le_of_lt κ.2.1)).succ_lt
-    rw [←mem_V_iff]
+    rw [←mem_vonNeumann]
     exact (v 0).2⟩
   | .omega, v => ⟨.omega, by
-    simp [mem_V_iff, rank_omega, Cardinal.lt_ord]; exact κ.2.1⟩
+    simp [mem_vonNeumann, rank_omega, Cardinal.lt_ord]; exact κ.2.1⟩
   interpRel
   | .mem, v => (v 0).1 ∈ (v 1).1
 
@@ -108,36 +109,36 @@ instance : ZF₂.IsModel (zf.V κ) where
       intro x y h
       ext z
       constructor <;> intro h'
-      · refine (h ⟨z, ?_⟩).mp h'; exact V_transitive _ x.2 h'
-      · refine (h ⟨z, ?_⟩).mpr h'; exact V_transitive _ y.2 h'
+      · refine (h ⟨z, ?_⟩).mp h'; exact isTransitive_vonNeumann _ _ x.2 h'
+      · refine (h ⟨z, ?_⟩).mpr h'; exact isTransitive_vonNeumann _ _ y.2 h'
     | ax_insert => intro _ _ _; exact or_comm
     | ax_union =>
       intro x y
       constructor
-      · intro ⟨z, h₁, h₂⟩; exists ⟨z, V_transitive _ x.2 h₁⟩
+      · intro ⟨z, h₁, h₂⟩; exists ⟨z, isTransitive_vonNeumann _ _ x.2 h₁⟩
       · intro ⟨z, h₁, h₂⟩; exists z.1
     | ax_powerset =>
       intro x y
       constructor
       · intro h z; apply h
-      · intro h z h'; exact h ⟨z, V_transitive _ y.2 h'⟩ h'
+      · intro h z h'; exact h ⟨z, isTransitive_vonNeumann _ _ y.2 h'⟩ h'
     | ax_replacement =>
       intro x f
       classical
-      let g : ZFSet → ZFSet := λ y => if h : y ∈ V κ.1.ord then (f [⟨y, h⟩]ᵥ).1 else ∅
+      let g : ZFSet → ZFSet := λ y => if h : y ∈ V_ κ.1.ord then (f [⟨y, h⟩]ᵥ).1 else ∅
       have : Definable₁ g := @Classical.allZFSetDefinable 1 _
       refine ⟨⟨image g x.1, ?_⟩, ?_⟩
       · simp; apply image_mem_V_of_inaccessible κ.2 x.2
-        intro y h; simp [g, V_transitive _ x.2 h]
+        intro y h; simp [g,  isTransitive_vonNeumann _ _ x.2 h]
       · intro y
         constructor
         · simp; intro z h h'
-          exists ⟨z, V_transitive _ x.2 h⟩, h
-          simp [←h', g, V_transitive _ x.2 h]
+          exists ⟨z, isTransitive_vonNeumann _ _ x.2 h⟩, h
+          simp [←h', g, isTransitive_vonNeumann _ _ x.2 h]
         · intro ⟨z, h, h'⟩
           simp [h']
           exists z.1, h
-          simp [g, V_transitive _ x.2 h]
+          simp [g, isTransitive_vonNeumann _ _ x.2 h]
     | ax_infinity =>
       refine ⟨?_, ?_, ?_⟩
       · exists 0
@@ -148,14 +149,14 @@ instance : ZF₂.IsModel (zf.V κ) where
         | zero => exact h₁
         | succ n ih =>
           refine h₂ ⟨ofNat n, ?_⟩ ih
-          simp [mem_V_iff, rank_ofNat, Cardinal.lt_ord]
+          simp [mem_vonNeumann, rank_ofNat, Cardinal.lt_ord]
           exact (Cardinal.nat_lt_aleph0 n).trans κ.2.1
     | ax_regularity =>
       intro x y _
       have : x.1 ≠ ∅ := by simp [eq_empty]; exists y.1
       apply ZFSet.regularity at this
       rcases this with ⟨z, h₁, h₂⟩; simp [eq_empty] at h₂
-      exists ⟨z, V_transitive _ x.2 h₁⟩, h₁
+      exists ⟨z, isTransitive_vonNeumann _ _ x.2 h₁⟩, h₁
       intro _ h₃ h₄; exact h₂ _ h₃ h₄
 
 variable {M : Model.{u} ZF₂} {t t₁ t₂ : zf.Term l} {ρ : Assignment M l} {x y z : M}
@@ -596,17 +597,17 @@ theorem rank_toZFSet : (toZFSet x).rank = rank x := by
     apply ZFSet.rank_lt_of_mem
     simp [h]
 
-open Cardinal in
+open Cardinal ZFSet in
 theorem toZFSet_surjective_V_kappa {x : ZFSet} :
-  x ∈ ZFSet.V (kappa M).ord → ∃ (y : M), toZFSet y = x := by
+  x ∈ V_ (kappa M).ord → ∃ (y : M), toZFSet y = x := by
   intro h₁
   induction' x using ZFSet.inductionOn with x ih
-  choose! f h₂ using λ y h => ih y h (ZFSet.V_transitive x h₁ h)
-  apply ZFSet.card_lt_of_mem_V_inaccessible kappa_inaccessible at h₁
+  choose! f h₂ using λ y h => ih y h (isTransitive_vonNeumann _ x h₁ h)
+  apply card_lt_of_mem_V_inaccessible kappa_inaccessible at h₁
   rw [ZFSet.card] at h₁
   apply exists_of_card_lt_kappa at h₁
   rcases h₁ with ⟨x', h₁⟩
-  rw [←ZFSet.card, ←lift_inj.{u,u+1}, ZFSet.card_eq, ←lift_id #x.toSet, card, lift_mk_eq.{u+1,u,u+1}] at h₁
+  rw [←ZFSet.card, ←lift_inj.{u,u+1}, card_eq, ←lift_id #x.toSet, card, lift_mk_eq.{u+1,u,u+1}] at h₁
   rcases h₁ with ⟨e⟩
   exists sUnion (replace x' λ z => if h : z ∈ x' then {f (e.symm ⟨z, h⟩)} else ∅)
   ext y; simp [mem_toZFSet]; constructor
@@ -625,7 +626,7 @@ theorem iso_V (M : Model.{u} ZF₂) :
   ∃ (κ : InaccessibleCardinal.{u}), _root_.Nonempty (M.toStructure ≃ᴹ .of (V κ)) := by
   refine ⟨⟨kappa M, ?_⟩, ⟨Equiv.ofBijective (λ x => ⟨toZFSet x, ?_⟩) ⟨?_, ?_⟩, ?_, ?_⟩⟩
   · exact kappa_inaccessible
-  · simp [ZFSet.mem_V_iff, rank_toZFSet]; exact rank_lt_kappa
+  · simp [ZFSet.mem_vonNeumann, rank_toZFSet]; exact rank_lt_kappa
   · intro _ _ h; simp at h; rw [Subtype.mk_eq_mk] at h; exact toZFSet_injective h
   · intro ⟨x, h⟩; simp at h; simp [@Subtype.mk_eq_mk ZFSet]; exact toZFSet_surjective_V_kappa h
   · intro _ f v

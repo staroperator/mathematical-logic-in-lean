@@ -1,14 +1,23 @@
 import Mathlib.SetTheory.Cardinal.Regular
-import Mathlib.SetTheory.ZFC.Ordinal
-import Mathlib.SetTheory.ZFC.Rank
+import Mathlib.SetTheory.ZFC.VonNeumann
 
 universe u v
+
+theorem Cardinal.IsRegular.lift {c : Cardinal.{u}} (hc : c.IsRegular) : (lift.{v, u} c).IsRegular :=
+  ⟨by simpa using hc.1, by simpa [← lift_ord, ← Ordinal.lift_cof] using hc.2⟩
+
+open Cardinal in
+theorem Cardinal.sum_lt_lift_of_isRegular' {ι : Type u} {f : ι → Cardinal.{v}}
+    {c : Cardinal.{max u v}} (hc : IsRegular c) (hι : lift #ι < c) (hf : ∀ i, lift (f i) < c) :
+    sum f < c := by
+  refine (sum_lt_lift_of_isRegular hc hι hf).trans_le' ?_
+  rw [←lift_sum, lift_id']
 
 theorem ZFSet.rank_mk : rank (mk x) = PSet.rank x := rfl
 
 namespace PSet
 
-private instance typeSetoid (x : PSet) : Setoid x.Type where
+local instance typeSetoid (x : PSet) : Setoid x.Type where
   r a b := x.Func a ≈ x.Func b
   iseqv.refl _ := Equiv.refl _
   iseqv.symm := Equiv.symm
@@ -88,11 +97,12 @@ theorem card_powerset : card (powerset x) = 2 ^ card x := by
   · intro ⟨y, h⟩; simp at h; ext; simp; apply h
   · intro ⟨s, h⟩; ext; simp; apply h
 
-theorem card_sUnion_range_le [Small.{u} α] {f : α → ZFSet.{u}} :
-  card (sUnion (range f)) ≤ sum λ i => (f i).card := by
-  rw [←lift_le, card_eq, lift_sum]
-  simp_rw [card_eq]
-  rw [←mk_sigma, Cardinal.le_def]
+theorem lift_card_sUnion_range_le {α : Type u} [Small.{v, u} α] {f : α → ZFSet.{v}} :
+  lift (card (sUnion (range f))) ≤ sum λ i => (f i).card := by
+  -- rw [←lift_le.{max (u + 1) v}, lift_lift, ←lift_lift, card_eq, lift_sum]
+  rw [←lift_le.{max u (v + 1)}, lift_lift, ←lift_lift.{v + 1}, card_eq, lift_sum]
+  conv => rhs; arg 1; intro i; rw [←lift_lift.{v + 1}, card_eq]
+  rw [←lift_sum, ←mk_sigma, ←mk_uLift, ←mk_uLift, Cardinal.le_def]
   simp [toSet]
   refine ⟨⟨
     λ ⟨y, h⟩ =>
@@ -138,122 +148,48 @@ theorem rank_image {f : ZFSet.{u} → ZFSet.{u}} [Definable₁ f] :
     rw [mk_out] at this
     simp; exact ⟨_, this, rfl⟩
 
-noncomputable def V (α : Ordinal.{u}) : ZFSet.{u} :=
-  α.limitRecOn ∅ (λ _ ih => powerset ih)
-    (λ α _ ih => sUnion (range (Ordinal.familyOfBFamily α λ β h => ih β h)))
-
-theorem V_zero : V 0 = ∅ := by simp [V]
-
-theorem V_succ : V (Order.succ α) = powerset (V α) := by simp [V]
-
-theorem V_limit {α : Ordinal.{u}} (h : Order.IsSuccLimit α) : V α = sUnion (range (Ordinal.familyOfBFamily α λ β _ => V β)) := by
-  simp [V, Ordinal.limitRecOn_limit (h := h)]
-
-theorem mem_V_limit {α : Ordinal.{u}} (h : Order.IsSuccLimit α) : x ∈ V α ↔ ∃ β < α, x ∈ V β := by
-  simp [V_limit h, Ordinal.mem_brange]
-
-lemma V_transitive : (V α).IsTransitive := by
-  induction' α using Ordinal.induction with α ih
-  rcases α.zero_or_succ_or_isSuccLimit with h | ⟨α, h⟩ | h
-  · simp [h, V_zero]
-  · subst h
-    simp [V_succ]
-    apply IsTransitive.powerset
-    apply ih
-    simp
-  · simp [V_limit h]
-    apply IsTransitive.sUnion'
-    intro x h₁; simp [Ordinal.mem_brange] at h₁
-    rcases h₁ with ⟨β, h₁, h₂⟩; subst h₂
-    exact ih _ h₁
-
-theorem V_strict_mono : α < β → V α ∈ V β := by
-  intro h
-  induction' β using Ordinal.induction with β ih
-  rcases β.zero_or_succ_or_isSuccLimit with h₁ | ⟨β, h₁⟩ | h₁
-  · simp [h₁, Ordinal.not_lt_zero] at h
-  · subst h₁; simp at h; simp [V_succ]
-    rcases lt_or_eq_of_le h with h | h
-    · apply V_transitive; exact ih β (Order.lt_succ β) h
-    · simp [h, subset_refl]
-  · simp [mem_V_limit h₁]
-    exists Order.succ α; constructor
-    · exact h₁.succ_lt h
-    · simp [V_succ, subset_refl]
-
-theorem V_mono : α ≤ β → V α ⊆ V β := by
-  intro h
-  rcases lt_or_eq_of_le h with h | h
-  · apply V_transitive; exact V_strict_mono h
-  · simp [h]
-
-theorem mem_V_rank {x : ZFSet} : x ∈ V (x.rank + 1) := by
-  induction' x using inductionOn with x ih
-  simp [V_succ]
-  intro _ h₂
-  apply V_mono _ (ih _ h₂)
-  simp; exact rank_lt_of_mem h₂
-
-theorem mem_V_iff : x ∈ V α ↔ x.rank < α := by
-  constructor
-  · intro h
-    induction' α using Ordinal.induction with α ih generalizing x
-    rcases α.zero_or_succ_or_isSuccLimit with h₁ | ⟨α, rfl⟩ | h₁
-    · simp [h₁, V_zero] at h
-    · simp [V_succ] at h
-      rw [Order.lt_succ_iff, rank_le_iff]
-      intro y h₂; apply ih
-      · exact Order.lt_succ α
-      · apply h; exact h₂
-    · simp [mem_V_limit h₁] at h
-      rcases h with ⟨β, h₂, h₃⟩
-      apply ih _ h₂ at h₃
-      exact h₃.trans h₂
-  · intro h; apply V_mono _ mem_V_rank; simp [h]
-
 theorem card_V_lt_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
-  α < κ.ord → (V α).card < κ := by
+  α < κ.ord → (V_ α).card < κ := by
   intro h
   induction' α using Ordinal.induction with α ih
   rcases α.zero_or_succ_or_isSuccLimit with h₁ | ⟨α, h₁⟩ | h₁
-  · simp [h₁, V_zero, card_empty]
+  · simp [h₁, vonNeumann_zero, card_empty]
     have := (isSuccLimit_ord (le_of_lt hκ.1)).1
     simpa [← pos_iff_ne_zero] using this
-  · subst h₁; simp [V_succ, card_powerset] at *
+  · subst h₁; simp [vonNeumann_succ, card_powerset] at *
     apply hκ.2.2
     apply ih
     · rfl
     · trans Order.succ α
       · simp
       · exact h
-  · simp [V_limit h₁]
-    apply lt_of_le_of_lt (card_sUnion_range_le)
-    apply sum_lt_of_isRegular hκ.isRegular
-    · simp [lt_ord] at h; simp [h]
-    · intro i
-      apply ih
-      · apply Ordinal.typein_lt_self
-      · trans; apply Ordinal.typein_lt_self; exact h
+  · rw [vonNeumann_of_isSuccPrelimit h₁.isSuccPrelimit]
+    refine lift_lt.1 (lift_card_sUnion_range_le.trans_lt ?_)
+    apply sum_lt_lift_of_isRegular' hκ.isRegular.lift
+    · rwa [Ordinal.mk_Iio_ordinal, lift_lift, lift_lt, ← lt_ord]
+    · intro ⟨i, hi⟩
+      simp at hi
+      rw [lift_lt]
+      exact ih i hi (hi.trans h)
 
 theorem card_lt_of_mem_V_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) :
-  x ∈ V κ.ord → x.card < κ := by
+  x ∈ V_ κ.ord → x.card < κ := by
   intro h
-  apply lt_of_le_of_lt (card_mono (V_transitive _ mem_V_rank))
+  apply lt_of_le_of_lt (card_mono (isTransitive_vonNeumann _ _ (mem_vonNeumann_succ _)))
   apply card_V_lt_of_inaccessible hκ
   apply (isSuccLimit_ord (le_of_lt hκ.1)).succ_lt
-  rw [←mem_V_iff]
-  exact h
+  rwa [←mem_vonNeumann]
 
 theorem image_mem_V_of_inaccessible {κ : Cardinal.{u}} (hκ : κ.IsInaccessible) [Definable₁ f] :
-  x ∈ V κ.ord → (∀ y ∈ x, f y ∈ V κ.ord) → image f x ∈ V κ.ord := by
+  x ∈ V_ κ.ord → (∀ y ∈ x, f y ∈ V_ κ.ord) → image f x ∈ V_ κ.ord := by
   intro h₁ h₂
-  rw [mem_V_iff, rank_image]
+  rw [mem_vonNeumann, rank_image]
   apply lsub_lt_ord_of_isRegular hκ.isRegular
   · rw [←PSet.card]
     rw [←mk_out x] at h₁
     exact card_lt_of_mem_V_inaccessible hκ h₁
   · intro a
-    rw [←mem_V_iff]
+    rw [←mem_vonNeumann]
     apply h₂
     have := PSet.func'_mem_mk a
     rw [mk_out x] at this
