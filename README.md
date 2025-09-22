@@ -4,7 +4,6 @@
 
 The following results are formalized in this library:
 
-Completeness and incompleteness
 - Gödel's completeness theorem
   ```lean
   theorem FirstOrder.Language.completeness {n : ℕ} {L : Language} {Γ : L.FormulaSet n} {p : L.Formula n} : Γ ⊨ p → Γ ⊢ p
