@@ -4,7 +4,7 @@ universe u v
 
 namespace SecondOrder.Language
 
-class IsStructure (L : Language) (M : Type u) where
+class HasStructure (L : Language) (M : Type u) where
   interpFunc : L.Func n → Vec M n → M
   interpRel : L.Rel n → Vec M n → Prop
 
@@ -35,21 +35,21 @@ infixr:80 " ∷ₐ " => Assignment.cons
 
 end Assignment
 
-open IsStructure
+open HasStructure
 
-variable {M : Type u} [IsStructure L M] {l} {ρ : Assignment M l} {p q : L.Formula l}
+variable {M : Type u} [HasStructure L M] {l} {ρ : Assignment M l} {p q : L.Formula l}
 
-def interp (M : Type u) [L.IsStructure M] (ρ : Assignment M l) : L.Term l → M
+def interp (M : Type u) [L.HasStructure M] (ρ : Assignment M l) : L.Term l → M
 | #x => ρ x
 | f ⬝ᶠ v => interpFunc f λ i => interp M ρ (v i)
 | f ⬝ᶠᵛ v => ρ f λ i => interp M ρ (v i)
-notation:80 "⟦ " t " ⟧ₜ " M ", " ρ:80 => interp M ρ t
+notation:55 "⟦ " t " ⟧ₜ " M ", " ρ:55 => interp M ρ t
 
 @[simp] theorem interp_var : ⟦ (#x : L.Term l) ⟧ₜ M, ρ = ρ x := rfl
 @[simp] theorem interp_fconst : ⟦ (f ⬝ᶠ v : L.Term l) ⟧ₜ M, ρ = interpFunc f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
 @[simp] theorem interp_fvar : ⟦ (f ⬝ᶠᵛ v : L.Term l) ⟧ₜ M, ρ = ρ f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
 
-def satisfy (M : Type u) [L.IsStructure M] : {l : List Ty} → L.Formula l → Assignment M l → Prop
+def satisfy (M : Type u) [L.HasStructure M] : {l : List Ty} → L.Formula l → Assignment M l → Prop
 | _, r ⬝ʳ v, ρ => interpRel r λ i => ⟦ v i ⟧ₜ M, ρ
 | _, r ⬝ʳᵛ v, ρ => ρ r λ i => ⟦ v i ⟧ₜ M, ρ
 | _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ
@@ -77,7 +77,7 @@ notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
 @[simp] theorem satisfy_exf {p : L.Formula (_ :: l)} : M ⊨[ρ] ∃ᶠ[n] p ↔ ∃ (f : Vec M n → M), M ⊨[f ∷ₐ ρ] p := by simp [Formula.exf]
 @[simp] theorem satisfy_exr {p : L.Formula (_ :: l)} : M ⊨[ρ] ∃ʳ[n] p ↔ ∃ (r : Vec M n → Prop), M ⊨[r ∷ₐ ρ] p := by simp [Formula.exr]
 
-abbrev satisfys (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ₐ] p
+abbrev satisfys (M : Type u) [L.HasStructure M] (p : L.Sentence) := M ⊨[[]ₐ] p
 infix:50 " ⊨ₛ " => satisfys
 
 structure Structure (L : Language) where
@@ -88,14 +88,15 @@ structure Structure (L : Language) where
 namespace Structure
 
 instance : CoeSort L.Structure (Type u) := ⟨(·.Dom)⟩
-instance {M : L.Structure} : L.IsStructure M := ⟨M.interpFunc, M.interpRel⟩
-@[reducible] def of (M : Type u) [L.IsStructure M] : L.Structure := ⟨M, IsStructure.interpFunc, IsStructure.interpRel⟩
+instance {M : L.Structure} : L.HasStructure M := ⟨M.interpFunc, M.interpRel⟩
+@[reducible] def of (M : Type u) [L.HasStructure M] : L.Structure :=
+  ⟨M, HasStructure.interpFunc, HasStructure.interpRel⟩
 
 variable {M N : L.Structure}
 
 structure Embedding (M : L.Structure) (N : L.Structure) extends M ↪ N where
-  on_func : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)
-  on_rel : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEmbedding ∘ v)
+  on_func : ∀ (f : L.Func n) (v : Vec M n), toEmbedding (HasStructure.interpFunc f v) = HasStructure.interpFunc f (toEmbedding ∘ v)
+  on_rel : ∀ (r : L.Rel n) (v : Vec M n), HasStructure.interpRel r v ↔ HasStructure.interpRel r (toEmbedding ∘ v)
 infixr:25 " ↪ᴹ " => Embedding
 
 namespace Embedding
@@ -115,8 +116,8 @@ def trans (e₁ : M ↪ᴹ N) (e₂ : N ↪ᴹ 𝓢) : M ↪ᴹ 𝓢 where
 end Embedding
 
 structure Isomorphism (M : L.Structure) (N : L.Structure) extends M ≃ N where
-  on_func : ∀ (f : L.Func n) (v : Vec M n), toEquiv (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEquiv ∘ v)
-  on_rel : ∀ (r : L.Rel n) (v : Vec M n), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEquiv ∘ v)
+  on_func : ∀ (f : L.Func n) (v : Vec M n), toEquiv (HasStructure.interpFunc f v) = HasStructure.interpFunc f (toEquiv ∘ v)
+  on_rel : ∀ (r : L.Rel n) (v : Vec M n), HasStructure.interpRel r v ↔ HasStructure.interpRel r (toEquiv ∘ v)
 infix:25 " ≃ᴹ " => Isomorphism
 
 namespace Isomorphism
@@ -200,12 +201,12 @@ end Structure
 
 namespace Theory
 
-class IsModel (T : L.Theory) (M : Type u) [L.IsStructure M] : Prop where
+class IsModel (T : L.Theory) (M : Type u) [L.HasStructure M] : Prop where
   satisfy_theory : ∀ p ∈ T, M ⊨ₛ p
 
 structure Model (T : L.Theory) extends L.Structure where
   satisfy_theory :
-    haveI : L.IsStructure toStructure := Structure.instIsStructureDom
+    haveI : L.HasStructure toStructure := Structure.instHasStructureDom
     ∀ p ∈ T, toStructure ⊨ₛ p
 
 variable {T : L.Theory} {M : T.Model} {p q : L.Sentence}
@@ -216,7 +217,8 @@ instance : CoeOut T.Model L.Structure := ⟨(·.toStructure)⟩
 instance : CoeSort T.Model (Type u) := ⟨(·.Dom)⟩
 instance : T.IsModel M := ⟨M.satisfy_theory⟩
 
-@[reducible] def of (M : Type u) [L.IsStructure M] [T.IsModel M] : T.Model := ⟨Structure.of M, IsModel.satisfy_theory⟩
+@[reducible] def of (M : Type u) [L.HasStructure M] [T.IsModel M] : T.Model :=
+  ⟨Structure.of M, IsModel.satisfy_theory⟩
 
 end Model
 

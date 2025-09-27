@@ -11,24 +11,30 @@ This file formalizes the soundness theorem of first-order logic.
 
 namespace FirstOrder.Language
 
-variable {L : Language} {M : Type u} [IsStructure L M]
+variable {L : Language} {M : Type u} [L.HasStructure M] {n : ℕ} {Γ : L.FormulaSet n}
+  {p q : L.Formula n}
 
 theorem Entails.ax : p ∈ L.Axiom → Γ ⊨ p := by
   intro h M ρ _
-  induction h with simp
+  induction h with
   | forall_elim =>
     intro h
-    simp [satisfy_subst_single]
+    rw [satisfy_subst_single]
     apply h
   | forall_self =>
     intro h _
-    simp [satisfy_shift]
+    rw [satisfy_shift]
     exact h
   | eq_trans =>
-    intro h₁ h₂; simp [h₁, h₂]
+    intro h₁ h₂
+    rw [satisfy_eq] at h₁ h₂
+    simp [h₁, h₂]
   | eq_congr_func | eq_congr_rel =>
-    intro h; simp [h]
-  | _ => tauto
+    intro h
+    simp only [satisfy_eq, satisfy_vecAnd] at h
+    simp [h]
+  | _ =>
+    simp only [satisfy_eq, satisfy_imp, satisfy_neg, satisfy_all] <;> tauto
 
 theorem Entails.mp : Γ ⊨.{u} p ⇒ q → Γ ⊨.{u} p → Γ ⊨.{u} q := by
   intros h₁ h₂ M ρ h
@@ -53,7 +59,7 @@ theorem Consistent.of_satisfiable : Satisfiable Γ → Consistent Γ := by
 theorem Consistent.empty : Consistent (∅ : L.FormulaSet n) :=
   of_satisfiable.{0} .empty
 
-variable {T : L.Theory} [T.IsModel M]
+variable {T T₁ : L.Theory} [T.IsModel M] {p : L.Sentence}
 
 theorem Theory.soundness : T ⊢ p → M ⊨ₛ p := by
   intro h
@@ -66,28 +72,33 @@ theorem Theory.IsModel.of_subtheory (T₂ : L.Theory) [T₁ ⊆ᵀ T₂] [IsMode
 instance Theory.subtheory_theory : T ⊆ᵀ L.theory M :=
   .of_subset (λ _ h => soundness (.hyp h))
 
+variable (M)
+
 theorem Complete.provable_iff_satisfied (h : Complete T) : T ⊢ p ↔ M ⊨ₛ p := by
-  by_cases h' : T ⊢ p <;> simp [h']
-  · exact Theory.soundness h'
+  by_cases h' : T ⊢ p
+  · simpa [h'] using Theory.soundness h'
   · cases h p with
     | inl h => contradiction
-    | inr h => apply Theory.soundness h
+    | inr h => simpa [h'] using Theory.soundness h
 
-theorem Complete.eq_theory (h : Complete T) : T.theorems = L.theory M := by
-  ext p; simp
-  exact h.provable_iff_satisfied
+theorem Complete.theorems_eq_theory (h : Complete T) : T.theorems = L.theory M := by
+  ext p
+  exact h.provable_iff_satisfied M
 
-theorem theory.consistent : Consistent (L.theory M) :=
-  .of_satisfiable satisfiable
+variable (L)
 
-theorem theory.complete : Complete (L.theory M) := by
+theorem theory_consistent : Consistent (L.theory M) :=
+  .of_satisfiable (theory_satisfiable L M)
+
+theorem theory_complete : Complete (L.theory M) := by
   intro p
   by_cases h : M ⊨ₛ p
   · exact Or.inl (.hyp h)
   · exact Or.inr (.hyp h)
 
-theorem theory.theorems_eq_self : (L.theory M).theorems = L.theory M := by
+theorem theorems_theory_eq_theory : (L.theory M).theorems = L.theory M := by
   apply Theory.subset_theorems.antisymm'
-  intro p h; simp [complete.provable_iff_satisfied (M := M)] at h; exact h
+  intro p h
+  simpa [(theory_complete L M).provable_iff_satisfied M] using h
 
 end FirstOrder.Language

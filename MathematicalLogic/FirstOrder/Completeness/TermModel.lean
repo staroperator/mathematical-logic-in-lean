@@ -24,7 +24,7 @@ def TermModel (Γ : L.FormulaSet n) := Quotient (TermSetoid Γ)
 
 variable {Γ : L.FormulaSet n}
 
-@[simps] instance : L.IsStructure (TermModel Γ) where
+@[simps] instance : L.HasStructure (TermModel Γ) where
   interpFunc f v :=
     Quotient.liftOnVec v (⟦f ⬝ᶠ ·⟧)
       (by intros v₁ v₂ h; simp; apply Quotient.sound; papply Proof.eq_congr_func; exact Proof.andN_intro h)

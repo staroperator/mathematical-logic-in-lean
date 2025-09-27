@@ -46,7 +46,7 @@ namespace V
 @[simp] theorem val_inj {x y : V κ} : x = y ↔ x.1 = y.1 := Subtype.val_inj.symm
 
 open ZFSet in
-instance : zf.IsStructure (V κ) where
+instance : zf.HasStructure (V κ) where
   interpFunc
   | .empty, _ => ⟨∅, by
     simp [mem_vonNeumann, rank_empty]

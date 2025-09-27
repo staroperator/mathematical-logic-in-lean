@@ -29,7 +29,7 @@ instance : Mul (orderedRing.Term l) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 def le (t₁ t₂ : orderedRing.Term l) : orderedRing.Formula l := .le ⬝ʳ [t₁, t₂]ᵥ
 scoped infix:60 " ⪯ " => le
 
-instance Real : orderedRing.IsStructure ℝ where
+instance Real : orderedRing.HasStructure ℝ where
   interpFunc
   | .zero, _ => 0
   | .one, _ => 1
@@ -45,9 +45,9 @@ variable {t t₁ t₂ : orderedRing.Term l} {ρ : Assignment ℝ l}
 
 @[simp] theorem interp_zero : ⟦ (0 : orderedRing.Term l) ⟧ₜ ℝ, ρ = 0 := rfl
 @[simp] theorem interp_one : ⟦ (1 : orderedRing.Term l) ⟧ₜ ℝ, ρ = 1 := rfl
-@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ ℝ, ρ = ⟦ t₁ ⟧ₜ ℝ, ρ + ⟦ t₂ ⟧ₜ ℝ, ρ := rfl
-@[simp] theorem interp_neg : ⟦ -t ⟧ₜ ℝ, ρ = - ⟦ t ⟧ₜ ℝ, ρ := rfl
-@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ ℝ, ρ = ⟦ t₁ ⟧ₜ ℝ, ρ * ⟦ t₂ ⟧ₜ ℝ, ρ := rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ ℝ, ρ = (⟦ t₁ ⟧ₜ ℝ, ρ) + (⟦ t₂ ⟧ₜ ℝ, ρ) := rfl
+@[simp] theorem interp_neg : ⟦ -t ⟧ₜ ℝ, ρ = - (⟦ t ⟧ₜ ℝ, ρ) := rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ ℝ, ρ = (⟦ t₁ ⟧ₜ ℝ, ρ) * (⟦ t₂ ⟧ₜ ℝ, ρ) := rfl
 @[simp] theorem satisfy_le : ℝ ⊨[ρ] t₁ ⪯ t₂ ↔ ⟦ t₁ ⟧ₜ ℝ, ρ ≤ ⟦ t₂ ⟧ₜ ℝ, ρ := by rfl
 
 end orderedRing.Real
@@ -106,9 +106,9 @@ instance : LE M := ⟨(M.interpRel .le [·, ·]ᵥ)⟩
 
 @[simp] theorem interp_zero : ⟦ (0 : orderedRing.Term l) ⟧ₜ M, ρ = 0 := by simp [OfNat.ofNat, Zero.zero, Vec.eq_nil]; rfl
 @[simp] theorem interp_one : ⟦ (1 : orderedRing.Term l) ⟧ₜ M, ρ = 1 := by simp [OfNat.ofNat, One.one, Vec.eq_nil]; rfl
-@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ + ⟦ t₂ ⟧ₜ M, ρ := by simp [HAdd.hAdd, Add.add, Vec.eq_two]; rfl
-@[simp] theorem interp_neg : ⟦ -t ⟧ₜ M, ρ = - ⟦ t ⟧ₜ M, ρ := by simp [Neg.neg, Vec.eq_one]; rfl
-@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ * ⟦ t₂ ⟧ₜ M, ρ := by simp [HMul.hMul, Mul.mul, Vec.eq_two]; rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ M, ρ = (⟦ t₁ ⟧ₜ M, ρ) + (⟦ t₂ ⟧ₜ M, ρ) := by simp [HAdd.hAdd, Add.add, Vec.eq_two]; rfl
+@[simp] theorem interp_neg : ⟦ -t ⟧ₜ M, ρ = - (⟦ t ⟧ₜ M, ρ) := by simp [Neg.neg, Vec.eq_one]; rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ M, ρ = (⟦ t₁ ⟧ₜ M, ρ) * (⟦ t₂ ⟧ₜ M, ρ) := by simp [HMul.hMul, Mul.mul, Vec.eq_two]; rfl
 @[simp] theorem satisfy_le : M ⊨[ρ] t₁ ⪯ t₂ ↔ ⟦ t₁ ⟧ₜ M, ρ ≤ ⟦ t₂ ⟧ₜ M, ρ := by simp [orderedRing.le, LE.le, Vec.eq_two]; rfl
 
 theorem add_comm (a b : M) : a + b = b + a := by

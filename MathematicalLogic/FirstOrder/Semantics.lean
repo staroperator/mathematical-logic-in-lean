@@ -10,39 +10,39 @@ This file defines the semantics of first-order logic (structures, models, satisf
 
 namespace FirstOrder.Language
 
-/--
-  First-order structures. The name `IsStructure` is to align with `IsModel`, but it's not `Prop`
-  valued. Note: structures do not have to be nonempty.
-  -/
-class IsStructure (L : Language) (M : Type u) where
-  interpFunc : L.Func m → Vec M m → M
-  interpRel : L.Rel m → Vec M m → Prop
+/-- First-order structures. -/
+class HasStructure (L : Language) (M : Type u) where
+  interpFunc {m : ℕ} : L.Func m → Vec M m → M
+  interpRel {m : ℕ} : L.Rel m → Vec M m → Prop
 
-variable {L : Language} {M : Type u} [L.IsStructure M] {t t₁ t₂ : L.Term n} {p q : L.Formula n}
+variable {L : Language} {M : Type u} [L.HasStructure M] {m n : ℕ} {t t₁ t₂ : L.Term n}
+  {p q : L.Formula n} {ρ : Vec M n}
 
-open IsStructure
+open HasStructure
 
 /-- A term is interpreted by a structures and an assignment of type `Vec M n`. -/
-def interp (M : Type u) [L.IsStructure M] : L.Term n → Vec M n → M
+def interp (M : Type u) [L.HasStructure M] : L.Term n → Vec M n → M
 | #x, ρ => ρ x
 | f ⬝ᶠ v, ρ => interpFunc f λ i => interp M (v i) ρ
-notation:80 "⟦" t "⟧ₜ " α ", " ρ:80 => interp α t ρ
+notation:55 "⟦" t "⟧ₜ " M ", " ρ:55 => interp M t ρ
 
-@[simp] theorem interp_var : ⟦ (#x : L.Term n) ⟧ₜ M, ρ = ρ x := rfl
-@[simp] theorem interp_func : ⟦ (f ⬝ᶠ v : L.Term n) ⟧ₜ M, ρ = interpFunc f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
+@[simp] theorem interp_var {i : Fin n} : ⟦ (#i : L.Term n) ⟧ₜ M, ρ = ρ i := rfl
+@[simp] theorem interp_func {f : L.Func m} {v : Vec (L.Term n) m} :
+    ⟦ (f ⬝ᶠ v : L.Term n) ⟧ₜ M, ρ = interpFunc f λ i => ⟦ v i ⟧ₜ M, ρ := rfl
 
-theorem interp_subst : ⟦ t[σ]ₜ ⟧ₜ M, ρ = ⟦ t ⟧ₜ M, λ x => ⟦ σ x ⟧ₜ M, ρ := by
-  induction t with simp
-  | func f v ih => simp [ih]
+theorem interp_subst {σ : L.Subst n m} {ρ} :
+    ⟦ t[σ]ₜ ⟧ₜ M, ρ = ⟦ t ⟧ₜ M, λ x => ⟦ σ x ⟧ₜ M, ρ := by
+  induction t with simp [*]
 
-theorem interp_shift_succ : ⟦ ↑ₜ^[k + 1] t ⟧ₜ M, (u ∷ᵥ ρ) = ⟦ ↑ₜ^[k] t ⟧ₜ M, ρ := by
+theorem interp_shift_succ {k u} {ρ : Vec M (n + k)} :
+    ⟦ ↑ₜ^[k + 1] t ⟧ₜ M, u ∷ᵥ ρ = ⟦ ↑ₜ^[k] t ⟧ₜ M, ρ := by
   simp [interp_subst]
 
-theorem interp_shift : ⟦ ↑ₜt ⟧ₜ M, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ M, ρ := by
+theorem interp_shift {u} : ⟦ ↑ₜt ⟧ₜ M, u ∷ᵥ ρ = ⟦ t ⟧ₜ M, ρ := by
   simp [interp_subst]
 
 /-- A formula is satisfied by a structure and an assignment if it is interpreted as true. -/
-def satisfy (M : Type u) [L.IsStructure M] : {n : ℕ} → L.Formula n → Vec M n → Prop
+def satisfy (M : Type u) [L.HasStructure M] : {n : ℕ} → L.Formula n → Vec M n → Prop
 | _, r ⬝ʳ v, ρ => interpRel r λ i => ⟦ v i ⟧ₜ M, ρ
 | _, t₁ ≐ t₂, ρ => ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ
 | _, ⊥, _ => False
@@ -50,17 +50,22 @@ def satisfy (M : Type u) [L.IsStructure M] : {n : ℕ} → L.Formula n → Vec M
 | _, ∀' p, ρ => ∀ u, satisfy M p (u ∷ᵥ ρ)
 notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
 
-@[simp] theorem satisfy_rel : M ⊨[ρ] (r ⬝ʳ v : L.Formula n) ↔ interpRel r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
+@[simp] theorem satisfy_rel {r : L.Rel m} {v : Vec (L.Term n) m} :
+    M ⊨[ρ] (r ⬝ʳ v : L.Formula n) ↔ interpRel r λ i => ⟦ v i ⟧ₜ M, ρ := by rfl
 @[simp] theorem satisfy_eq : M ⊨[ρ] t₁ ≐ t₂ ↔ ⟦ t₁ ⟧ₜ M, ρ = ⟦ t₂ ⟧ₜ M, ρ := by rfl
 @[simp] theorem satisfy_false : ¬ M ⊨[ρ] (⊥ : L.Formula n) := by tauto
 @[simp] theorem satisfy_imp : M ⊨[ρ] p ⇒ q ↔ M ⊨[ρ] p → M ⊨[ρ] q := by rfl
 @[simp] theorem satisfy_true : M ⊨[ρ] (⊤ : L.Formula n) := by tauto
 @[simp] theorem satisfy_neg : M ⊨[ρ] ~ p ↔ ¬ M ⊨[ρ] p := by rfl
-@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by simp [ClassicalPropNotation.and_def]
-@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by simp [ClassicalPropNotation.or_def]; tauto
-@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by simp [ClassicalPropNotation.iff_def]; tauto
+@[simp] theorem satisfy_and : M ⊨[ρ] p ⩑ q ↔ M ⊨[ρ] p ∧ M ⊨[ρ] q := by
+  simp [ClassicalPropNotation.and_def]
+@[simp] theorem satisfy_or : M ⊨[ρ] p ⩒ q ↔ M ⊨[ρ] p ∨ M ⊨[ρ] q := by
+  simp [ClassicalPropNotation.or_def, or_iff_not_imp_left]
+@[simp] theorem satisfy_iff : M ⊨[ρ] p ⇔ q ↔ (M ⊨[ρ] p ↔ M ⊨[ρ] q) := by
+  simp [ClassicalPropNotation.iff_def, iff_iff_implies_and_implies]
 @[simp] theorem satisfy_all {p : L.Formula (n + 1)} : M ⊨[ρ] ∀' p ↔ ∀ u, M ⊨[u ∷ᵥ ρ] p := by rfl
-@[simp] theorem satisfy_ex {p : L.Formula (n + 1)} : M ⊨[ρ] ∃' p ↔ ∃ u, M ⊨[u ∷ᵥ ρ] p := by simp [Formula.ex]
+@[simp] theorem satisfy_ex {p : L.Formula (n + 1)} : M ⊨[ρ] ∃' p ↔ ∃ u, M ⊨[u ∷ᵥ ρ] p := by
+  simp [Formula.ex]
 
 @[simp] theorem satisfy_vecAnd {v : Vec (L.Formula n) m} :
     M ⊨[ρ] (⋀ i, v i) ↔ ∀ i, M ⊨[ρ] v i := by
@@ -72,46 +77,56 @@ notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
 
 @[simp] theorem satisfy_allN {p : L.Formula (n + m)} :
     M ⊨[ρ] ∀^[m] p ↔ ∀ v, M ⊨[v ++ᵥ ρ] p := by
-  induction m with simp [Formula.allN, Vec.eq_nil]
+  induction m with
+  | zero =>
+    simp [Formula.allN, Vec.eq_nil]
   | succ m ih =>
-    rw [ih]; simp [Fin.forall_fin_succ_pi]; rw [forall_comm]; rfl
+    simp only [Formula.allN, ih, satisfy_all, Fin.forall_fin_succ_pi]
+    rw [forall_comm]
+    rfl
 
 @[simp] theorem satisfy_exN {p : L.Formula (n + m)} :
     M ⊨[ρ] ∃^[m] p ↔ ∃ v, M ⊨[v ++ᵥ ρ] p := by
-  induction m with simp [Formula.exN, Vec.eq_nil]
+  induction m with
+  | zero =>
+    simp [Formula.exN, Vec.eq_nil]
   | succ m ih =>
-    rw [ih]; simp [Fin.exists_fin_succ_pi]; rw [exists_comm]; rfl
+    simp only [Formula.exN, ih, satisfy_ex, Fin.exists_fin_succ_pi]
+    rw [exists_comm]
+    rfl
 
-theorem satisfy_subst {σ : L.Subst n m} :
+theorem satisfy_subst {σ : L.Subst n m} {ρ} :
     M ⊨[ρ] p[σ]ₚ ↔ M ⊨[λ x => ⟦ σ x ⟧ₜ M, ρ] p := by
   induction p generalizing m with
-  | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
+  | imp p q ih₁ ih₂ =>
+    simp [ih₁, ih₂]
   | all p ih =>
-    apply forall_congr'
-    intro u; simp [ih]
-    congr! with x
+    simp only [Formula.subst_all, satisfy_all, ih]
+    congr! with u x
     cases x using Fin.cases <;> simp [syntax_simp, interp_subst]
-  | _ => simp [interp_subst]
+  | _ =>
+    simp [interp_subst]
 
 theorem satisfy_subst_single {p : L.Formula (n + 1)} :
-  M ⊨[ρ] p[↦ₛ t]ₚ ↔ M ⊨[ ⟦t⟧ₜ M, ρ ∷ᵥ ρ ] p := by
+    M ⊨[ρ] p[↦ₛ t]ₚ ↔ M ⊨[ (⟦t⟧ₜ M, ρ) ∷ᵥ ρ ] p := by
   rw [satisfy_subst]
   congr! with x
   cases x using Fin.cases <;> simp
 
-theorem satisfy_subst_assign {p : L.Formula (n + 1)} {t} :
-  M ⊨[ρ] p[≔ₛ t]ₚ ↔ M ⊨[ ⟦t⟧ₜ M, ρ ∷ᵥ ρ.tail ] p := by
+theorem satisfy_subst_assign {p : L.Formula (n + 1)} {t ρ} :
+    M ⊨[ρ] p[≔ₛ t]ₚ ↔ M ⊨[ (⟦t⟧ₜ M, ρ) ∷ᵥ ρ.tail ] p := by
   rw [satisfy_subst]
   congr! with x
   cases x using Fin.cases <;> simp
 
-theorem satisfy_shift_succ : M ⊨[u ∷ᵥ ρ] ↑ₚ^[k + 1] p ↔ M ⊨[ρ] ↑ₚ^[k] p := by
+theorem satisfy_shift_succ {k u} {ρ : Vec M (n + k)} :
+    M ⊨[u ∷ᵥ ρ] ↑ₚ^[k + 1] p ↔ M ⊨[ρ] ↑ₚ^[k] p := by
   simp [satisfy_subst]
 
-theorem satisfy_shift : M ⊨[u ∷ᵥ ρ] ↑ₚp ↔ M ⊨[ρ] p := by
+theorem satisfy_shift {u} : M ⊨[u ∷ᵥ ρ] ↑ₚp ↔ M ⊨[ρ] p := by
   simp [satisfy_subst]
 
-abbrev satisfys (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ᵥ] p
+abbrev satisfys (M : Type u) [L.HasStructure M] (p : L.Sentence) := M ⊨[[]ᵥ] p
 infix:50 " ⊨ₛ " => satisfys
 
 theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
@@ -123,21 +138,22 @@ theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
     rw [forall_comm]
     rfl
 
-/-- Bundled version of `IsStructure`. -/
+/-- Bundled version of `HasStructure`. -/
 structure Structure (L : Language) where
   Dom : Type u
-  interpFunc : L.Func m → Vec Dom m → Dom
-  interpRel : L.Rel m → Vec Dom m → Prop
+  interpFunc {m : ℕ} : L.Func m → Vec Dom m → Dom
+  interpRel {m : ℕ} : L.Rel m → Vec Dom m → Prop
 
 namespace Structure
 
 instance : CoeSort L.Structure (Type u) := ⟨(·.Dom)⟩
-instance {M : L.Structure} : L.IsStructure M := ⟨M.interpFunc, M.interpRel⟩
-@[reducible] def of (M : Type u) [L.IsStructure M] : L.Structure := ⟨M, IsStructure.interpFunc, IsStructure.interpRel⟩
+instance {M : L.Structure} : L.HasStructure M := ⟨M.interpFunc, M.interpRel⟩
+abbrev of (M : Type u) [L.HasStructure M] : L.Structure :=
+  ⟨M, HasStructure.interpFunc, HasStructure.interpRel⟩
 
 end Structure
 
-/-- `Γ ⊨ p` (called `Γ` entails `p`) if any structure that satisfies `Γ` must also satisfy `p`. -/
+/-- `Γ ⊨ p` (`Γ` entails `p`) if any structure that satisfies `Γ` must also satisfy `p`. -/
 def Entails (Γ : L.FormulaSet n) (p : L.Formula n) :=
   ∀ (M : Structure.{u} L) (ρ), (∀ q ∈ Γ, M ⊨[ρ] q) → M ⊨[ρ] p
 
@@ -146,36 +162,32 @@ syntax:50 term " ⊨.{" level "} " term:50 : term
 macro_rules
 | `($Γ ⊨.{$u} $p) => `(Entails.{$u} $Γ $p)
 
-/--
-  `Γ` is satisfiable if there is a structure and an assignment that satisfy all formulas in `Γ`.
-  The assignment is not needed for `Theory` (see `Theory.satisfiable_iff`).
-  -/
+/-- `Γ` is satisfiable if there is a structure and an assignment that satisfy all formulas in `Γ`.
+  The assignment is not needed for `Theory` (see `Theory.satisfiable_iff`). -/
 @[pp_with_univ] def Satisfiable (Γ : L.FormulaSet n) :=
-  ∃ (𝓢 : Structure.{u} L), ∃ ρ, ∀ p ∈ Γ, 𝓢 ⊨[ρ] p
+  ∃ (M : Structure.{u} L), ∃ ρ, ∀ p ∈ Γ, M ⊨[ρ] p
 
-theorem Satisfiable.weaken :
-  Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
-  rintro h₁ ⟨𝓢, ⟨ρ, h₂⟩⟩
-  exists 𝓢, ρ
-  intros p h₃
-  apply h₂
-  apply h₁
-  exact h₃
+variable {Γ Δ : L.FormulaSet n}
 
-theorem Satisfiable.empty : Satisfiable (∅ : L.FormulaSet n) := by
-  exists ⟨PUnit, λ _ v => .unit, λ _ _ => True⟩, λ _ => .unit
-  simp
+theorem Satisfiable.weaken : Γ ⊆ Δ → Satisfiable.{u} Δ → Satisfiable.{u} Γ := by
+  intro h ⟨M, ⟨ρ, hM⟩⟩
+  exists M, ρ
+  intro p hp
+  exact hM _ (h hp)
+
+theorem Satisfiable.empty : Satisfiable (∅ : L.FormulaSet n) :=
+  ⟨⟨PUnit, λ _ v => .unit, λ _ _ => True⟩, λ _ => .unit, by simp⟩
 
 namespace Theory
 
 /-- A structure `M` is a model of theory `T` if it satisfies all the axioms of `T`. -/
-class IsModel (T : L.Theory) (M : Type u) [L.IsStructure M] : Prop where
+class IsModel (T : L.Theory) (M : Type u) [L.HasStructure M] : Prop where
   satisfy_theory : ∀ p ∈ T, M ⊨ₛ p
 
 /-- Bundled version of `IsModel`. -/
 structure Model (T : L.Theory) extends L.Structure where
   satisfy_theory :
-    haveI : L.IsStructure toStructure := Structure.instIsStructureDom
+    haveI : L.HasStructure toStructure := Structure.instHasStructureDom
     ∀ p ∈ T, toStructure ⊨ₛ p
 
 variable {T : L.Theory} {M : T.Model} {p q : L.Sentence}
@@ -186,7 +198,8 @@ instance : CoeOut T.Model L.Structure := ⟨(·.toStructure)⟩
 instance : CoeSort T.Model (Type u) := ⟨(·.Dom)⟩
 instance : T.IsModel M := ⟨M.satisfy_theory⟩
 
-@[reducible] def of (M : Type u) [L.IsStructure M] [T.IsModel M] : T.Model := ⟨Structure.of M, IsModel.satisfy_theory⟩
+abbrev of (M : Type u) [L.HasStructure M] [T.IsModel M] : T.Model :=
+  ⟨Structure.of M, IsModel.satisfy_theory⟩
 
 end Model
 
@@ -202,18 +215,20 @@ theorem satisfiable_iff : Satisfiable.{u} T ↔ Nonempty (Model.{u} T) := by
 
 end Theory
 
-def Satisfiable.of_model {T : L.Theory} (M : Type u) [L.IsStructure M] [T.IsModel M] : Satisfiable.{u} T :=
+def Satisfiable.of_model {T : L.Theory} (M : Type u) [L.HasStructure M] [T.IsModel M] :
+    Satisfiable.{u} T :=
   Theory.satisfiable_iff.mpr ⟨.of M⟩
 
 /-- The theory of a structure `M` includes all the sentences satisfied by `M` as its axioms. -/
-def theory (L : Language) (M : Type u) [L.IsStructure M] : L.Theory := { p | M ⊨ₛ p }
+def theory (L : Language) (M : Type u) [L.HasStructure M] : L.Theory := { p | M ⊨ₛ p }
 
 instance : (L.theory M).IsModel M where
   satisfy_theory _ h := h
 
 @[simp] theorem mem_theory {p : L.Sentence} : p ∈ L.theory M ↔ M ⊨ₛ p := by rfl
 
-theorem theory.satisfiable : Satisfiable.{u} (L.theory M) := .of_model M
+variable (L M) in
+theorem theory_satisfiable : Satisfiable.{u} (L.theory M) := .of_model M
 
 namespace Structure
 
@@ -223,27 +238,33 @@ def ulift (M : Structure.{u} L) : Structure.{max u v} L where
   interpRel r v := M.interpRel r (ULift.down ∘ v)
 
 lemma interp_ulift {M : L.Structure} {ρ : Vec M n} :
-  ⟦ t ⟧ₜ M.ulift, (ULift.up ∘ ρ) = ULift.up (⟦ t ⟧ₜ M, ρ) := by
-  induction t with simp
-  | func f v ih => simp [ih]; rfl
+    ⟦ t ⟧ₜ M.ulift, (ULift.up ∘ ρ) = ULift.up (⟦ t ⟧ₜ M, ρ) := by
+  induction t with
+  | var => simp
+  | func f v ih => simp only [interp_func, ih]; rfl
 
 lemma satisfy_ulift {M : L.Structure} {ρ : Vec M n} :
-  M.ulift ⊨[ULift.up ∘ ρ] p ↔ M ⊨[ρ] p := by
-  induction p with simp
-  | rel r v => simp [interp_ulift]; rfl
-  | eq t₁ t₂ => simp [interp_ulift]; exact ULift.up_inj
-  | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
+    M.ulift ⊨[ULift.up ∘ ρ] p ↔ M ⊨[ρ] p := by
+  induction p with
+  | rel r v =>
+    simp only [satisfy_rel, interp_ulift]; rfl
+  | eq t₁ t₂ =>
+    simp only [satisfy_eq, interp_ulift]; exact ULift.up_inj
+  | false =>
+    rfl
+  | imp p q ih₁ ih₂ =>
+    simp [ih₁, ih₂]
   | all p ih =>
     constructor
-    · intros h u; rw [←ih, Vec.comp_cons]; apply h
-    · intros h u; rw [←ULift.up_down u, ←Vec.comp_cons, ih]; apply h
+    · intros h u; rw [← ih, Vec.comp_cons]; apply h
+    · intros h u; rw [← ULift.up_down u, ← Vec.comp_cons, ih]; apply h
 
 end Structure
 
 theorem Entails.down : Γ ⊨.{max u v} p → Γ ⊨.{u} p := by
   intros h M ρ h₁
   have := h M.ulift (ULift.up ∘ ρ)
-  simp [Structure.satisfy_ulift] at this
+  simp only [Structure.satisfy_ulift] at this
   exact this h₁
 
 theorem Satisfiable.up : Satisfiable.{u} Γ → Satisfiable.{max u v} Γ := by
@@ -265,8 +286,10 @@ theorem ElementaryEquivalent.iff_theory_eq : M ≃ᴱ N ↔ L.theory M = L.theor
   simp [ElementaryEquivalent, Set.ext_iff]
 
 structure Embedding (M : L.Structure) (N : L.Structure) extends M ↪ N where
-  on_func : ∀ (f : L.Func m) (v : Vec M m), toEmbedding (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEmbedding ∘ v)
-  on_rel : ∀ (r : L.Rel m) (v : Vec M m), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEmbedding ∘ v)
+  on_func {m : ℕ} : ∀ (f : L.Func m) (v : Vec M m),
+    toEmbedding (HasStructure.interpFunc f v) = HasStructure.interpFunc f (toEmbedding ∘ v)
+  on_rel {m : ℕ} : ∀ (r : L.Rel m) (v : Vec M m),
+    HasStructure.interpRel r v ↔ HasStructure.interpRel r (toEmbedding ∘ v)
 infixr:25 " ↪ᴹ " => Embedding
 
 namespace Embedding
@@ -278,41 +301,48 @@ def refl : M ↪ᴹ M where
   on_func f v := rfl
   on_rel r v := by rfl
 
-def trans (e₁ : M ↪ᴹ N) (e₂ : N ↪ᴹ 𝓢) : M ↪ᴹ 𝓢 where
+def trans {R} (e₁ : M ↪ᴹ N) (e₂ : N ↪ᴹ R) : M ↪ᴹ R where
   toEmbedding := .trans e₁.toEmbedding e₂.toEmbedding
-  on_func f v := by simp [e₁.on_func, e₂.on_func]; rfl
+  on_func f v := by simp only [Function.Embedding.trans_apply, e₁.on_func, e₂.on_func]; rfl
   on_rel r v := by rw [e₁.on_rel, e₂.on_rel]; rfl
 
 theorem on_term (e : M ↪ᴹ N) (t : L.Term n) (ρ : Vec M n) : e (⟦t⟧ₜ M, ρ) = ⟦t⟧ₜ N, e ∘ ρ := by
-  induction t with simp
-  | func f v ih => rw [e.on_func]; congr; ext; simp [ih]
+  induction t with
+  | var => simp
+  | func f v ih => simp only [interp_func, e.on_func]; congr; ext; simp [ih]
 
 def IsElementary (e : M ↪ᴹ N) :=
   ∀ {n} (p : L.Formula n) (ρ : Vec M n), M ⊨[ρ] p ↔ N ⊨[e ∘ ρ] p
 
 /-- Tarski–Vaught test. -/
 theorem is_elementary_iff (e : M ↪ᴹ N) :
-  e.IsElementary ↔ ∀ {n} (p : L.Formula (n + 1)) (ρ : Vec M n), N ⊨[e ∘ ρ] ∃' p → ∃ u, N ⊨[e u ∷ᵥ e ∘ ρ] p := by
+    e.IsElementary ↔ ∀ {n} (p : L.Formula (n + 1)) (ρ : Vec M n),
+      N ⊨[e ∘ ρ] ∃' p → ∃ u, N ⊨[e u ∷ᵥ e ∘ ρ] p := by
   constructor
   · intro h n p ρ h₁
-    rw [←h] at h₁; simp at h₁
+    rw [← h, satisfy_ex] at h₁
     rcases h₁ with ⟨u, h₁⟩
     exists u
-    rw [←Vec.comp_cons, ←h]
+    rw [← Vec.comp_cons, ← h]
     exact h₁
   · intro h n p ρ
-    induction p with simp
-    | rel r v => rw [e.on_rel]; congr!; simp [e.on_term]
-    | eq t₁ t₂ => simp [←e.on_term]
-    | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
+    induction p with
+    | rel r v =>
+      simp only [satisfy_rel, e.on_rel]; congr!; simp [e.on_term]
+    | eq t₁ t₂ =>
+      simp [← e.on_term]
+    | false =>
+      rfl
+    | imp p q ih₁ ih₂ =>
+      simp [ih₁, ih₂]
     | all p ih =>
       constructor
       · intro h₁
-        by_contra h₂; simp at h₂
-        simp_rw [←satisfy_neg, ←satisfy_ex] at h₂
+        by_contra h₂
+        simp_rw [satisfy_all, not_forall, ← satisfy_neg, ← satisfy_ex] at h₂
         apply h at h₂
         rcases h₂ with ⟨u, h₂⟩
-        simp [←Vec.comp_cons, ←ih] at h₂
+        rw [← Vec.comp_cons, satisfy_neg, ← ih] at h₂
         exact h₂ (h₁ u)
       · intro h₁ u
         rw [ih, Vec.comp_cons]
@@ -321,8 +351,10 @@ theorem is_elementary_iff (e : M ↪ᴹ N) :
 end Embedding
 
 structure Isomorphism (M : L.Structure) (N : L.Structure) extends M ≃ N where
-  on_func : ∀ (f : L.Func m) (v : Vec M m), toEquiv (IsStructure.interpFunc f v) = IsStructure.interpFunc f (toEquiv ∘ v)
-  on_rel : ∀ (r : L.Rel m) (v : Vec M m), IsStructure.interpRel r v ↔ IsStructure.interpRel r (toEquiv ∘ v)
+  on_func {m : ℕ} : ∀ (f : L.Func m) (v : Vec M m),
+    toEquiv (HasStructure.interpFunc f v) = HasStructure.interpFunc f (toEquiv ∘ v)
+  on_rel {m : ℕ} : ∀ (r : L.Rel m) (v : Vec M m),
+    HasStructure.interpRel r v ↔ HasStructure.interpRel r (toEquiv ∘ v)
 infix:25 " ≃ᴹ " => Isomorphism
 
 namespace Isomorphism
@@ -339,9 +371,9 @@ def symm (i : M ≃ᴹ N) : N ≃ᴹ M where
   on_func f v := by apply i.toEquiv.injective; simp [i.on_func, Function.comp_def]
   on_rel r v := by rw [i.on_rel]; simp [Function.comp_def]
 
-def trans (i₁ : M ≃ᴹ N) (i₂ : N ≃ᴹ 𝓢) : M ≃ᴹ 𝓢 where
+def trans {R} (i₁ : M ≃ᴹ N) (i₂ : N ≃ᴹ R) : M ≃ᴹ R where
   toEquiv := .trans i₁.toEquiv i₂.toEquiv
-  on_func f v := by simp [i₁.on_func, i₂.on_func]; rfl
+  on_func f v := by simp only [Equiv.trans_apply, i₁.on_func, i₂.on_func, Equiv.coe_trans]; rfl
   on_rel r v := by rw [i₁.on_rel, i₂.on_rel]; rfl
 
 def toEmbedding (i : M ≃ᴹ N) : M ↪ᴹ N where
@@ -350,15 +382,17 @@ def toEmbedding (i : M ≃ᴹ N) : M ↪ᴹ N where
   on_rel := i.on_rel
 
 theorem on_term (i : M ≃ᴹ N) (t : L.Term n) (ρ : Vec M n) : i (⟦t⟧ₜ M, ρ) = ⟦t⟧ₜ N, i ∘ ρ := by
-  induction t with simp
-  | func f v ih => rw [i.on_func]; congr; ext; simp [ih]
+  induction t with
+  | var => simp
+  | func f v ih => simp only [interp_func, i.on_func]; congr; ext; simp [ih]
 
 theorem on_formula (i : M ≃ᴹ N) (p : L.Formula n) (ρ : Vec M n) : M ⊨[ρ] p ↔ N ⊨[i ∘ ρ] p := by
-  induction p with simp
-  | rel r v => rw [i.on_rel]; congr!; simp [i.on_term]
+  induction p with
+  | rel r v => simp only [satisfy_rel, i.on_rel]; congr!; simp [i.on_term]
   | eq t₁ t₂ => simp [←i.on_term]
+  | false => rfl
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
-  | all p ih => rw [i.toEquiv.forall_congr]; simp [ih, Vec.comp_cons]
+  | all p ih => simp only [satisfy_all]; rw [i.toEquiv.forall_congr]; simp [ih, Vec.comp_cons]
 
 theorem elementary_equivalent (i : M ≃ᴹ N) : M ≃ᴱ N := by
   intro; simp [i.on_formula, Vec.eq_nil]

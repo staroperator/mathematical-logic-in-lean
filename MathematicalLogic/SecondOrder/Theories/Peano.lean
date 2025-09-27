@@ -21,7 +21,7 @@ instance : Mul (peano.Term l) := ⟨(.mul ⬝ᶠ [·, ·]ᵥ)⟩
 def succ (t : peano.Term l) : peano.Term l := .succ ⬝ᶠ [t]ᵥ
 scoped prefix:max "S " => succ
 
-instance Nat : peano.IsStructure ℕ where
+instance Nat : peano.HasStructure ℕ where
   interpFunc
   | .zero, _ => 0
   | .succ, v => v 0 + 1
@@ -34,9 +34,9 @@ namespace Nat
 variable {t t₁ t₂ : peano.Term l}
 
 @[simp] theorem interp_zero : ⟦ (0 : peano.Term l) ⟧ₜ ℕ, ρ = 0 := rfl
-@[simp] theorem interp_succ : ⟦ S t ⟧ₜ ℕ, ρ = ⟦ t ⟧ₜ ℕ, ρ + 1 := rfl
-@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ ℕ, ρ = ⟦ t₁ ⟧ₜ ℕ, ρ + ⟦ t₂ ⟧ₜ ℕ, ρ := rfl
-@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ ℕ, ρ = ⟦ t₁ ⟧ₜ ℕ, ρ * ⟦ t₂ ⟧ₜ ℕ, ρ := rfl
+@[simp] theorem interp_succ : ⟦ S t ⟧ₜ ℕ, ρ = (⟦ t ⟧ₜ ℕ, ρ) + 1 := rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ ℕ, ρ = (⟦ t₁ ⟧ₜ ℕ, ρ) + (⟦ t₂ ⟧ₜ ℕ, ρ) := rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ ℕ, ρ = (⟦ t₁ ⟧ₜ ℕ, ρ) * (⟦ t₂ ⟧ₜ ℕ, ρ) := rfl
 
 end peano.Nat
 
@@ -76,8 +76,8 @@ def succ (u : M) := M.interpFunc .succ [u]ᵥ
 
 @[simp] theorem interp_zero : ⟦ (0 : peano.Term l) ⟧ₜ M, ρ = 0 := by simp [OfNat.ofNat, Zero.zero, Vec.eq_nil]; rfl
 @[simp] theorem interp_succ : ⟦ S t ⟧ₜ M, ρ = succ (⟦ t ⟧ₜ M, ρ) := by simp [peano.succ, succ, Vec.eq_one]; rfl
-@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ + ⟦ t₂ ⟧ₜ M, ρ := by simp [HAdd.hAdd, Add.add, Vec.eq_two]; rfl
-@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ M, ρ = ⟦ t₁ ⟧ₜ M, ρ * ⟦ t₂ ⟧ₜ M, ρ := by simp [HMul.hMul, Mul.mul, Vec.eq_two]; rfl
+@[simp] theorem interp_add : ⟦ t₁ + t₂ ⟧ₜ M, ρ = (⟦ t₁ ⟧ₜ M, ρ) + (⟦ t₂ ⟧ₜ M, ρ) := by simp [HAdd.hAdd, Add.add, Vec.eq_two]; rfl
+@[simp] theorem interp_mul : ⟦ t₁ * t₂ ⟧ₜ M, ρ = (⟦ t₁ ⟧ₜ M, ρ) * (⟦ t₂ ⟧ₜ M, ρ) := by simp [HMul.hMul, Mul.mul, Vec.eq_two]; rfl
 
 def ofNat : ℕ → M
 | 0 => 0
