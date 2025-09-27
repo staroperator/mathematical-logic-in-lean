@@ -26,7 +26,7 @@ We formalize the equational theory of de Bruijn substitutions, extending the Aut
 well-scoped syntax and a much richer set of operations.
 
 We tag the rewriting rules in Autosubst paper with the simp set `syntax_simp`. Tactic `syntax_simp`
-uses these rules to rewrite FOL syntaxes to their normal form, e.g.
+uses these rules to rewrite FOL syntaxes to their normal forms, e.g.
 
 ```
 example {L : Language} {n m : ℕ} {t : L.Term (n + 1)} {t' : L.Term n} {σ : L.Subst n m} :

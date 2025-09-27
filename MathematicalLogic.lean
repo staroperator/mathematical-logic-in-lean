@@ -6,6 +6,7 @@ import MathematicalLogic.ZFSet
 import MathematicalLogic.Computability.Primrec
 import MathematicalLogic.Computability.Partrec
 
+import MathematicalLogic.FirstOrder.Syntax.Init
 import MathematicalLogic.FirstOrder.Syntax
 import MathematicalLogic.FirstOrder.Semantics
 import MathematicalLogic.FirstOrder.Proof.Init
