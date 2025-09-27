@@ -73,7 +73,7 @@ theorem onTerm_subst : φ.onTerm (t[σ]ₜ) = (φ.onTerm t)[φ.onTerm ∘ σ]ₜ
   | func f v ih => ext; apply ih
 
 theorem onTerm_shift : φ.onTerm (↑ₜt) = ↑ₜ(φ.onTerm t) := by
-  simp [Term.shift, onTerm_subst]; rfl
+  rw [onTerm_subst]; rfl
 
 def onFormula (φ : L₁ →ᴸ L₂) : L₁.Formula n → L₂.Formula n
 | r ⬝ʳ v => φ.onRel r ⬝ʳ λ i => φ.onTerm (v i)
@@ -87,9 +87,9 @@ theorem onFormula_neg : φ.onFormula (~ p) = ~ φ.onFormula p := rfl
 theorem onFormula_and : φ.onFormula (p ⩑ q) = φ.onFormula p ⩑ φ.onFormula q := rfl
 
 theorem onFormula_andN {v : Vec (L₁.Formula n) m} : φ.onFormula (⋀ i, v i) = ⋀ i, φ.onFormula (v i) := by
-  induction m with try simp [onFormula, onFormula_and, Formula.andN]
+  induction m with
   | zero => rfl
-  | succ m ih => simp [ih]; rfl
+  | succ m ih => simp [ih, Formula.vecAnd, Vec.head, Vec.tail, onFormula]; rfl
 
 theorem id_onFormula : id.onFormula p = p := by
   induction p with simp [onFormula]
@@ -111,13 +111,14 @@ theorem onFormula_subst {σ : L₁.Subst n m} : φ.onFormula (p[σ]ₚ) = (φ.on
   | eq t₁ t₂ => simp [onTerm_subst]
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
-    simp [ih]; congr 1; funext x; cases x using Fin.cases <;> simp [onTerm, onTerm_shift]
+    simp [ih]; congr 1; funext x
+    cases x using Fin.cases <;> syntax_simp [onTerm, onTerm_shift, Function.comp_apply]
 
 theorem onFormula_shift : φ.onFormula (↑ₚp) = ↑ₚ(φ.onFormula p) := by
-  simp [Formula.shift, onFormula_subst]; rfl
+  rw [onFormula_subst]; rfl
 
 theorem onFormula_subst_single : φ.onFormula (p[↦ₛ t]ₚ) = (φ.onFormula p)[↦ₛ (φ.onTerm t)]ₚ := by
-  simp [onFormula_subst]; congr 1; funext x; cases x using Fin.cases <;> rfl
+  rw [onFormula_subst]; congr 1; funext x; cases x using Fin.cases <;> rfl
 
 theorem on_axiom : p ∈ L₁.Axiom → φ.onFormula p ∈ L₂.Axiom := by
   intro h

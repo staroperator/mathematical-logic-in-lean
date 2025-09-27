@@ -4,6 +4,7 @@
         "dotor": "⩒",
         "dotle": "⪁",
         "dotlt": "⋖",
-        "preceq": "⪯"
+        "preceq": "⪯",
+        "succeq": "⪰"
     }
 }

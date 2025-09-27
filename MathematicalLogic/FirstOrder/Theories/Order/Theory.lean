@@ -28,44 +28,42 @@ namespace Order
 
 def le (t₁ t₂ : L.Term n) := leDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ⪯ " => le
-@[simp] theorem subst_le : (t₁ ⪯ t₂)[σ]ₚ = t₁[σ]ₜ ⪯ t₂[σ]ₜ := by
-  simp [le, ←Formula.subst_comp]
-@[simp] theorem shift_le : ↑ₚ(t₁ ⪯ t₂) = ↑ₜt₁ ⪯ ↑ₜt₂ := subst_le
+@[simp, syntax_simp] theorem subst_le : (t₁ ⪯ t₂)[σ]ₚ = t₁[σ]ₜ ⪯ t₂[σ]ₜ := by
+  syntax_simp [le]
 
 def lt (t₁ t₂ : L.Term n) := ltDef[[t₁, t₂]ᵥ]ₚ
 infix:60 " ≺ " => lt
-@[simp] theorem subst_lt : (t₁ ≺ t₂)[σ]ₚ = t₁[σ]ₜ ≺ t₂[σ]ₜ := by
-  simp [lt, ←Formula.subst_comp]
-@[simp] theorem shift_lt : ↑ₚ(t₁ ≺ t₂) = ↑ₜt₁ ≺ ↑ₜt₂ := subst_lt
+@[simp, syntax_simp] theorem subst_lt : (t₁ ≺ t₂)[σ]ₚ = t₁[σ]ₜ ≺ t₂[σ]ₜ := by
+  syntax_simp [lt]
 
 /-- Bounded forall. -/
 def bdall (t : L.Term n) (p : L.Formula (n + 1)) := ∀' (#0 ≺ ↑ₜt ⇒ p)
 notation:100 "∀[" "≺ " t "] " p:100 => bdall t p
-@[simp] theorem subst_bdall : (∀[≺ t] p)[σ]ₚ = ∀[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
-  simp [bdall, Term.shift_subst_lift]
+@[simp, syntax_simp] theorem subst_bdall : (∀[≺ t] p)[σ]ₚ = ∀[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
+  syntax_simp [bdall]
 
 /-- Bounded exists. -/
 def bdex (t : L.Term n) (p : L.Formula (n + 1)) := ∃' (#0 ≺ ↑ₜt ⩑ p)
 notation "∃[" "≺ " t "] " p:100 => bdex t p
-@[simp] theorem subst_bdex : (∃[≺ t] p)[σ]ₚ = ∃[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
-  simp [bdex, Term.shift_subst_lift]
+@[simp, syntax_simp] theorem subst_bdex : (∃[≺ t] p)[σ]ₚ = ∃[≺ t[σ]ₜ] p[⇑ₛσ]ₚ := by
+  syntax_simp [bdex]
 
 open Proof
 
 @[prw] theorem iff_congr_le : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ⪯ t₂ ⇔ t₁' ⪯ t₂') := by
-  pintros 2; simp [Order.le]; prw [0, 1]; prefl
+  pintros 2; syntax_simp [le]; prw [0, 1]; prefl
 
 @[prw] theorem iff_congr_lt : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ (t₁ ≺ t₂ ⇔ t₁' ≺ t₂') := by
-  pintros 2; simp [Order.lt]; prw [0, 1]; prefl
+  pintros 2; syntax_simp [lt]; prw [0, 1]; prefl
 
 @[prw] theorem iff_congr_bdall : Γ ⊢ t₁ ≐ t₂ ⇒ (∀[≺ t₁] p ⇔ ∀[≺ t₂] p) := by
-  pintro; papply iff_congr_forall; pintro; simp; prw [0]; prefl
+  pintro; papply iff_congr_forall; pintro; syntax_simp; prw [0]; prefl
 
 @[prw] theorem iff_congr_bdex : Γ ⊢ t₁ ≐ t₂ ⇒ (∃[≺ t₁] p ⇔ ∃[≺ t₂] p) := by
-  pintro; papply iff_congr_exists; pintro; simp; prw [0]; prefl
+  pintro; papply iff_congr_exists; pintro; syntax_simp; prw [0]; prefl
 
 theorem neg_bdall_iff : Γ ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) := by
-  simp [Order.bdall, Order.bdex]
+  syntax_simp [bdall, bdex]
   prw [neg_forall_iff]
   papply iff_congr_exists
   pintro
@@ -73,7 +71,7 @@ theorem neg_bdall_iff : Γ ⊢ ~ ∀[≺ t] p ⇔ ∃[≺ t] (~ p) := by
   prefl
 
 theorem neg_bdex_iff : Γ ⊢ ~ ∃[≺ t] p ⇔ ∀[≺ t] (~ p) := by
-  simp [Order.bdall, Order.bdex]
+  syntax_simp [bdall, bdex]
   prw [neg_exists_iff]
   papply iff_congr_forall
   pintro
@@ -123,19 +121,23 @@ namespace PO
 
 theorem le_refl : ↑ᵀ^[n] PO ⊢ t ⪯ t := by
   have := foralls_elim [t]ᵥ (hyp ax_le_refl)
-  simp at this; exact this
+  syntax_simp at this
+  exact this
 
 theorem le_antisymm : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₁ ⇒ t₁ ≐ t₂ := by
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_le_antisymm)
-  simp at this; exact this
+  syntax_simp at this
+  exact this
 
 theorem le_trans : ↑ᵀ^[n] PO ⊢ t₁ ⪯ t₂ ⇒ t₂ ⪯ t₃ ⇒ t₁ ⪯ t₃ := by
   have := foralls_elim [t₃, t₂, t₁]ᵥ (hyp ax_le_trans)
-  simp at this; exact this
+  syntax_simp at this
+  exact this
 
 theorem lt_iff_le_not_ge : ↑ᵀ^[n] PO ⊢ t₁ ≺ t₂ ⇔ t₁ ⪯ t₂ ⩑ ~ t₂ ⪯ t₁ := by
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_lt_iff_le_not_ge)
-  simp at this; exact this
+  syntax_simp at this
+  exact this
 
 theorem le_trans' : ↑ᵀ^[n] PO ⊢ t₂ ⪯ t₃ ⇒ t₁ ⪯ t₂ ⇒ t₁ ⪯ t₃ := by
   pintros; papply le_trans <;> passumption
@@ -253,7 +255,8 @@ instance {T : L.Theory} [h : LO ⊆ᵀ T] : PO ⊆ᵀ T := h.trans' inferInstanc
 
 theorem le_total (t₁ t₂ : L.Term n) : ↑ᵀ^[n] LO ⊢ t₁ ⪯ t₂ ⩒ t₂ ⪯ t₁ := by
   have := foralls_elim [t₂, t₁]ᵥ (hyp ax_le_total)
-  simp at this; exact this
+  syntax_simp at this
+  exact this
 
 theorem neg_le_iff : ↑ᵀ^[n] LO ⊢ ~ t₁ ⪯ t₂ ⇔ t₂ ≺ t₁ := by
   papply iff_intro

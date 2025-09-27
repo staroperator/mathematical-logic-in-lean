@@ -35,8 +35,11 @@ theorem interp_subst : ⟦ t[σ]ₜ ⟧ₜ M, ρ = ⟦ t ⟧ₜ M, λ x => ⟦ �
   induction t with simp
   | func f v ih => simp [ih]
 
+theorem interp_shift_succ : ⟦ ↑ₜ^[k + 1] t ⟧ₜ M, (u ∷ᵥ ρ) = ⟦ ↑ₜ^[k] t ⟧ₜ M, ρ := by
+  simp [interp_subst]
+
 theorem interp_shift : ⟦ ↑ₜt ⟧ₜ M, (u ∷ᵥ ρ) = ⟦ t ⟧ₜ M, ρ := by
-  simp [Term.shift, interp_subst]
+  simp [interp_subst]
 
 /-- A formula is satisfied by a structure and an assignment if it is interpreted as true. -/
 def satisfy (M : Type u) [L.IsStructure M] : {n : ℕ} → L.Formula n → Vec M n → Prop
@@ -59,65 +62,66 @@ notation:50 M " ⊨[" ρ "] " p:50 => satisfy M p ρ
 @[simp] theorem satisfy_all {p : L.Formula (n + 1)} : M ⊨[ρ] ∀' p ↔ ∀ u, M ⊨[u ∷ᵥ ρ] p := by rfl
 @[simp] theorem satisfy_ex {p : L.Formula (n + 1)} : M ⊨[ρ] ∃' p ↔ ∃ u, M ⊨[u ∷ᵥ ρ] p := by simp [Formula.ex]
 
-theorem satisfy_andN {v : Vec (L.Formula n) m} :
-  M ⊨[ρ] (⋀ i, v i) ↔ ∀ i, M ⊨[ρ] v i := by
-  induction m with simp [Formula.andN]
-  | succ n ih => simp [Vec.head, ih, Fin.forall_fin_succ]
+@[simp] theorem satisfy_vecAnd {v : Vec (L.Formula n) m} :
+    M ⊨[ρ] (⋀ i, v i) ↔ ∀ i, M ⊨[ρ] v i := by
+  induction m with simp [*, Formula.vecAnd, Fin.forall_fin_succ, Vec.head]
 
-theorem satisfy_orN {v : Vec (L.Formula n) m} :
-  M ⊨[ρ] (⋁ i, v i) ↔ ∃ i, M ⊨[ρ] v i := by
-  induction m with simp [Formula.orN]
-  | succ n ih => simp [Vec.head, ih, Fin.exists_fin_succ]
+@[simp] theorem satisfy_vecOr {v : Vec (L.Formula n) m} :
+    M ⊨[ρ] (⋁ i, v i) ↔ ∃ i, M ⊨[ρ] v i := by
+  induction m with simp [*, Formula.vecOr, Fin.exists_fin_succ, Vec.head]
 
-theorem satisfy_allN {p : L.Formula (n + m)} :
-  M ⊨[ρ] ∀^[m] p ↔ ∀ v, M ⊨[v ++ᵥ ρ] p := by
+@[simp] theorem satisfy_allN {p : L.Formula (n + m)} :
+    M ⊨[ρ] ∀^[m] p ↔ ∀ v, M ⊨[v ++ᵥ ρ] p := by
   induction m with simp [Formula.allN, Vec.eq_nil]
   | succ m ih =>
     rw [ih]; simp [Fin.forall_fin_succ_pi]; rw [forall_comm]; rfl
 
-theorem satisfy_exN {p : L.Formula (n + m)} :
-  M ⊨[ρ] ∃^[m] p ↔ ∃ v, M ⊨[v ++ᵥ ρ] p := by
+@[simp] theorem satisfy_exN {p : L.Formula (n + m)} :
+    M ⊨[ρ] ∃^[m] p ↔ ∃ v, M ⊨[v ++ᵥ ρ] p := by
   induction m with simp [Formula.exN, Vec.eq_nil]
   | succ m ih =>
     rw [ih]; simp [Fin.exists_fin_succ_pi]; rw [exists_comm]; rfl
 
 theorem satisfy_subst {σ : L.Subst n m} :
-  M ⊨[ρ] p[σ]ₚ ↔ M ⊨[λ x => ⟦ σ x ⟧ₜ M, ρ] p := by
-  induction p generalizing m with simp
-  | rel | eq => simp [interp_subst]
+    M ⊨[ρ] p[σ]ₚ ↔ M ⊨[λ x => ⟦ σ x ⟧ₜ M, ρ] p := by
+  induction p generalizing m with
   | imp p q ih₁ ih₂ => simp [ih₁, ih₂]
   | all p ih =>
     apply forall_congr'
     intro u; simp [ih]
     congr! with x
-    cases x using Fin.cases <;> simp [interp_shift]
+    cases x using Fin.cases <;> simp [syntax_simp, interp_subst]
+  | _ => simp [interp_subst]
 
 theorem satisfy_subst_single {p : L.Formula (n + 1)} :
   M ⊨[ρ] p[↦ₛ t]ₚ ↔ M ⊨[ ⟦t⟧ₜ M, ρ ∷ᵥ ρ ] p := by
-  simp [satisfy_subst]
+  rw [satisfy_subst]
   congr! with x
   cases x using Fin.cases <;> simp
 
 theorem satisfy_subst_assign {p : L.Formula (n + 1)} {t} :
   M ⊨[ρ] p[≔ₛ t]ₚ ↔ M ⊨[ ⟦t⟧ₜ M, ρ ∷ᵥ ρ.tail ] p := by
-  simp [satisfy_subst]
+  rw [satisfy_subst]
   congr! with x
   cases x using Fin.cases <;> simp
 
+theorem satisfy_shift_succ : M ⊨[u ∷ᵥ ρ] ↑ₚ^[k + 1] p ↔ M ⊨[ρ] ↑ₚ^[k] p := by
+  simp [satisfy_subst]
+
 theorem satisfy_shift : M ⊨[u ∷ᵥ ρ] ↑ₚp ↔ M ⊨[ρ] p := by
-  simp [Formula.shift, satisfy_subst]
+  simp [satisfy_subst]
 
 abbrev satisfys (M : Type u) [L.IsStructure M] (p : L.Sentence) := M ⊨[[]ᵥ] p
 infix:50 " ⊨ₛ " => satisfys
 
 theorem satisfy_alls : M ⊨ₛ ∀* p ↔ ∀ ρ, M ⊨[ρ] p := by
-  induction n with simp [Formula.alls]
-  | zero => rfl
+  induction n with
+  | zero =>
+    simp [Formula.alls, Vec.eq_nil]
   | succ n ih =>
-    simp [ih]
-    constructor
-    · intro h ρ; rw [Vec.eq_cons ρ]; apply h
-    · intro h ρ u; exact h (u ∷ᵥ ρ)
+    simp only [Formula.alls, ih, satisfy_all, Fin.forall_fin_succ_pi]
+    rw [forall_comm]
+    rfl
 
 /-- Bundled version of `IsStructure`. -/
 structure Structure (L : Language) where

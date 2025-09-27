@@ -69,20 +69,26 @@ theorem interp_formula : Γ.TermModel ⊨[(⟦σ ·⟧)] p ↔ Γ ⊢ p[σ]ₚ :
         prw [Proof.neg_forall_iff] at h₂'
         apply h₃ at h₂'
         rcases h₂' with ⟨c, h₂'⟩
-        simp at h₂'; rw [←Term.subst_const (σ := σ), ←Formula.subst_swap_single, ←Formula.subst_comp] at h₂'
+        syntax_simp at h₂'
         apply h₁
         apply h₂'.mp
-        rw [←ih h₁ h₂ h₃]
+        rw [← ih h₁ h₂ h₃]
         have : (λ x => ⟦(↦ₛ c ∘ₛ σ) x⟧) = (⟦c⟧ : Quotient (TermSetoid Γ)) ∷ᵥ (⟦σ ·⟧) := by
           funext x; cases x using Fin.cases <;> simp [Vec.eq_nil]
-        rw [this]
+        simp_vec
+        rw [← this]
+        simp_vec
         apply h₁'
     · rintro h ⟨t⟩
       apply (Proof.forall_elim t).mp at h
-      rw [←Formula.subst_comp, ←ih h₁ h₂ h₃] at h
+      syntax_simp at h
+      rw [← ih h₁ h₂ h₃] at h
       have : (λ x => ⟦(⇑ₛσ ∘ₛ ↦ₛ t) x⟧) = (⟦t⟧ : Quotient (TermSetoid Γ)) ∷ᵥ (⟦σ ·⟧) := by
-        funext x; cases x using Fin.cases <;> simp [Term.shift_subst_single]
-      rw [this] at h
+        funext x; cases x using Fin.cases <;> syntax_simp
+      simp_vec at h
+      rw [← this] at h
+      simp_vec at h
+      syntax_simp at h
       exact h
 
 theorem satisfiable : Satisfiable Γ := by

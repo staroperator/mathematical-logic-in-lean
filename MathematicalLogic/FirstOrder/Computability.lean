@@ -35,7 +35,7 @@ def Term.substPR : Primrec 2 :=
 theorem Term.substPR_eval {t : L.Term n} {σ : L.Subst n m} :
   substPR [Encodable.encode t, Encodable.encode σ]ᵥ = Encodable.encode (t[σ]ₜ) := by
   induction t with
-  | var x => rw [substPR, covrec_eval]; simp [Vec.encode_eq, Term.encode_var]; rw [vget_eval]
+  | var x => rw [substPR, covrec_eval]; simp [Subst.encode_eq, Term.encode_var]; rw [vget_eval]
   | func f v ih =>
     rw [substPR, covrec_eval, ←substPR]; simp [Vec.encode_eq, Term.encode_func]; rw [vmap'_eval]
     · simp [←Vec.encode_eq, ih]
@@ -47,36 +47,39 @@ theorem Term.substPR_eval {t : L.Term n} {σ : L.Subst n m} :
 
 def Subst.shiftPR : Primrec 1 :=
   vmk (mul.comp₂ (const 2) (succ.comp₁ (proj 0)))
-theorem Subst.shiftPR_eval : shiftPR [n]ᵥ = Encodable.encode (shift : L.Subst n (n + 1)) := by
-  simp [shiftPR, vmk_eval, Vec.encode_eq, Term.encode_var]
+theorem Subst.shiftPR_eval : shiftPR [n]ᵥ = Encodable.encode (shift 1 : L.Subst n (n + 1)) := by
+  simp [shiftPR, vmk_eval, Subst.encode_eq, Term.encode_var]
 
 def Term.shiftPR : Primrec 2 :=
   substPR.comp₂ (proj 1) (Subst.shiftPR.comp₁ (proj 0))
 theorem Term.shiftPR_eval {t : L.Term n} :
   shiftPR [n, Encodable.encode t]ᵥ = Encodable.encode (↑ₜt) := by
-  simp [shiftPR, Subst.shiftPR_eval (L := L), Term.substPR_eval, Term.shift]
+  simp [shiftPR, Subst.shiftPR_eval (L := L), Term.substPR_eval]
 
 def Subst.liftPR : Primrec 3 :=
   pair.comp₂ zero ((vmap (Term.shiftPR.swap)).comp₃ (proj 0) (proj 2) (proj 1))
 theorem Subst.liftPR_eval {σ : L.Subst n m} :
   liftPR [n, m, Encodable.encode σ]ᵥ = Encodable.encode (⇑ₛσ) := by
-  simp [liftPR, lift]
-  simp [Vec.encode_eq, vmap_eval, Term.shiftPR_eval, Term.encode_var]
+  syntax_simp [liftPR]
+  simp [Subst.encode_eq, vmap_eval, Term.shiftPR_eval]
+  simp_vec
+  simp [Term.encode_var, Vec.paired]
 
 def Subst.liftNPR : Primrec 4 :=
   (proj 2).prec (liftPR.comp₃ (add.comp₂ (proj 2) (proj 0)) (add.comp₂ (proj 3) (proj 0)) (proj 1))
 theorem Subst.liftNPR_eval {σ : L.Subst n m} :
   liftNPR [k, n, m, Encodable.encode σ]ᵥ = Encodable.encode (⇑ₛ^[k] σ) := by
   simp [liftNPR]
-  induction k generalizing n m σ with simp [liftN]
-  | zero => simp [prec_eval_zero]
-  | succ k ih => simp [prec_eval_succ, ih, liftPR_eval]
+  induction k generalizing n m σ with
+  | zero => simp [prec_eval_zero]; syntax_simp
+  | succ k ih => simp [prec_eval_succ, ih, liftPR_eval]; syntax_simp
 
 def Subst.singlePR : Primrec 2 :=
   pair.comp₂ (proj 1) ((vmk (mul.comp₂ (const 2) (proj 0))).comp₁ (proj 0))
 theorem Subst.singlePR_eval {t : L.Term n} :
   singlePR [n, Encodable.encode t]ᵥ = Encodable.encode (↦ₛ t : L.Subst (n + 1) n) := by
   simp [singlePR, vmk_eval, Subst.single]
+  rw [Vec.encode_cons]
   simp [Vec.encode_eq, Term.encode_var]
 
 def Subst.assignPR : Primrec 2 :=
@@ -84,6 +87,7 @@ def Subst.assignPR : Primrec 2 :=
 theorem Subst.assignPR_eval {t : L.Term (n + 1)} :
   assignPR [n, Encodable.encode t]ᵥ = Encodable.encode (≔ₛ t : L.Subst (n + 1) (n + 1)) := by
   simp [assignPR, vmk_eval, Subst.assign]
+  rw [Vec.encode_cons]
   simp [Vec.encode_eq, Term.encode_var]
 
 
@@ -166,7 +170,7 @@ def Formula.andNPR : Primrec 2 :=
     exact this
   intro k h₁
   induction k with
-  | zero => rw [←h, prec_eval_zero]; simp [Formula.andN]; rfl
+  | zero => rw [←h, prec_eval_zero]; simp [Formula.vecAnd]; rfl
   | succ k ih =>
     rw [←h, prec_eval_succ, h]
     simp; rw [ih (Nat.le_of_succ_le h₁), Vec.encode_eq, vget_eval' (by simp; exact Nat.zero_lt_of_lt h₁), andPR_eval]
@@ -274,7 +278,7 @@ theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
     f [(Encodable.encode p).pair d, d + k, n, m, Encodable.encode σ]ᵥ = Encodable.encode ((h₁ ▸ p)[⇑ₛ^[k] σ]ₚ) by
     simp [depthPR_eval]
     specialize this p.depth 0 n p rfl (by rfl)
-    simp at this
+    syntax_simp at this
     exact this
   intro d k l p h₁ h₂
   induction p generalizing d k with simp [depth] at h₂
@@ -282,7 +286,7 @@ theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
     subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_rel, Nat.mul_add_div]
     simp [Vec.encode_eq, vmap_eval]
     congr with i
-    simp [Vec.eq_four]; simp [←Vec.encode_eq, Subst.liftNPR_eval, Term.substPR_eval]
+    simp [Vec.eq_four]; simp [Subst.liftNPR_eval, Term.substPR_eval]
   | eq t₁ t₂ =>
     subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_eq, Nat.mul_add_div]
     constructor <;> simp [Vec.eq_four] <;> simp [Subst.liftNPR_eval, Term.substPR_eval]
@@ -308,7 +312,8 @@ theorem Formula.substPR_eval {p : L.Formula n} {σ : L.Subst n m} :
     cases' d with d <;> simp at h₂
     subst h₁; rw [←h, covrec_eval, h]; simp [Formula.encode_all]
     rw [vget_eval']
-    · rw [Nat.add_right_comm d 1 k, Nat.add_assoc d k 1, ih d (k + 1) rfl h₂, Subst.liftN]
+    · rw [Nat.add_right_comm d 1 k, Nat.add_assoc d k 1, ih d (k + 1) rfl h₂]
+      syntax_simp
     · apply Nat.pair_lt_pair_left'
       · simp [Nat.lt_succ]
         apply (Nat.le_add_right _ _).trans'
@@ -319,7 +324,7 @@ def Formula.shiftPR : Primrec 2 :=
   substPR.comp₄ (proj 0) (succ.comp₁ (proj 0)) (proj 1) (Subst.shiftPR.comp₁ (proj 0))
 theorem Formula.shiftPR_eval {p : L.Formula n} :
   shiftPR [n, Encodable.encode p]ᵥ = Encodable.encode (↑ₚp) := by
-  simp [shiftPR, Subst.shiftPR_eval (L := L), substPR_eval, Formula.shift]
+  simp [shiftPR, Subst.shiftPR_eval (L := L), substPR_eval]
 
 def Formula.substSinglePR : Primrec 3 :=
   substPR.comp₄ (succ.comp₁ (proj 0)) (proj 0) (proj 1) (Subst.singlePR.comp₂ (proj 0) (proj 2))
@@ -960,7 +965,7 @@ theorem isProofOfPR_eval_pos_of_proof [L.HasConstEncodeZero] :
     left
     constructor
     · simp
-    · -- simp/simp only timeout here!
+    · -- TODO: simp/simp only timeout here!
       simp_rw [Partrec.ofPrim_eval, Part.mem_some_iff, ite_eval, andv_eval_pos_iff]
       simp only [Nat.reduceAdd, Fin.forall_fin_four, Vec.cons_three, Vec.cons_two, Vec.cons_one,
         Vec.cons_zero]

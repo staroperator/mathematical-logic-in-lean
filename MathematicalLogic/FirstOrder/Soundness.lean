@@ -15,7 +15,7 @@ variable {L : Language} {M : Type u} [IsStructure L M]
 
 theorem Entails.ax : p ∈ L.Axiom → Γ ⊨ p := by
   intro h M ρ _
-  induction h with simp [satisfy_andN]
+  induction h with simp
   | forall_elim =>
     intro h
     simp [satisfy_subst_single]

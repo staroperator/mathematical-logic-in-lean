@@ -64,12 +64,14 @@ instance : Encodable (L.Term n) where
   encode := Term.encode
   decode := Term.decode n
   encodek _ := Term.encode_decode
+instance : Encodable (L.Subst n m) := Vec.encodable
 
 theorem Term.encode_var : Encodable.encode (#x : L.Term n) = 2 * x := rfl
 theorem Term.encode_func {v : Vec (L.Term n) m} :
-  Encodable.encode (f ⬝ᶠ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 := rfl
+    Encodable.encode (f ⬝ᶠ v) = 2 * m.pair ((Encodable.encode f).pair (Encodable.encode v)) + 1 :=
+  rfl
 theorem Subst.encode_eq {σ : L.Subst n m} :
-  Encodable.encode σ = Vec.paired λ i => Encodable.encode (σ i) := rfl
+    Encodable.encode σ = Vec.paired λ i => Encodable.encode (σ i) := rfl
 attribute [local simp] Term.encode_var Term.encode_func
 
 theorem Term.encode_lt_func_m {v : Vec (L.Term n) m} :
@@ -295,7 +297,6 @@ theorem Formula.encode_le_subst {p : L.Formula n} {σ : L.Subst n m} :
     apply (Nat.le_add_right _ _).trans'
     apply (Nat.le_mul_of_pos_left _ (by simp)).trans'
     apply (ih h).trans'
-    simp
     exact Term.encode_le_shift
 
 theorem Formula.encode_le_subst_single {p : L.Formula (n + 1)} :

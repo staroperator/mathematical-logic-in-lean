@@ -97,7 +97,13 @@ variable {L : Language}
 
 theorem Axiom.subst {σ : L.Subst n m} : p ∈ L.Axiom → p[σ]ₚ ∈ L.Axiom := by
   intro h
-  induction h generalizing m <;> simp [Formula.shift_subst_lift, Formula.subst_swap_single, Formula.subst_andN]
+  induction h generalizing m <;> syntax_simp
+  case forall_elim p t =>
+    convert forall_elim (p := p[⇑ₛσ]ₚ) (t := t[σ]ₜ) using 1
+    syntax_simp
+  case forall_self p =>
+    convert forall_self (p := p[σ]ₚ) using 1
+    syntax_simp
   case all ih => exact all ih
   all_goals constructor
 
@@ -169,11 +175,7 @@ theorem subst : Γ ⊢ p → (·[σ]ₚ) '' Γ ⊢ p[σ]ₚ := by
 
 theorem shift : Γ ⊢ p → ↑ᴳΓ ⊢ ↑ₚp := subst
 
-theorem shiftN : Γ ⊢ p → ↑ᴳ^[m] Γ ⊢ ↑ₚ^[m] p := by
-  intro h
-  induction m with
-  | zero => exact h
-  | succ m ih => exact shift ih
+theorem shiftk : Γ ⊢ p → ↑ᴳ^[m] Γ ⊢ ↑ₚ^[m] p := subst
 
 theorem forall_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∀' p ⇒ ∀' q := ax .forall_imp
 theorem forall_elim (t) : Γ ⊢ ∀' p ⇒ p[↦ₛ t]ₚ := ax .forall_elim
@@ -192,12 +194,29 @@ theorem generalization : ↑ᴳΓ ⊢ p ↔ Γ ⊢ ∀' p := by
     | mp _ _ ih₁ ih₂ => exact forall_imp.mp₂ ih₁ ih₂
   · intro h
     apply shift at h
-    simp [Formula.shift] at h
     apply (forall_elim #0).mp at h
-    rw [←Formula.subst_comp, Subst.lift_comp_single, Subst.zero_cons_shift, Formula.subst_id] at h
+    syntax_simp at h
     exact h
 
 theorem forall_intro : ↑ᴳΓ ⊢ p → Γ ⊢ ∀' p := generalization.mp
+
+/-- Proof compactness theorem. -/
+theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
+  intro h
+  induction h with
+  | @hyp p h =>
+    exists {p}; simp [h]
+    exact hyp rfl
+  | ax h =>
+    exists ∅; simp
+    exact ax h
+  | mp _ _ ih₁ ih₂ =>
+    rcases ih₁ with ⟨Δ₁, h₁, h₂, h₃⟩
+    rcases ih₂ with ⟨Δ₂, h₄, h₅, h₆⟩
+    exists Δ₁ ∪ Δ₂; simp [h₁, h₄, h₂, h₅]
+    apply mp
+    · apply weaken _ h₃; simp
+    · apply weaken _ h₆; simp
 
 end Proof
 
@@ -218,16 +237,12 @@ theorem append_append (h : Γ ⊆ᵀ Δ) : Γ,' p ⊆ᵀ Δ,' p where
   | _, .inl rfl => .hyp_append
   | _, .inr h' => .weaken_append (h.subtheory _ h')
 
-theorem shift (h : Γ ⊆ᵀ Δ) : ↑ᴳΓ ⊆ᵀ ↑ᴳΔ where
+theorem shiftk (h : Γ ⊆ᵀ Δ) : ↑ᴳ^[k] Γ ⊆ᵀ ↑ᴳ^[k] Δ where
   subtheory _ h' := by
-    simp [FormulaSet.shift] at h'
     rcases h' with ⟨p, h', rfl⟩
-    exact .shift (h.subtheory p h')
+    exact .subst (h.subtheory p h')
 
-theorem shiftN (h : Γ ⊆ᵀ Δ) : ↑ᴳ^[m] Γ ⊆ᵀ ↑ᴳ^[m] Δ := by
-  induction m with
-  | zero => exact h
-  | succ m ih => exact shift ih
+theorem shift (h : Γ ⊆ᵀ Δ) : ↑ᴳΓ ⊆ᵀ ↑ᴳΔ := shiftk h
 
 theorem shiftT {T₁ T₂ : L.Theory} (h : T₁ ⊆ᵀ T₂) : ↑ᵀ^[n] T₁ ⊆ᵀ ↑ᵀ^[n] T₂ := by
   induction n with
@@ -245,8 +260,8 @@ macro "pintro" : tactic => `(tactic|
   first
   | eapply deduction.mpr
   | (eapply forall_intro;
-     try simp only [FormulaSet.shift_append, FormulaSet.shiftN_append,
-       Theory.shift_eq, Theory.shift_shiftN, Theory.shiftN_eq, Theory.shiftN_shiftN]))
+     try simp only [Nat.reduceAdd, FormulaSet.shift_append,
+       Theory.shift_eq, Theory.shift_shiftT, Theory.shift_eq, Theory.shift_shiftT]))
 
 /--
   Repeatedly introduce new hypotheses and variables. `pintros n` introduces exactly `n` hypotheses
@@ -285,7 +300,8 @@ elab "pclear" n:(ppSpace colGt num) : tactic => do
   let mut weakenTerm ← `(FormulaSet.subset_append)
   for _ in [:n.getNat] do
     weakenTerm ← `(FormulaSet.append_subset_append $weakenTerm)
-  let mainGoal :: _ ← evalTacticAt (← `(tactic| eapply weaken $weakenTerm)) (← getMainGoal) | throwError "pclear failed"
+  let mainGoal :: _ ← evalTacticAt (← `(tactic| eapply weaken $weakenTerm)) (← getMainGoal)
+    | throwError "pclear failed"
   replaceMainGoal [mainGoal]
 
 /-- Remove all assumptions except the theory (or formula set) itself. -/
@@ -303,28 +319,27 @@ elab "pswap" n:(ppSpace colGt num) m:(ppSpace colGt num) : tactic => do
   permuteTerm ← `(Eq.trans $permuteTerm (Eq.trans FormulaSet.append_comm (Eq.symm $permuteTerm)))
   for _ in [:n] do
     permuteTerm ← `(FormulaSet.append_eq_append $permuteTerm)
-  let mainGoal :: _ ← evalTacticAt (← `(tactic| eapply weaken (FormulaSet.subset_of_eq $permuteTerm))) (← getMainGoal)
+  let mainGoal :: _ ← evalTacticAt
+    (← `(tactic| eapply weaken (FormulaSet.subset_of_eq $permuteTerm))) (← getMainGoal)
     | throwError "pswap failed"
   replaceMainGoal [mainGoal]
 
 /--
   `preplace n p` replaces the `n`-th assumption with a new proposition `p`, and generate a new goal
-  to prove `p`.
-  -/
+  to prove `p`. -/
 macro "preplace" n:(ppSpace colGt num) t:(ppSpace colGt term) : tactic =>
   `(tactic| (psuffices $t; focus (pswap 0 $(mkNatLit (n.getNat+1)); pclear 0)))
 
 /--
-  Revert a hypothesis through deduction theorem. `prevert n` reverts the `n`-th assumption, and
-  `prevert` reverts the `0`-th assumption.
-  -/
-macro "prevert" n:(ppSpace colGt num)? : tactic =>
-  match n with
-  | some n =>
-    match n.getNat with
-    | n + 1 => `(tactic| (pswap $(mkNatLit (n + 1)) 0; eapply deduction.mp; pswap $(mkNatLit n) 0))
-    | 0 => `(tactic| eapply deduction.mp)
-  | none => `(tactic| eapply deduction.mp)
+  Revert an assumption through deduction theorem. `prevert n` reverts the `n`-th assumption, and
+  `prevert` reverts the `0`-th assumption. -/
+elab "prevert" n:(ppSpace colGt num)? : tactic => do
+  let n := (n.map (·.getNat)).getD 0
+  let mut permuteTerm ← `(Eq.refl _)
+  for _ in [:n] do
+    permuteTerm ← `((Eq.trans (FormulaSet.append_eq_append $permuteTerm) FormulaSet.append_comm))
+  evalTactic
+    (← `(tactic| eapply weaken (FormulaSet.subset_of_eq (Eq.symm $permuteTerm)); eapply deduction.mp))
 
 def isTheory? (n : Expr) (Γ : Expr) : MetaM (Option Expr) := do
   if let some (_, _, T) := Γ.app3? ``Theory.shiftT then return T
@@ -396,7 +411,8 @@ private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × 
       if d == some newMVarIds.length then
         throwError "failed to apply {ftype} at {goal} with depth {newMVarIds.length}"
       MonadBacktrack.restoreState s
-    if let some (_, _, p, q) := (← withAtLeastTransparency .instances (whnf goalFormula)).app4? ``Formula.imp then
+    if let some (_, _, p, q) :=
+        (← withAtLeastTransparency .instances (whnf goalFormula)).app4? ``Formula.imp then
       let mvarId ← mkFreshMVarId
       newMVarIds := newMVarIds ++ [mvarId]
       let mvar ← mkFreshExprMVarWithId mvarId (some (mkApp4 (.const ``Proof []) L n Δ p))
@@ -410,13 +426,14 @@ private def papply (f : Expr) (goal : Expr) (d : Option ℕ) : TacticM (Expr × 
   Term.synthesizeSyntheticMVarsNoPostponing
   return (proofTerm, newMVarIds)
 
-def runPapplyAtMainGoal (f : TSyntax `term) (depth : Option ℕ) : TacticM Unit := withMainContext do
+def papplyAtMainGoal (f : TSyntax `term) (depth : Option ℕ) : TacticM Unit := withMainContext do
   let mainGoal ← getMainGoal
   let (goalTerm, newGoals) ← papply (← elabTerm f none true) (← mainGoal.getType') depth
   mainGoal.assign goalTerm
   replaceMainGoal newGoals
 
-def runPapplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : Option ℕ) : TacticM Unit := withMainContext do
+def papplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : Option ℕ) :
+    TacticM Unit := withMainContext do
   if depth == some 0 then throwError "depth can't be 0"
   let depth := depth.map λ d => d - 1
   let some ldecl := (← getLCtx).findFromUserName? target.getId | throwError m!"{target} not found"
@@ -430,7 +447,8 @@ def runPapplyAtLocalHyp (f : TSyntax `term) (target : TSyntax `ident) (depth : O
   let mainGoal ← mainGoal.tryClear ldecl.fvarId
   replaceMainGoal (mainGoal :: newGoals)
 
-def runPapplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ) : TacticM Unit := withMainContext do
+def papplyAtAssumption (f : TSyntax `term) (target : ℕ) (depth : Option ℕ) :
+    TacticM Unit := withMainContext do
   if depth == some 0 then throwError "depth can't be 0"
   let depth := depth.map λ d => d - 1
   let [goal, newMainGoal] ← evalTacticAt
@@ -466,12 +484,12 @@ syntax location := "at" (ident <|> num)
 syntax "papply" ppSpace colGt term (location)? ("with" num)? : tactic
 
 elab_rules : tactic
-| `(tactic| papply $t) => runPapplyAtMainGoal t none
-| `(tactic| papply $t with $d) => runPapplyAtMainGoal t (some d.getNat)
-| `(tactic| papply $t at $h:ident) => runPapplyAtLocalHyp t h none
-| `(tactic| papply $t at $h:ident with $d) => runPapplyAtLocalHyp t h (some d.getNat)
-| `(tactic| papply $t at $n:num) => runPapplyAtAssumption t n.getNat none
-| `(tactic| papply $t at $n:num with $d) => runPapplyAtAssumption t n.getNat (some d.getNat)
+| `(tactic| papply $t) => papplyAtMainGoal t none
+| `(tactic| papply $t with $d) => papplyAtMainGoal t (some d.getNat)
+| `(tactic| papply $t at $h:ident) => papplyAtLocalHyp t h none
+| `(tactic| papply $t at $h:ident with $d) => papplyAtLocalHyp t h (some d.getNat)
+| `(tactic| papply $t at $n:num) => papplyAtAssumption t n.getNat none
+| `(tactic| papply $t at $n:num with $d) => papplyAtAssumption t n.getNat (some d.getNat)
 
 /-- Apply the `n`-th assumption using `Proof.mp`. -/
 syntax "papplya" (ppSpace colGt num) (location)? ("with" num)? : tactic
@@ -493,7 +511,9 @@ syntax "pspecialize" ppSpace colGt num ("with" num)? : tactic
 
 macro_rules
 | `(tactic| pspecialize $n with $d) => `(tactic| (
-  eapply cut_append; (on_goal 2 => pswap 0 $(mkNatLit (n.getNat+1)); pclear 0); on_goal 1 => papplya $n with $d))
+  eapply cut_append
+  on_goal 2 => pswap 0 $(mkNatLit (n.getNat+1)); pclear 0
+  on_goal 1 => papplya $n with $d))
 | `(tactic| pspecialize $n) => `(tactic| (
   eapply cut_append
   on_goal 1 => papplya $n with 1
@@ -515,8 +535,8 @@ syntax multilineProof := multilineProofTheory multilineProofHyp* ppDedent(ppLine
   let stxΓ ← withNaryArg 2 delab
   let stxp ← withNaryArg 3 delab
   let defaultDelab ← `($stxΓ ⊢ $stxp)
-  -- One line display if fits within 80 characters
-  if defaultDelab.raw.prettyPrint.pretty.length <= 80 then
+  -- use default delab if not in the root expr or fits within 80 characters
+  if !(← readThe SubExpr).isRoot || defaultDelab.raw.prettyPrint.pretty.length <= 80 then
     return defaultDelab
   let mut hyps : TSyntaxArray ``multilineProofHyp := #[]
   repeat
@@ -678,7 +698,8 @@ theorem iff_trans : Γ ⊢ (p ⇔ q) ⇒ (q ⇔ r) ⇒ (p ⇔ r) := by
   · papply composition <;> papply iff_mp <;> passumption
   · papply composition <;> papply iff_mpr <;> passumption
 
-@[prw] theorem iff_congr_imp : Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ ⇒ q₁) ⇔ (p₂ ⇒ q₂)) := by
+@[prw] theorem iff_congr_imp :
+    Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ ⇒ q₁) ⇔ (p₂ ⇒ q₂)) := by
   pintros 2
   papply iff_intro <;> pintros
   · papply iff_mp; passumption
@@ -711,7 +732,8 @@ theorem iff_trans : Γ ⊢ (p ⇔ q) ⇒ (q ⇔ r) ⇒ (p ⇔ r) := by
     passumption
   · passumption
 
-@[prw] theorem iff_congr_iff : Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ ⇔ q₁) ⇔ (p₂ ⇔ q₂)) := by
+@[prw] theorem iff_congr_iff :
+    Γ ⊢ (p₁ ⇔ p₂) ⇒ (q₁ ⇔ q₂) ⇒ ((p₁ ⇔ q₁) ⇔ (p₂ ⇔ q₂)) := by
   pintros 2
   papply iff_congr_and <;> papply iff_congr_imp <;> passumption
 
@@ -764,7 +786,7 @@ theorem imp_contra_iff : Γ ⊢ (~ p ⇒ ~ q) ⇔ (q ⇒ p) := by
   · pintros; papplya 1; papplya 2; passumption
 
 theorem neg_andN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋀ i, v i) ⇔ ⋁ i, ~ v i := by
-  induction m with simp [Formula.orN, Formula.andN]
+  induction m with
   | zero => exact double_neg_iff
   | succ m ih =>
     papply iff_trans
@@ -774,7 +796,7 @@ theorem neg_andN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋀ i, v i) ⇔ ⋁ i
       · exact ih
 
 theorem neg_orN_iff {v : Vec (L.Formula n) m} : Γ ⊢ ~ (⋁ i, v i) ⇔ ⋀ i, ~ v i := by
-  induction m with simp [Formula.orN, Formula.andN]
+  induction m with
   | zero => exact iff_refl
   | succ m ih =>
     papply iff_trans
@@ -794,14 +816,16 @@ theorem and_comm : Γ ⊢ p ⩑ q ⇔ q ⩑ p := by
 
 theorem and_assoc : Γ ⊢ (p ⩑ q) ⩑ r ⇔ p ⩑ q ⩑ r := by
   papply iff_intro <;> pintro <;> papply and_intro <;> (try papply and_intro)
-   <;> aesop (add unsafe tactic (by papply and_left), unsafe tactic (by papply and_right), safe tactic (by passumption 0))
+    <;> aesop (add unsafe tactic (by papply and_left), unsafe tactic (by papply and_right),
+      safe tactic (by passumption 0))
 
 theorem or_comm : Γ ⊢ p ⩒ q ⇔ q ⩒ p := by
   papply iff_intro <;> papply or_elim' <;> first | pexact or_inl | pexact or_inr
 
 theorem or_assoc : Γ ⊢ (p ⩒ q) ⩒ r ⇔ p ⩒ q ⩒ r := by
   papply iff_intro <;> papply or_elim' <;> (try papply or_elim' with 2) <;> pintro
-   <;> aesop (add unsafe tactic (by papply or_inl), unsafe tactic (by papply or_inr), safe tactic (by passumption 0))
+    <;> aesop (add unsafe tactic (by papply or_inl), unsafe tactic (by papply or_inr),
+      safe tactic (by passumption 0))
 
 theorem iff_congr_forall : Γ ⊢ ∀' (p ⇔ q) ⇒ ∀' p ⇔ ∀' q := by
   pintro
@@ -862,58 +886,61 @@ theorem exists_imp : Γ ⊢ ∀' (p ⇒ q) ⇒ ∃' p ⇒ ∃' q := by
   · apply forall_intro
     pintros 2
     papply exists_intro #0
-    rw [←Formula.subst_comp, Subst.lift_comp_single, Subst.zero_cons_shift, Formula.subst_id]
+    syntax_simp
     papplya 1
     passumption 0
   · passumption
 
 theorem forallN_intro : ↑ᴳ^[m] Γ ⊢ p → Γ ⊢ ∀^[m] p := by
   intro h
-  induction m with simp [FormulaSet.shiftN, Formula.allN] at *
-  | zero => exact h
-  | succ m ih => apply ih; pintro; exact h
+  induction m with
+  | zero =>
+    syntax_simp at h
+    exact h
+  | succ m ih =>
+    apply ih
+    pintro
+    syntax_simp
+    exact h
 
 theorem forallN_elim' (σ₁) : Γ ⊢ (∀^[m] p)[σ₂]ₚ ⇒ p[σ₁ ++ᵥ σ₂]ₚ := by
-  induction m with simp [Formula.allN]
+  induction m with
   | zero =>
-    simp [Vec.eq_nil]; exact identity
+    syntax_simp
+    exact identity
   | succ m ih =>
-    rw [Vec.eq_cons σ₁]; simp
     pintro
-    rw [←Subst.lift_comp_single, Formula.subst_comp]
-    papply forall_elim σ₁.head
-    rw [←Formula.subst_all]
-    papply ih (σ₁.tail)
+    papply ih σ₁.tail at 0
+    papply forall_elim σ₁.head at 0
+    rw [Vec.eq_cons σ₁]
+    syntax_simp
     passumption
 
-theorem forallN_elim (σ) : Γ ⊢ ∀^[m] p ⇒ p[σ ++ᵥ Subst.id]ₚ := by
+theorem forallN_elim (σ : L.Subst m n) : Γ ⊢ ∀^[m] p ⇒ p[σ ++ᵥ Subst.id]ₚ := by
   rw [←Formula.subst_id (∀^[m] p)]
   apply forallN_elim'
 
 theorem forallN_imp : Γ ⊢ ∀^[m] p ⇒ ∀^[m] (p ⇒ q) ⇒ ∀^[m] q := by
   pintros
   apply forallN_intro
-  simp [Formula.shiftN_eq_subst]
-  apply mp (p := p)
-  · nth_rw 2 [←Formula.subst_id (p ⇒ q)]
-    rw [Vec.eq_append Subst.id]
-    papply forallN_elim'
-    passumption
-  · nth_rw 3 [←Formula.subst_id p]
-    rw [Vec.eq_append Subst.id]
-    papply forallN_elim'
-    passumption
+  syntax_simp
+  papply forallN_elim (Subst.embed m) at 1
+  papply forallN_elim (Subst.embed m) at 0
+  syntax_simp
+  papplya 0
+  passumption
 
-theorem existsN_intro' {p : L.Formula (k + m)} (σ₁) : Γ ⊢ p[σ₁ ++ᵥ σ₂]ₚ ⇒ (∃^[m] p)[σ₂]ₚ := by
-  induction m with simp [Formula.exN]
+theorem existsN_intro' {p : L.Formula (k + m)} (σ₁) :
+    Γ ⊢ p[σ₁ ++ᵥ σ₂]ₚ ⇒ (∃^[m] p)[σ₂]ₚ := by
+  induction m with
   | zero =>
-    simp [Vec.eq_nil]; exact identity
+    syntax_simp
+    exact identity
   | succ m ih =>
-    rw [Vec.eq_cons σ₁]; simp
     pintro
     papply ih σ₁.tail
     papply exists_intro σ₁.head
-    rw [←Formula.subst_comp, Subst.lift_comp_single]
+    syntax_simp
     passumption
 
 theorem existsN_intro {p : L.Formula (n + m)} (σ) :
@@ -923,18 +950,24 @@ theorem existsN_intro {p : L.Formula (n + m)} (σ) :
 
 theorem existsN_elim {p : L.Formula (n + m)} :
   Γ ⊢ ∃^[m] p ⇒ ∀^[m] (p ⇒ ↑ₚ^[m] q) ⇒ q := by
-  induction m with simp [Formula.exN, Formula.allN]
+  induction m with
   | zero =>
-    pintros; papplya 0; passumption
+    pintros
+    syntax_simp
+    papplya 0
+    passumption
   | succ m ih =>
     pintros
-    papply ih (p := ∃' p)
+    papply ih
     · passumption
     · papply forallN_imp
       · passumption 0
       · apply forallN_intro
         pintros
-        papply exists_elim <;> passumption
+        papply exists_elim
+        · passumption 0
+        · syntax_simp
+          passumption
 
 theorem existsN_elim' : Γ ⊢ ∀^[m] (p ⇒ ↑ₚ^[m] q) ⇒ ∃^[m] p ⇒ q := by
   pintros; papply existsN_elim <;> passumption
@@ -979,7 +1012,7 @@ theorem eq_congr_func : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ f ⬝ᶠ v₁ ≐ 
 
 @[prw] theorem eq_subst_eq : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ t[σ₁]ₜ ≐ t[σ₂]ₜ := by
   pintro
-  induction t with simp
+  induction t with
   | var x => papply andN_elim x at 0; passumption
   | func f v ih => papply eq_congr_func; apply andN_intro; exact ih
 
@@ -989,7 +1022,8 @@ theorem eq_congr_eq : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂
   · psymm; passumption
   · ptrans <;> passumption
 
-@[prw] theorem eq_congr_eq_iff : Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇔ t₁' ≐ t₂' := by
+@[prw] theorem eq_congr_eq_iff :
+    Γ ⊢ t₁ ≐ t₁' ⇒ t₂ ≐ t₂' ⇒ t₁ ≐ t₂ ⇔ t₁' ≐ t₂' := by
   pintros 2
   papply iff_intro
   · papply eq_congr_eq <;> passumption
@@ -1007,8 +1041,9 @@ theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ �
     papply andN_elim (v := λ i => v₁ i ≐ v₂ i)
     passumption
 
-@[prw] theorem eq_subst_iff {Γ : L.FormulaSet n} : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
-  induction p generalizing n with (pintro; simp)
+@[prw] theorem eq_subst_iff {Γ : L.FormulaSet n} :
+    Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇔ p[σ₂]ₚ := by
+  induction p generalizing n with pintro
   | rel r v =>
     papply eq_congr_rel_iff
     apply andN_intro
@@ -1029,9 +1064,13 @@ theorem eq_congr_rel_iff : Γ ⊢ (⋀ i, v₁ i ≐ v₂ i) ⇒ r ⬝ʳ v₁ �
     papply ih
     apply andN_intro
     intro i
-    cases i using Fin.cases with simp [Formula.shift, Formula.subst_andN]
-    | zero => prefl
-    | succ i => papply andN_elim i at 0; passumption
+    cases i using Fin.cases with
+    | zero =>
+      prefl
+    | succ i =>
+      syntax_simp
+      papply andN_elim i at 0
+      passumption
 
 theorem eq_subst : Γ ⊢ (⋀ i, σ₁ i ≐ σ₂ i) ⇒ p[σ₁]ₚ ⇒ p[σ₂]ₚ := by
   pintro
@@ -1154,7 +1193,7 @@ theorem exists_of_exists_unique : Γ ⊢ ∃!' p ⇒ ∃' p := by
   pintros 2
   papply and_left at 0
   papply exists_intro #0
-  simp [←Formula.subst_comp, Subst.comp_def]; simp_vec; rw [←Subst.shift_def, Subst.zero_cons_shift, Formula.subst_id]
+  syntax_simp
   passumption
 
 theorem unique_of_exists_unique : Γ ⊢ ∃!' p ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦ₛ t₂]ₚ ⇒ t₁ ≐ t₂ := by
@@ -1162,8 +1201,15 @@ theorem unique_of_exists_unique : Γ ⊢ ∃!' p ⇒ p[↦ₛ t₁]ₚ ⇒ p[↦
   pintros
   papply and_right at 2
   ptrans #0
-  · papply forall_elim ↑ₜt₁ at 2; papplya 2; rw [Term.shift_def, ←Formula.subst_swap_single]; passumption
-  · papply forall_elim ↑ₜt₂ at 2; psymm; papplya 2; rw [Term.shift_def, ←Formula.subst_swap_single]; passumption
+  · papply forall_elim ↑ₜt₁ at 2
+    papplya 2
+    syntax_simp
+    passumption
+  · papply forall_elim ↑ₜt₂ at 2
+    psymm
+    papplya 2
+    syntax_simp
+    passumption
 
 theorem iff_congr_exists_unique : Γ ⊢ ∀' (p ⇔ q) ⇒ ∃!' p ⇔ ∃!' q := by
   pintro
@@ -1171,34 +1217,15 @@ theorem iff_congr_exists_unique : Γ ⊢ ∀' (p ⇔ q) ⇒ ∃!' p ⇔ ∃!' q 
   pintro
   papply iff_congr_and
   · papply forall_elim #0 at 0
-    simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
-    rw [←Subst.shift_def, Subst.zero_cons_shift, Formula.subst_id, Formula.subst_id]
+    syntax_simp
     passumption
   · papply iff_congr_forall
     pintro
     papply iff_congr_imp
     · papply forall_elim #0 at 0
-      simp [←Formula.subst_comp, Subst.comp_def, Subst.lift]
+      syntax_simp
       passumption
     · prefl
-
-/-- Compactness theorem (for proofs). -/
-theorem compactness : Γ ⊢ p → ∃ Δ, Δ ⊆ Γ ∧ Δ.Finite ∧ Δ ⊢ p := by
-  intro h
-  induction h with
-  | @hyp p h =>
-    exists {p}; simp [h]
-    passumption; rfl
-  | ax h =>
-    exists ∅; simp
-    exact ax h
-  | mp _ _ ih₁ ih₂ =>
-    rcases ih₁ with ⟨Δ₁, h₁, h₂, h₃⟩
-    rcases ih₂ with ⟨Δ₂, h₄, h₅, h₆⟩
-    exists Δ₁ ∪ Δ₂; simp [h₁, h₄, h₂, h₅]
-    apply mp
-    · apply weaken _ h₃; simp
-    · apply weaken _ h₆; simp
 
 end Proof
 
@@ -1209,28 +1236,28 @@ namespace Theory
 variable {T : L.Theory}
 
 theorem generalization_alls : ↑ᵀ^[n] T ⊢ p ↔ T ⊢ ∀* p := by
-  induction n with simp [Formula.alls]
+  induction n with
   | zero => rfl
-  | succ n ih => rw [←shift_shiftN, generalization, ih]
+  | succ n ih => rw [← Theory.shift_shiftT, generalization, ih]; rfl
 
 theorem foralls_intro : ↑ᵀ^[n] T ⊢ p → T ⊢ ∀* p := generalization_alls.mp
 
 theorem foralls_elim (σ : L.Subst n m) : T ⊢ ∀* p → ↑ᵀ^[m] T ⊢ p[σ]ₚ := by
   intro h
-  induction n with simp [Formula.alls] at h
+  induction n with simp only [Formula.alls] at h
   | zero =>
     rw [Vec.eq_nil σ]; clear σ
     induction m with
-    | zero => rw [←Vec.eq_nil Subst.id, Formula.subst_id]; exact h
+    | zero =>
+      rwa [Sentence.subst_nil]
     | succ m ih =>
       apply shift at ih
-      simp [Formula.shift, ←Formula.subst_comp, Vec.eq_nil] at ih
+      syntax_simp at ih
       exact ih
   | succ n ih =>
     apply ih (σ := σ.tail) at h
-    simp at h
-    apply (forall_elim σ.head).mp at h
-    rw [←Formula.subst_comp, Subst.lift_comp_single, ←Vec.eq_cons] at h
+    papply forall_elim σ.head at h
+    syntax_simp [← Vec.eq_cons σ] at h
     exact h
 
 theorem foralls_imp : T ⊢ ∀* (p ⇒ q) ⇒ ∀* p ⇒ ∀* q := by
@@ -1243,6 +1270,11 @@ theorem iff_congr_foralls : T ⊢ ∀* (p ⇔ q) ⇒ ∀* p ⇔ ∀* q := by
   papply iff_intro <;> papply foralls_imp <;> apply foralls_intro
   · papply iff_mp; rw [generalization_alls]; passumption
   · papply iff_mpr; rw [generalization_alls]; passumption
+
+theorem iff_congr_subst : ↑ᵀ^[k] T ⊢ p ⇔ q → ↑ᵀ^[n] T ⊢ p[σ]ₚ ⇔ q[σ]ₚ := by
+  intro h
+  rw [generalization_alls] at h
+  exact foralls_elim σ h
 
 /-- The deductive closure of a theory. -/
 def theorems (T : L.Theory) : L.Theory := { p | T ⊢ p }

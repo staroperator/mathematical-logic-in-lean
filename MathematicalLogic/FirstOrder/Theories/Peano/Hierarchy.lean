@@ -33,12 +33,12 @@ namespace FirstOrder.Language.peano
 @[aesop safe] theorem Sigma₁.andN {v : Vec (peano.Formula n) m} :
   (∀ i, Sigma₁ (v i)) → Sigma₁ (⋀ i, v i) := by
   intro h
-  induction m <;> simp [Formula.andN] <;> aesop
+  induction m <;> simp [Formula.vecAnd] <;> aesop
 
 @[aesop safe] theorem Sigma₁.orN {v : Vec (peano.Formula n) m} :
   (∀ i, Sigma₁ (v i)) → Sigma₁ (⋁ i, v i) := by
   intro h
-  induction m <;> simp [Formula.orN] <;> aesop
+  induction m <;> simp [Formula.vecOr] <;> aesop
 
 @[aesop safe] theorem Sigma.exN {p : peano.Formula (n + m)} : Sigma₁ p → Sigma₁ (∃^[m] p) := by
   induction m <;> simp [Formula.exN]; aesop
