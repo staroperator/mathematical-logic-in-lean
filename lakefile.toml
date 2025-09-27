@@ -1,0 +1,18 @@
+name = "mathematical-logic"
+version = "0.1.0"
+defaultTargets = ["MathematicalLogic"]
+
+[[lean_lib]]
+name = "MathematicalLogic"
+
+[[require]]
+scope = "leanprover-community"
+name = "mathlib"
+
+[[require]]
+scope = "leanprover"
+name = "doc-gen4"
+
+[[require]]
+scope = "leanprover-community"
+name = "importGraph"
