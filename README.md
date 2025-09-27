@@ -35,7 +35,8 @@ A main part of this library is an experiment of writing *pure syntactic proofs* 
 logic, with help of Lean's metaprogramming framework.
 
 We first define the synatx of first-order logic with de Bruijn indexes and substitutions, and
-formalize the equation theory of de Bruijn substitutions following [autosubst](https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf).
+formalize the equational theory of de Bruijn substitutions following [Autosubst paper](https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf).
+`syntax_simp` is the tactic to rewrite FOL syntaxes to their normal forms.
 
 ```lean
 inductive Term (L : Language) (n : ℕ) : Type where
@@ -48,6 +49,10 @@ inductive Formula (L : Language) : ℕ → Type where
 | false : L.Formula n
 | imp : L.Formula n → L.Formula n → L.Formula n
 | all : L.Formula (n + 1) → L.Formula n
+
+example {L : Language} {n m : ℕ} {t : L.Term (n + 1)} {t' : L.Term n} {σ : L.Subst n m} :
+    t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ t'[σ]ₜ]ₜ := by
+  syntax_simp
 ```
 
 We define a Hilbert proof system for first-order logic:
@@ -74,7 +79,7 @@ inductive Proof (Γ : L.FormulaSet n) : L.Formula n → Prop where
 ```
 
 Based on this defintion, we provide a few tactics to write proofs, including `papply` to apply
-implications and `prw` to rewrite equalities/iffs. Here is a demonstration on writing pure syntatic
+implications and `prw` to rewrite equalities/iffs. Here is a demonstration on writing pure syntactic
 proof:
 
 ```lean
@@ -92,5 +97,5 @@ theorem PA.le_add_of_le_left {n : ℕ} {t t₁ t₂ : peano.Term n} :
 ```
 
 See [`Proof.lean`](MathematicalLogic/FirstOrder/Proof.lean) for the proof system and tactics. We
-prove the representation theorem in such a syntatic way (and plan to prove Gödel's incompleteness
-theorems syntatically also).
+have proved the representation theorem in such a syntactic way, and plan to prove Gödel's
+incompleteness theorems syntactically also.
