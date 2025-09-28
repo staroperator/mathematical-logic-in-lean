@@ -168,15 +168,15 @@ decreasing_by
 
 theorem Formula.encode_decode {p : L.Formula n} : decode n p.encode = some p := by
   induction p with simp [encode, decode]
-  | @rel m _ r v =>
+  | @rel _ m r v =>
     rw [Nat.mul_mod_right 4]; simp
     rw [Nat.mul_div_right, Nat.unpair_pair]
     · simp [Option.bind_eq_some_iff]; clear r
       induction m with simp [Term.decodeVec, Vec.paired]
       | zero => simp [Vec.eq_nil]
       | succ m ih =>
-      simp [Vec.head, Vec.tail, Term.encode_decode, Function.comp_def, ih]
-      nth_rw 3 [Vec.eq_cons v]; rfl
+        simp [Vec.head, Vec.tail, Term.encode_decode, Function.comp_def, ih]
+        nth_rw 3 [Vec.eq_cons v]; rfl
     · simp
   | eq t₁ t₂ =>
     rw [Nat.mul_add_mod]; simp [Nat.mul_add_div, Term.encode_decode]

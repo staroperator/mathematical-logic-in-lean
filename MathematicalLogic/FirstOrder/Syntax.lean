@@ -45,24 +45,24 @@ lot of equalities.
   theory folder uses a locally nameless representation.
 * *Well-scoped syntax.* We start from a non-well-scoped design, where `L.Formula` takes any index in
   `ℕ` as its variable. Switching to well-scoped design gives some advantages:
-  1. it makes definitions simpler in many cases, e.g. `FirstOrder.Language.Order` requires two
-  `Formula 2` for less-equal `⪯` and less-than `≺`. In non-well-scoped design, one would require a
-  formula with a proof that only `0` and `1` are used.
+  1. it makes definitions simpler in many cases, e.g. `Language.Order` requires two `Formula 2`s for
+  less-equal `⪯` and less-than `≺`. In non-well-scoped design, one would require a formula with a
+  proof that only `0` and `1` are used.
   2. it's easier to prove computability results, since substitutions as `ℕ → L.Term` are not
     encodable, but `Fin n → L.Term m` are.
   3. The proof system can admit empty structure (see `Proof.lean` for more details).
 * *Equality.* Equality can be defined as a primitive notion (which is what we are doing) or an
   optional binary relation. The advantage to define it as a primitive notion is that we can enforce
-  equalities to be interpreted as true equality, and we can provide proof tactics on equalities for
-  any languages.
+  equalities to be interpreted as true equality, and we can ship `prw` tactic on equalities along
+  with iffs.
 
 ## References
 
-* Autosubst: Reasoning with de Bruijn Terms and Parallel Substitution. Steven Schäfer, Tobias Tebbi,
-  Gert Smolka. <https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf>
-* Completeness and Decidability of de Bruijn Substitution Algebra in Coq. Steven Schäfer, Gert
+* *Autosubst: Reasoning with de Bruijn Terms and Parallel Substitution.* Steven Schäfer, Tobias
+  Tebbi, Gert Smolka. <https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf>
+* *Completeness and Decidability of de Bruijn Substitution Algebra in Coq.* Steven Schäfer, Gert
   Smolka, Tobias Tebbi. <https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Completeness.pdf>
-* 1001 Representations of Syntax with Binding. Jesper Cockx. <https://jesper.sikanda.be/posts/1001-syntax-representations.html>
+* *1001 Representations of Syntax with Binding.* Jesper Cockx. <https://jesper.sikanda.be/posts/1001-syntax-representations.html>
 
 -/
 
@@ -84,8 +84,6 @@ structure Language where
 
 namespace Language
 
-variable {L : Language}
-
 abbrev Const (L : Language) := L.Func 0
 
 /-- `L.Term n` is the type of terms with variables indexed by `Fin n`. -/
@@ -93,7 +91,9 @@ inductive Term (L : Language) (n : ℕ) : Type where
   /-- A variable indexed by `Fin n`. -/
 | var : Fin n → L.Term n
   /-- A function symbol applied by a vector of terms. -/
-| func : L.Func m → (Fin m → L.Term n) → L.Term n
+| func {m} : L.Func m → (Fin m → L.Term n) → L.Term n
+
+variable {L : Language} {n m k l : ℕ}
 
 namespace Term
 
@@ -129,10 +129,12 @@ instance : SizeOf (L.Term n) := ⟨size⟩
 end Term
 
 /-- `σ : L.Subst n m` substitutes variable `i : Fin n` into a term `σ i : L.Term m`. This is defined
-  as `Fin n → L.Term m`, but `Subst.of` should be used to create substitution from raw lambdas. -/
+  as `Fin n → L.Term m`, but `Subst.of` should be used to create substitution from raw vectors. -/
 def Subst (L : Language) (n m : ℕ) := Vec (L.Term m) n
 
-@[ext] theorem Subst.ext {σ₁ σ₂ : L.Subst n m} : (∀ i, σ₁ i = σ₂ i) → σ₁ = σ₂ := funext
+variable {t : L.Term n} {σ σ₁ σ₂ : L.Subst n m} {i : Fin n}
+
+@[ext] theorem Subst.ext : (∀ i, σ₁ i = σ₂ i) → σ₁ = σ₂ := funext
 
 /-- Substitution of a term. -/
 def Term.subst : L.Term n → L.Subst n m → L.Term m
@@ -144,13 +146,13 @@ def Term.subst : L.Term n → L.Subst n m → L.Term m
 | _ => throw ()
 
 @[simp, syntax_simp] theorem Term.subst_var : (#i)[σ]ₜ = σ i := rfl
-@[simp, syntax_simp] theorem Term.subst_func {f : L.Func k} {v : Fin k → L.Term n} :
+@[simp, syntax_simp] theorem Term.subst_func {f : L.Func k} {v : Vec (L.Term n) k} :
     (f ⬝ᶠ v)[σ]ₜ = f ⬝ᶠ λ i => (v i)[σ]ₜ := rfl
 
 theorem Term.subst_const {c : L.Const} : (c : L.Term n)[σ]ₜ = c := by
   syntax_simp [Vec.eq_nil]
 
-def Subst.of (v : Fin n → L.Term m) : L.Subst n m := v
+def Subst.of (v : Vec (L.Term m) n) : L.Subst n m := v
 @[simp, syntax_simp] theorem Subst.of_apply {v : Fin n → L.Term m} : of v i = v i := rfl
 
 /-- Identical substitution. -/
@@ -167,29 +169,32 @@ theorem Subst.id_def : (idₛ : L.Subst n n) = of λ i => #i := rfl
 def Subst.comp (σ₁ : L.Subst n m) (σ₂ : L.Subst m k) : L.Subst n k :=
   of λ i => (σ₁ i)[σ₂]ₜ
 @[inherit_doc] infixl:90 " ∘ₛ " => Subst.comp
-theorem Subst.comp_def : σ₁ ∘ₛ σ₂ = of λ i => (σ₁ i)[σ₂]ₜ := rfl
-@[simp, syntax_simp] theorem Subst.comp_apply : (σ₁ ∘ₛ σ₂) i = (σ₁ i)[σ₂]ₜ := rfl
+theorem Subst.comp_def {σ₂ : L.Subst m k} : σ₁ ∘ₛ σ₂ = of λ i => (σ₁ i)[σ₂]ₜ := rfl
+@[simp, syntax_simp] theorem Subst.comp_apply {σ₂ : L.Subst m k} : (σ₁ ∘ₛ σ₂) i = (σ₁ i)[σ₂]ₜ := rfl
 
-@[syntax_simp] theorem Term.subst_subst : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ := by
+@[syntax_simp] theorem Term.subst_subst {σ₂ : L.Subst m k} : t[σ₁]ₜ[σ₂]ₜ = t[σ₁ ∘ₛ σ₂]ₜ := by
   induction t with syntax_simp [*]
 
 @[syntax_simp] theorem Subst.id_comp : idₛ ∘ₛ σ = σ := by
   ext; syntax_simp
 @[syntax_simp] theorem Subst.comp_id : σ ∘ₛ idₛ = σ := by
   ext; syntax_simp
-@[syntax_simp] theorem Subst.comp_assoc : σ₁ ∘ₛ σ₂ ∘ₛ σ₃ = σ₁ ∘ₛ (σ₂ ∘ₛ σ₃) := by
+@[syntax_simp] theorem Subst.comp_assoc {σ₂ : L.Subst m k} {σ₃ : L.Subst k l} :
+    σ₁ ∘ₛ σ₂ ∘ₛ σ₃ = σ₁ ∘ₛ (σ₂ ∘ₛ σ₃) := by
   ext; syntax_simp
 @[syntax_simp] theorem Subst.nil_comp : []ᵥ ∘ₛ σ = []ᵥ := by
   simp [Vec.eq_nil]
-@[syntax_simp] theorem Subst.cons_comp : (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
+@[syntax_simp] theorem Subst.cons_comp {t} {σ₂ : L.Subst m k} :
+    (t ∷ᵥ σ₁) ∘ₛ σ₂ = t[σ₂]ₜ ∷ᵥ σ₁ ∘ₛ σ₂ := by
   ext i; cases i using Fin.cases with syntax_simp
-@[syntax_simp] theorem Subst.append_comp : (σ₁ ++ᵥ σ₂) ∘ₛ σ₃ = σ₁ ∘ₛ σ₃ ++ᵥ σ₂ ∘ₛ σ₃ := by
+@[syntax_simp] theorem Subst.append_comp {σ₂ : L.Subst k m} {σ₃ : L.Subst m l} : (σ₁ ++ᵥ σ₂) ∘ₛ σ₃ = σ₁ ∘ₛ σ₃ ++ᵥ σ₂ ∘ₛ σ₃ := by
   ext i; cases i using Fin.addCases' with syntax_simp
-@[syntax_simp] theorem Subst.of_comp {v : Fin n → L.Term m} :
+@[syntax_simp] theorem Subst.of_comp {v : Vec (L.Term m) n} {σ : L.Subst m k} :
     of v ∘ₛ σ = of λ i => (v i)[σ]ₜ := rfl
 @[syntax_simp] theorem Subst.of_nil : (of []ᵥ : L.Subst 0 n) = []ᵥ := rfl
-@[syntax_simp] theorem Subst.of_cons : of (t ∷ᵥ v) = t ∷ᵥ of v := rfl
-@[syntax_simp] theorem Subst.of_append : of (v₁ ++ᵥ v₂) = of v₁ ++ᵥ of v₂ := rfl
+@[syntax_simp] theorem Subst.of_cons {t} {v : Vec (L.Term m) n} : of (t ∷ᵥ v) = t ∷ᵥ of v := rfl
+@[syntax_simp] theorem Subst.of_append {v₁ : Vec (L.Term m) n} {v₂ : Vec (L.Term m) k} :
+    of (v₁ ++ᵥ v₂) = of v₁ ++ᵥ of v₂ := rfl
 
 /-- `Subst.shift k` shifts variables from `0..n-1` to `k..n-1+k`. -/
 def Subst.shift (k : ℕ) : L.Subst n (n + k) :=
@@ -228,7 +233,7 @@ notation:arg "↑ₜ^[" k "] " t:arg => t[Subst.shift k]ₜ
 def Subst.embed (k : ℕ) : L.Subst k (n + k) :=
   of λ i => #(Fin.castAdd' i n)
 theorem Subst.embed_def : (embed k : L.Subst k (n + k)) = of λ i => #(Fin.castAdd' i n) := rfl
-@[simp, syntax_simp] theorem Subst.embed_apply :
+@[simp, syntax_simp] theorem Subst.embed_apply {i} :
     (embed k i : L.Term (n + k)) = #(Fin.castAdd' i n) := rfl
 @[syntax_simp] theorem Subst.embed_zero : (embed 0 : L.Subst 0 n) = []ᵥ := by
   simp [Vec.eq_nil]
@@ -294,26 +299,29 @@ theorem Subst.embed_comp_append_shift_comp (σ : L.Subst (n + k) m) :
     embed k ++ᵥ shift k = (idₛ : L.Subst (n + k) (n + k)) := by
   rw [← embed_comp_append_shift_comp idₛ]; syntax_simp
 
-@[syntax_simp] theorem Subst.shift_comp_cons : shift (k + 1) ∘ₛ (t ∷ᵥ σ) = shift k ∘ₛ σ := by
+@[syntax_simp] theorem Subst.shift_comp_cons {t} {σ : L.Subst (n + k) m} :
+    shift (k + 1) ∘ₛ (t ∷ᵥ σ) = shift k ∘ₛ σ := by
   ext; syntax_simp
 
-@[syntax_simp] theorem Subst.shift_comp_append : shift k ∘ₛ (σ₁ ++ᵥ σ₂) = σ₂ := by
+@[syntax_simp] theorem Subst.shift_comp_append {σ₁ : L.Subst k m} {σ₂ : L.Subst n m} :
+    shift k ∘ₛ (σ₁ ++ᵥ σ₂) = σ₂ := by
   ext; syntax_simp
 
-@[syntax_simp] theorem Subst.embed_comp_append : embed k ∘ₛ (σ₁ ++ᵥ σ₂) = σ₁ := by
+@[syntax_simp] theorem Subst.embed_comp_append {σ₁ : L.Subst k m} {σ₂ : L.Subst n m} :
+    embed k ∘ₛ (σ₁ ++ᵥ σ₂) = σ₁ := by
   ext; syntax_simp
 
 example : ⇑ₛ^[0] σ = σ := by syntax_simp
 example : ⇑ₛ (⇑ₛ^[k] σ) = ⇑ₛ^[k + 1] σ := by syntax_simp
 example : ⇑ₛ(idₛ : L.Subst n n) = idₛ := by syntax_simp
-example : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛσ₂ := by syntax_simp
+example {σ₂ : L.Subst m k} : ⇑ₛ(σ₁ ∘ₛ σ₂) = ⇑ₛσ₁ ∘ₛ ⇑ₛσ₂ := by syntax_simp
 example : Subst.shift 1 ∘ₛ ⇑ₛσ = σ ∘ₛ Subst.shift 1 := by syntax_simp
-example : (↑ₜt₁)[t₂ ∷ᵥ σ]ₜ = t₁[σ]ₜ := by syntax_simp
-example : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by syntax_simp
-example : (↑ₜt₁)[≔ₛ t₂]ₜ = ↑ₜt₁ := by syntax_simp
+example {t₁ t₂} : (↑ₜt₁)[t₂ ∷ᵥ σ]ₜ = t₁[σ]ₜ := by syntax_simp
+example {t₁ t₂ : L.Term n} : (↑ₜt₁)[↦ₛ t₂]ₜ = t₁ := by syntax_simp
+example {t₁ : L.Term n} {t₂} : (↑ₜt₁)[≔ₛ t₂]ₜ = ↑ₜt₁ := by syntax_simp
 example : (↑ₜt)[⇑ₛσ]ₜ = ↑ₜ(t[σ]ₜ) := by syntax_simp
-example : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ t'[σ]ₜ]ₜ := by syntax_simp
-example : (↑ₜ^[m] t)[⇑ₛ^[m] σ]ₜ = ↑ₜ^[m] (t[σ]ₜ) := by syntax_simp
+example {t t'} : t[↦ₛ t']ₜ[σ]ₜ = t[⇑ₛσ]ₜ[↦ₛ t'[σ]ₜ]ₜ := by syntax_simp
+example : (↑ₜ^[k] t)[⇑ₛ^[k] σ]ₜ = ↑ₜ^[k] (t[σ]ₜ) := by syntax_simp
 
 def Term.vars : L.Term n → Set (Fin n)
 | #i => {i}
@@ -341,13 +349,13 @@ theorem Term.vars_subst : t[σ]ₜ.vars = ⋃ x ∈ t.vars, (σ x).vars := by
 /-- `L.Formula n` is the type of formulas with free variables indexed by `Fin n`. -/
 inductive Formula (L : Language) : ℕ → Type where
   /-- A relation symbol applied by a vector of terms. -/
-| rel : L.Rel m → (Fin m → L.Term n) → L.Formula n
+| rel {n m} : L.Rel m → (Fin m → L.Term n) → L.Formula n
   /-- Equality between two terms. -/
-| eq : L.Term n → L.Term n → L.Formula n
-| false : L.Formula n
-| imp : L.Formula n → L.Formula n → L.Formula n
+| eq {n} : L.Term n → L.Term n → L.Formula n
+| false {n} : L.Formula n
+| imp {n} : L.Formula n → L.Formula n → L.Formula n
   /-- Universal quantification of a formula. -/
-| all : L.Formula (n + 1) → L.Formula n
+| all {n} : L.Formula (n + 1) → L.Formula n
 
 namespace Formula
 
@@ -385,27 +393,29 @@ def exN : (k : ℕ) → L.Formula (n + k) → L.Formula n
 | k + 1, p => exN k (∃' p)
 @[inherit_doc] notation "∃^[" k "] " p:arg => exN k p
 
+variable {p q : L.Formula n}
+
 @[simp, syntax_simp] theorem false_eq : false = (⊥ : L.Formula n) := rfl
 @[simp, syntax_simp] theorem imp_eq : imp p q = p ⇒ q := rfl
-@[simp, syntax_simp] theorem neg_eq {p : L.Formula n} : (p ⇒ ⊥) = ~ p := rfl
+@[simp, syntax_simp] theorem neg_eq : (p ⇒ ⊥) = ~ p := rfl
 
 @[simp] theorem imp_inj {p₁ q₁ p₂ q₂ : L.Formula n} : (p₁ ⇒ q₁) = p₂ ⇒ q₂ ↔ p₁ = p₂ ∧ q₁ = q₂ :=
   iff_of_eq (imp.injEq _ _ _ _)
-@[simp] theorem neg_inj {p q : L.Formula n} : ~ p = ~ q ↔ p = q := by simp [← neg_eq]
+@[simp] theorem neg_inj : ~ p = ~ q ↔ p = q := by simp [← neg_eq]
 
-@[simp] def size : L.Formula n → ℕ
-| _ ⬝ʳ _ | _ ≐ _ | ⊥ => 0
-| p ⇒ q => p.size + q.size + 1
-| ∀' p => p.size + 1
+@[simp] def size : {n : ℕ} → L.Formula n → ℕ
+| _, _ ⬝ʳ _ | _, _ ≐ _ | _, ⊥ => 0
+| _, p ⇒ q => p.size + q.size + 1
+| _, ∀' p => p.size + 1
 instance : SizeOf (L.Formula n) := ⟨size⟩
-@[simp] theorem sizeOf_lt_imp_left {p q : L.Formula n} : sizeOf p < sizeOf (p ⇒ q) :=
+@[simp] theorem sizeOf_lt_imp_left : sizeOf p < sizeOf (p ⇒ q) :=
   Nat.lt_succ_of_le (Nat.le_add_right _ _)
-@[simp] theorem sizeOf_lt_imp_right {p q : L.Formula n} : sizeOf q < sizeOf (p ⇒ q) :=
+@[simp] theorem sizeOf_lt_imp_right : sizeOf q < sizeOf (p ⇒ q) :=
   Nat.lt_succ_of_le (Nat.le_add_left _ _)
 @[simp] theorem sizeOf_lt_all {p : L.Formula (n + 1)} : sizeOf p < sizeOf (∀' p) :=
   Nat.lt_succ_self _
 
-instance decEq [∀ n, DecidableEq (L.Func n)] [∀ n, DecidableEq (L.Rel n)] :
+instance decEq {n} [∀ n, DecidableEq (L.Func n)] [∀ n, DecidableEq (L.Rel n)] :
     DecidableEq (L.Formula n) := by
   intro p q
   cases p <;> cases q
@@ -427,19 +437,20 @@ instance decEq [∀ n, DecidableEq (L.Func n)] [∀ n, DecidableEq (L.Rel n)] :
   all_goals exact isFalse Formula.noConfusion
 
 /-- Substitution of a formula. -/
-def subst : L.Formula n → L.Subst n m → L.Formula m
-| r ⬝ʳ v, σ => r ⬝ʳ λ i => (v i)[σ]ₜ
-| t₁ ≐ t₂, σ => t₁.subst σ ≐ t₂.subst σ
-| ⊥, _ => ⊥
-| p ⇒ q, σ => p.subst σ ⇒ q.subst σ
-| ∀' p, σ => ∀' (p.subst ⇑ₛσ)
+def subst : {n m : ℕ} → L.Formula n → L.Subst n m → L.Formula m
+| _, _, r ⬝ʳ v, σ => r ⬝ʳ λ i => (v i)[σ]ₜ
+| _, _, t₁ ≐ t₂, σ => t₁.subst σ ≐ t₂.subst σ
+| _, _, ⊥, _ => ⊥
+| _, _, p ⇒ q, σ => p.subst σ ⇒ q.subst σ
+| _, _, ∀' p, σ => ∀' (p.subst ⇑ₛσ)
 @[inherit_doc subst] macro:max p:term noWs "[" σ:term "]ₚ" : term => `(subst $p $σ)
 @[app_unexpander subst] def unexpandSubst : Lean.PrettyPrinter.Unexpander
 | `($_ $p $σ) => `($p[$σ]ₚ)
 | _ => throw ()
 
-@[simp, syntax_simp] theorem subst_rel : (r ⬝ʳ ts)[σ]ₚ = r ⬝ʳ λ i => (ts i)[σ]ₜ := rfl
-@[simp, syntax_simp] theorem subst_eq : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
+@[simp, syntax_simp] theorem subst_rel {r : L.Rel k} {v : Vec (L.Term n) k} :
+    (r ⬝ʳ v)[σ]ₚ = r ⬝ʳ λ i => (v i)[σ]ₜ := rfl
+@[simp, syntax_simp] theorem subst_eq {t₁ t₂} : (t₁ ≐ t₂)[σ]ₚ = t₁[σ]ₜ ≐ t₂[σ]ₜ := rfl
 @[simp, syntax_simp] theorem subst_false : ⊥[σ]ₚ = ⊥ := rfl
 @[simp, syntax_simp] theorem subst_imp : (p ⇒ q)[σ]ₚ = p[σ]ₚ ⇒ q[σ]ₚ := rfl
 @[simp, syntax_simp] theorem subst_true : ⊤[σ]ₚ = ⊤ := rfl
@@ -447,23 +458,23 @@ def subst : L.Formula n → L.Subst n m → L.Formula m
 @[simp, syntax_simp] theorem subst_and : (p ⩑ q)[σ]ₚ = p[σ]ₚ ⩑ q[σ]ₚ := rfl
 @[simp, syntax_simp] theorem subst_or : (p ⩒ q)[σ]ₚ = p[σ]ₚ ⩒ q[σ]ₚ := rfl
 @[simp, syntax_simp] theorem subst_iff : (p ⇔ q)[σ]ₚ = p[σ]ₚ ⇔ q[σ]ₚ := rfl
-@[simp, syntax_simp] theorem subst_all : (∀' p)[σ]ₚ = ∀' (p[⇑ₛσ]ₚ) := rfl
-@[simp, syntax_simp] theorem subst_ex : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
+@[simp, syntax_simp] theorem subst_all {p} : (∀' p)[σ]ₚ = ∀' (p[⇑ₛσ]ₚ) := rfl
+@[simp, syntax_simp] theorem subst_ex {p} : (∃' p)[σ]ₚ = ∃' (p[⇑ₛσ]ₚ) := rfl
 
-@[simp, syntax_simp] theorem subst_vecAnd {v : Vec (L.Formula n) m} :
+@[simp, syntax_simp] theorem subst_vecAnd {v : Vec (L.Formula n) k} :
     (⋀ i, v i)[σ]ₚ = ⋀ i, (v i)[σ]ₚ := by
-  induction m with simp [vecAnd, Vec.head, Vec.tail, Function.comp_def, *]
-@[simp, syntax_simp] theorem subst_vecOr {v : Vec (L.Formula n) m} :
+  induction k with simp [vecAnd, Vec.head, Vec.tail, Function.comp_def, *]
+@[simp, syntax_simp] theorem subst_vecOr {v : Vec (L.Formula n) k} :
     (⋁ i, v i)[σ]ₚ = ⋁ i, (v i)[σ]ₚ := by
-  induction m with simp [vecOr, Vec.head, Vec.tail, Function.comp_def, *]
-@[simp, syntax_simp] theorem subst_allN : (∀^[k] p)[σ]ₚ = ∀^[k] (p[⇑ₛ^[k] σ]ₚ) := by
+  induction k with simp [vecOr, Vec.head, Vec.tail, Function.comp_def, *]
+@[simp, syntax_simp] theorem subst_allN {p} : (∀^[k] p)[σ]ₚ = ∀^[k] (p[⇑ₛ^[k] σ]ₚ) := by
   induction k with syntax_simp [*, allN]
-@[simp, syntax_simp] theorem subst_exN : (∃^[k] p)[σ]ₚ = ∃^[k] (p[⇑ₛ^[k] σ]ₚ) := by
+@[simp, syntax_simp] theorem subst_exN {p} : (∃^[k] p)[σ]ₚ = ∃^[k] (p[⇑ₛ^[k] σ]ₚ) := by
   induction k with syntax_simp [*, exN]
 
 @[syntax_simp] theorem subst_id (p : L.Formula n) : p[Subst.id]ₚ = p := by
   induction p with syntax_simp [*]
-@[syntax_simp] theorem subst_subst {σ₁ : L.Subst n m} {σ₂ : L.Subst m k} :
+@[syntax_simp] theorem subst_subst {σ₂ : L.Subst m k} :
     p[σ₁]ₚ[σ₂]ₚ = p[σ₁ ∘ₛ σ₂]ₚ := by
   induction p generalizing m k with syntax_simp [*]
 
@@ -471,7 +482,7 @@ def exUnique (p : L.Formula (n + 1)) :=
   ∃' (p ⩑ ∀' (p[⇑ₛ(Subst.shift 1)]ₚ ⇒ #0 ≐ #1))
 prefix:100 "∃!' " => exUnique
 
-@[simp, syntax_simp] theorem subst_exUnique : (∃!' p)[σ]ₚ = ∃!' p[⇑ₛσ]ₚ := by
+@[simp, syntax_simp] theorem subst_exUnique {p} : (∃!' p)[σ]ₚ = ∃!' p[⇑ₛσ]ₚ := by
   syntax_simp [exUnique]
 
 /-- `↑ₚp` is the abbreviation of `p[Subst.shift 1]ₚ`. -/
@@ -488,21 +499,20 @@ notation:arg "↑ₚ^[" k "] " p:arg => p[Subst.shift k]ₚ
   | σ => `($p[$σ]ₚ)
 | _ => throw ()
 
-example : (↑ₚp)[t ∷ᵥ σ]ₚ = p[σ]ₚ := by syntax_simp
+example {p} {σ : L.Subst m n} : (↑ₚp)[t ∷ᵥ σ]ₚ = p[σ]ₚ := by syntax_simp
 example : (↑ₚp)[↦ₛ t]ₚ = p := by syntax_simp
-example : (↑ₚp)[≔ₛ t]ₚ = ↑ₚp := by syntax_simp
+example {t : L.Term (n + 1)} : (↑ₚp)[≔ₛ t]ₚ = ↑ₚp := by syntax_simp
 example : (↑ₚp)[⇑ₛσ]ₚ = ↑ₚ(p[σ]ₚ) := by syntax_simp
-example : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ t[σ]ₜ]ₚ := by syntax_simp
+example {p} : p[↦ₛ t]ₚ[σ]ₚ = p[⇑ₛσ]ₚ[↦ₛ t[σ]ₜ]ₚ := by syntax_simp
 
-def free : L.Formula n → Set (Fin n)
-| _ ⬝ʳ v => ⋃i, (v i).vars
-| t₁ ≐ t₂ => t₁.vars ∪ t₂.vars
-| ⊥ => ∅
-| p ⇒ q => p.free ∪ q.free
-| ∀' p => { x | x.succ ∈ p.free }
+def free : {n : ℕ} → L.Formula n → Set (Fin n)
+| _, _ ⬝ʳ v => ⋃ i, (v i).vars
+| _, t₁ ≐ t₂ => t₁.vars ∪ t₂.vars
+| _, ⊥ => ∅
+| _, p ⇒ q => p.free ∪ q.free
+| _, ∀' p => { x | x.succ ∈ p.free }
 
-theorem subst_ext_free {p : L.Formula n} {σ₁ σ₂ : L.Subst n m} :
-  (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
+theorem subst_ext_free : (∀ x ∈ p.free, σ₁ x = σ₂ x) → p[σ₁]ₚ = p[σ₂]ₚ := by
   intro h
   induction p generalizing m with
   | rel =>
@@ -532,8 +542,7 @@ theorem subst_ext_free {p : L.Formula n} {σ₁ σ₂ : L.Subst n m} :
       apply h
       simp [free, h']
 
-theorem free_subst {σ : L.Subst n m} :
-  p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
+theorem free_subst : p[σ]ₚ.free = ⋃ x ∈ p.free, (σ x).vars := by
   induction p generalizing m with
   | rel =>
     simp only [subst_rel, free, Term.vars_subst, Set.mem_iUnion, Set.iUnion_exists]
@@ -590,9 +599,11 @@ abbrev FormulaSet (L : Language) (n : ℕ) := Set (L.Formula n)
 def FormulaSet.append (Γ : L.FormulaSet n) (p : L.Formula n) := insert p Γ
 infixl:51 ",' " => FormulaSet.append
 
+variable {Γ Δ : L.FormulaSet n} {p q : L.Formula n}
+
 theorem FormulaSet.append_comm : Γ,' p,' q = Γ,' q,' p := Set.insert_comm _ _ _
 theorem FormulaSet.append_eq_append : Γ = Δ → Γ,' p = Δ,' p := by intro h; rw [h]
-theorem FormulaSet.subset_of_eq {Γ : L.FormulaSet n} : Γ = Δ → Γ ⊆ Δ := by intro h; rw [h]
+theorem FormulaSet.subset_of_eq : Γ = Δ → Γ ⊆ Δ := _root_.subset_of_eq
 theorem FormulaSet.mem_append : p ∈ Γ,' p := Set.mem_insert _ _
 theorem FormulaSet.subset_append : Γ ⊆ Γ,' p := Set.subset_insert _ _
 theorem FormulaSet.append_subset_append : Γ ⊆ Δ → Γ,' p ⊆ Δ,' p := Set.insert_subset_insert
@@ -619,6 +630,8 @@ def Theory.shiftT : (n : ℕ) → L.Theory → L.FormulaSet n
 | n + 1, T => ↑ᴳ(T.shiftT n)
 notation "↑ᵀ^[" n "]" => Theory.shiftT n
 
+variable {T : L.Theory}
+
 @[simp, syntax_simp] theorem Theory.shiftT_zero : ↑ᵀ^[0] T = T := rfl
 @[simp, syntax_simp] theorem Theory.shift_shiftT : ↑ᴳ(↑ᵀ^[n] T) = ↑ᵀ^[n + 1] T := rfl
 @[simp, syntax_simp] theorem Theory.shiftk_shiftT : ↑ᴳ^[m] (↑ᵀ^[n] T) = ↑ᵀ^[n + m] T := by
@@ -633,8 +646,8 @@ notation "↑ᵀ^[" n "]" => Theory.shiftT n
 open Std Lean.Parser
 
 class Repr (L : Language) where
-  reprFunc : L.Func n → ℕ → (Fin n → ℕ → Format) → Format
-  reprRel : L.Rel n → ℕ → (Fin n → ℕ → Format) → Format
+  reprFunc {m : ℕ} : L.Func m → ℕ → (Fin m → ℕ → Format) → Format
+  reprRel {m : ℕ} : L.Rel m → ℕ → (Fin m → ℕ → Format) → Format
 
 variable [Repr L]
 
@@ -644,26 +657,26 @@ private def reprTerm : L.Term n → ℕ → Format
 
 instance : _root_.Repr (L.Term n) := ⟨reprTerm⟩
 
-private def reprFormula : L.Formula n → ℕ → Format
-| r ⬝ʳ v, prec =>
+private def reprFormula : {n : ℕ} → L.Formula n → ℕ → Format
+| _, r ⬝ʳ v, prec =>
   Repr.reprRel r prec λ i => reprTerm (v i)
-| t₁ ≐ t₂, prec =>
+| _, t₁ ≐ t₂, prec =>
   (if prec ≥ 60 then Format.paren else id) (reprTerm t₁ 60 ++ " = " ++ reprTerm t₂ 60)
-| (∀' (p ⇒ ⊥)) ⇒ ⊥, prec =>
+| _, (∀' (p ⇒ ⊥)) ⇒ ⊥, prec =>
   (if prec ≥ 100 then Format.paren else id) ("∃ " ++ reprFormula p 100)
-| (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec =>
+| _, (p ⇒ q ⇒ ⊥) ⇒ ⊥, prec =>
   (if prec ≥ 57 then Format.paren else id) (reprFormula p 57 ++ " ∧ " ++ reprFormula q 57)
-| (p ⇒ q) ⇒ ⊥, prec =>
+| _, (p ⇒ q) ⇒ ⊥, prec =>
   (if prec ≥ 56 then Format.paren else id) (reprFormula p 56 ++ " ∨ " ++ reprFormula q 56)
-| ⊥ ⇒ ⊥, _ =>
+| _, ⊥ ⇒ ⊥, _ =>
   "⊤"
-| p ⇒ ⊥, prec =>
+| _, p ⇒ ⊥, prec =>
   (if prec ≥ 58 then Format.paren else id) ("~ " ++ reprFormula p 58)
-| ⊥, _ =>
+| _, ⊥, _ =>
   "⊥"
-| p ⇒ q, prec =>
+| _, p ⇒ q, prec =>
   (if prec ≥ 55 then Format.paren else id) (reprFormula p 55 ++ " ⇒ " ++ reprFormula q 55)
-| ∀' p, prec =>
+| _, ∀' p, prec =>
   (if prec ≥ 100 then Format.paren else id) ("∀ " ++ reprFormula p 100)
 
 instance : _root_.Repr (L.Formula n) := ⟨reprFormula⟩
