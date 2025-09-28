@@ -3,6 +3,7 @@ name: Lean Action CI
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,6 +14,14 @@ jobs:
         uses: leanprover/lean-action@v1
         with:
           build-args: "--wfail" 
+      - name: Cache dependency docs
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/build/doc
+            !.lake/build/doc/MathematicalLogic
+          key: Doc-${{ hashFiles('lake-manifest.json') }}
+          restore-keys: Doc-
       - name: Build docs
         run: lake build MathematicalLogic:docs
       - name: Upload pages artifact
